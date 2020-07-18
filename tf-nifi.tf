@@ -41,6 +41,10 @@ variable "prinet3_cidr" {
   default                  = "10.90.6.0/24"
 }
 
+variable "instance_key" {
+  type                     = string
+}
+
 provider "aws" {
   region                   = var.aws_region
   profile                  = var.aws_profile
@@ -273,7 +277,7 @@ resource "aws_security_group_rule" "tf-nifi-pubsg1-rule1-in" {
   description             = "IN - NiFi Listen 1"
   from_port               = "3001"
   to_port                 = "3001"
-  protocol                = "udp"
+  protocol                = "tcp"
   cidr_blocks             = ["127.0.0.1/32"]
 }
 
@@ -283,7 +287,27 @@ resource "aws_security_group_rule" "tf-nifi-pubsg1-rule1-out" {
   description             = "OUT - NiFi Listen 1"
   from_port               = "3001"
   to_port                 = "3001"
-  protocol                = "udp"
+  protocol                = "tcp"
+  source_security_group_id = aws_security_group.tf-nifi-prisg1.id
+}
+
+resource "aws_security_group_rule" "tf-nifi-pubsg1-rule2-in" {
+  security_group_id       = aws_security_group.tf-nifi-pubsg1.id
+  type                    = "ingress"
+  description             = "IN - SSH MGMT"
+  from_port               = "22"
+  to_port                 = "22"
+  protocol                = "tcp"
+  cidr_blocks             = ["127.0.0.1/32"]
+}
+
+resource "aws_security_group_rule" "tf-nifi-pubsg1-rule2-out" {
+  security_group_id       = aws_security_group.tf-nifi-pubsg1.id
+  type                    = "egress"
+  description             = "OUT - SSH MGMT"
+  from_port               = "22"
+  to_port                 = "22"
+  protocol                = "tcp"
   source_security_group_id = aws_security_group.tf-nifi-prisg1.id
 }
 
@@ -293,7 +317,17 @@ resource "aws_security_group_rule" "tf-nifi-prisg1-rule1-in" {
   description             = "IN - NiFi Listen 1"
   from_port               = "3001"
   to_port                 = "3001"
-  protocol                = "udp"
+  protocol                = "tcp"
+  source_security_group_id = aws_security_group.tf-nifi-pubsg1.id
+}
+
+resource "aws_security_group_rule" "tf-nifi-prisg1-rule2-in" {
+  security_group_id       = aws_security_group.tf-nifi-prisg1.id
+  type                    = "ingress"
+  description             = "IN - SSH MGMT"
+  from_port               = "22"
+  to_port                 = "22"
+  protocol                = "tcp"
   source_security_group_id = aws_security_group.tf-nifi-pubsg1.id
 }
 
@@ -315,4 +349,66 @@ resource "aws_security_group_rule" "tf-nifi-prisg1-https-out" {
   to_port                 = "443"
   protocol                = "tcp"
   cidr_blocks             = ["0.0.0.0/0"]
+}
+
+# load balancer
+resource "aws_elb" "tf-nifi-elb1" {
+  name                    = "tf-nifi-elb1"
+  subnets                 = [aws_subnet.tf-nifi-pubnet1.id, aws_subnet.tf-nifi-pubnet2.id, aws_subnet.tf-nifi-pubnet3.id]
+  security_groups         = [aws_security_group.tf-nifi-pubsg1.id]
+  listener {
+    instance_port           = 22
+    instance_protocol       = "TCP"
+    lb_port                 = 22
+    lb_protocol             = "TCP"
+  }
+  listener {
+    instance_port           = 3001
+    instance_protocol       = "TCP"
+    lb_port                 = 3001
+    lb_protocol             = "TCP"
+  }
+}
+
+# Instance Key
+resource "aws_key_pair" "tf-nifi-instance-key" {
+  key_name   = "tf-nifi-instance-key"
+  public_key = var.instance_key
+  tags                    = {
+    Name                  = "tf-nifi-instance-key"
+  }
+}
+
+# Latest Ubuntu 18.04
+data "aws_ami" "tf-nifi-ubuntu-ami" {
+  most_recent             = true
+  owners                  = ["099720109477"]
+  filter {
+    name                    = "name"
+    values                  = ["ubuntu/images/hvm-ssd/ubuntu-bionic-18.04-amd64-server-*"]
+  }
+  filter {
+    name                    = "virtualization-type"
+    values                  = ["hvm"]
+  }
+  filter {
+    name                    = "architecture"
+    values                  = ["x86_64"]
+  }
+  filter {
+    name                    = "root-device-type"
+    values                  = ["ebs"]
+  }
+}
+
+# Instance(s)
+resource "aws_instance" "tf-nifi-managedinstance1" {
+  ami                       = data.aws_ami.tf-nifi-ubuntu-ami.id
+  instance_type             = "t3a.micro"
+  key_name                  = aws_key_pair.tf-nifi-instance-key.key_name
+  subnet_id                 = aws_subnet.tf-nifi-prinet1.id
+  vpc_security_group_ids    = [aws_security_group.tf-nifi-prisg1.id]
+  tags                    = {
+    Name                  = "tf-nifi-managedinstance1"
+  }
 }
