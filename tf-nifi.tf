@@ -247,3 +247,72 @@ resource "aws_route_table_association" "rt-assoc-prinet3" {
   subnet_id               = aws_subnet.tf-nifi-prinet3.id
   route_table_id          = aws_route_table.tf-nifi-prirt3.id
 }
+
+# security groups
+resource "aws_security_group" "tf-nifi-pubsg1" {
+  name                    = "tf-nifi-pubsg1"
+  description             = "Security group for public ELB"
+  vpc_id                  = aws_vpc.tf-nifi-vpc.id
+  tags = {
+    Name = "tf-nifi-pubsg1"
+  }
+}
+
+resource "aws_security_group" "tf-nifi-prisg1" {
+  name                    = "tf-nifi-prisg1"
+  description             = "Security group for private instances"
+  vpc_id                  = aws_vpc.tf-nifi-vpc.id
+  tags = {
+    Name = "tf-nifi-prisg1"
+  }
+}
+
+resource "aws_security_group_rule" "tf-nifi-pubsg1-rule1-in" {
+  security_group_id       = aws_security_group.tf-nifi-pubsg1.id
+  type                    = "ingress"
+  description             = "IN - NiFi Listen 1"
+  from_port               = "3001"
+  to_port                 = "3001"
+  protocol                = "udp"
+  cidr_blocks             = ["127.0.0.1/32"]
+}
+
+resource "aws_security_group_rule" "tf-nifi-pubsg1-rule1-out" {
+  security_group_id       = aws_security_group.tf-nifi-pubsg1.id
+  type                    = "egress"
+  description             = "OUT - NiFi Listen 1"
+  from_port               = "3001"
+  to_port                 = "3001"
+  protocol                = "udp"
+  source_security_group_id = aws_security_group.tf-nifi-prisg1.id
+}
+
+resource "aws_security_group_rule" "tf-nifi-prisg1-rule1-in" {
+  security_group_id       = aws_security_group.tf-nifi-prisg1.id
+  type                    = "ingress"
+  description             = "IN - NiFi Listen 1"
+  from_port               = "3001"
+  to_port                 = "3001"
+  protocol                = "udp"
+  source_security_group_id = aws_security_group.tf-nifi-pubsg1.id
+}
+
+resource "aws_security_group_rule" "tf-nifi-prisg1-http-out" {
+  security_group_id       = aws_security_group.tf-nifi-prisg1.id
+  type                    = "egress"
+  description             = "OUT - HTTP"
+  from_port               = "80"
+  to_port                 = "80"
+  protocol                = "tcp"
+  cidr_blocks             = ["0.0.0.0/0"]
+}
+
+resource "aws_security_group_rule" "tf-nifi-prisg1-https-out" {
+  security_group_id       = aws_security_group.tf-nifi-prisg1.id
+  type                    = "egress"
+  description             = "OUT - HTTPS"
+  from_port               = "443"
+  to_port                 = "443"
+  protocol                = "tcp"
+  cidr_blocks             = ["0.0.0.0/0"]
+}
