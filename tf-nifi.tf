@@ -43,6 +43,12 @@ variable "prinet3_cidr" {
 
 variable "instance_key" {
   type                     = string
+  description              = "A public key for SSH access to instance(s)"
+}
+
+variable "bucket_name" {
+  type                     = string
+  description              = "A unique bucket name to store playbooks and output of SSM"
 }
 
 provider "aws" {
@@ -376,8 +382,8 @@ resource "aws_security_group_rule" "tf-nifi-prisg1-https-out" {
 }
 
 # s3 bucket, object, and ssm association for nifi installation
-resource "aws_s3_bucket" "tf-nifi-bucket-1" {
-  bucket                  = "tf-nifi-bucket-1"
+resource "aws_s3_bucket" "tf-nifi-bucket" {
+  bucket                  = var.bucket_name
   acl                     = "private"
   versioning {
                             enabled = true
@@ -393,7 +399,7 @@ resource "aws_s3_bucket" "tf-nifi-bucket-1" {
 }
 
 resource "aws_s3_bucket_object" "tf-nifi-playbook" {
-  bucket                  = aws_s3_bucket.tf-nifi-bucket-1.id
+  bucket                  = aws_s3_bucket.tf-nifi-bucket.id
   key                     = "tf-nifi/tf-nifi-playbook.yml"
   source                  = "tf-nifi-playbook.yml"
 }
@@ -405,12 +411,16 @@ resource "aws_ssm_association" "tf-nifi-ssm-assoc" {
     key                   = "tag:Name"
     values                = ["tf-nifi-goldinstance"]
   }
+  output_location {
+    s3_bucket_name          = aws_s3_bucket.tf-nifi-bucket.id
+    s3_key_prefix           = "ssm"
+  }
   parameters              = {
     Check                   = "False"
     ExtraVariables          = "SSM=True"
     InstallDependencies     = "True"
     PlaybookFile            = "tf-nifi-playbook.yml"
-    SourceInfo              = "{\"path\":\"https://s3.${var.aws_region}.amazonaws.com/${aws_s3_bucket.tf-nifi-bucket-1.id}/${aws_s3_bucket_object.tf-nifi-playbook.key}\"}"
+    SourceInfo              = "{\"path\":\"https://s3.${var.aws_region}.amazonaws.com/${aws_s3_bucket.tf-nifi-bucket.id}/${aws_s3_bucket_object.tf-nifi-playbook.key}\"}"
     SourceType              = "S3"
     Verbose                 = "-v"
   }
@@ -452,7 +462,7 @@ resource "aws_iam_policy" "tf-nifi-instance-policy-s3" {
       "Sid": "ListObjectsinBucket",
       "Effect": "Allow",
       "Action": ["s3:ListBucket"],
-      "Resource": ["${aws_s3_bucket.tf-nifi-bucket-1.arn}"]
+      "Resource": ["${aws_s3_bucket.tf-nifi-bucket.arn}"]
     },
     {
       "Sid": "GetObjectsinBucketPrefix",
@@ -461,7 +471,16 @@ resource "aws_iam_policy" "tf-nifi-instance-policy-s3" {
         "s3:GetObject",
         "s3:GetObjectVersion"
       ],
-      "Resource": ["${aws_s3_bucket.tf-nifi-bucket-1.arn}/tf-nifi/*"]
+      "Resource": ["${aws_s3_bucket.tf-nifi-bucket.arn}/tf-nifi/*"]
+    },
+    {
+      "Sid": "PutObjectsinBucketPrefix",
+      "Effect": "Allow",
+      "Action": [
+        "s3:PutObject",
+        "s3:PutObjectAcl"
+      ],
+      "Resource": ["${aws_s3_bucket.tf-nifi-bucket.arn}/ssm/*"]
     }
   ]
 }
@@ -535,7 +554,7 @@ data "aws_ami" "tf-nifi-rhel-ami" {
 }
 
 # Instance(s)
-resource "aws_instance" "tf-nifi-instance1" {
+resource "aws_instance" "tf-nifi-goldinstance" {
   ami                     = data.aws_ami.tf-nifi-rhel-ami.id
   instance_type           = "t3a.micro"
   iam_instance_profile    = aws_iam_instance_profile.tf-nifi-instance-profile.name
@@ -543,7 +562,7 @@ resource "aws_instance" "tf-nifi-instance1" {
   subnet_id               = aws_subnet.tf-nifi-prinet1.id
   vpc_security_group_ids  = [aws_security_group.tf-nifi-prisg1.id]
   tags                    = {
-    Name                    = "tf-nifi-managedinstance1"
+    Name                    = "tf-nifi-goldinstance"
   }
   user_data               = file("tf-nifi-userdata.sh")
 }
