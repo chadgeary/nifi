@@ -55,6 +55,11 @@ data "aws_availability_zones" "tf-nifi-azs" {
   state                    = "available"
 }
 
+# aws managed kms key for s3
+data "aws_kms_key" "tf-nifi-s3kmskey" {
+  key_id                  = "alias/aws/s3"
+}
+
 # vpc and gateway
 resource "aws_vpc" "tf-nifi-vpc" {
   cidr_block              = var.vpc_cidr
@@ -252,6 +257,25 @@ resource "aws_route_table_association" "rt-assoc-prinet3" {
   route_table_id          = aws_route_table.tf-nifi-prirt3.id
 }
 
+# s3 endpoint for private instance(s)
+data "aws_vpc_endpoint_service" "tf-nifi-s3-endpoint-service" {
+  service                 = "s3"
+}
+
+resource "aws_vpc_endpoint" "tf-nifi-s3-endpoint" {
+  vpc_id                  = aws_vpc.tf-nifi-vpc.id
+  service_name            = data.aws_vpc_endpoint_service.tf-nifi-s3-endpoint-service.service_name
+  vpc_endpoint_type       = "Gateway"
+  route_table_ids         = [aws_route_table.tf-nifi-prirt1.id,aws_route_table.tf-nifi-prirt2.id,aws_route_table.tf-nifi-prirt3.id]
+  tags                    = {
+    Name                  = "tf-nifi-s3-endpoint"
+  }
+}
+
+data "aws_prefix_list" "tf-nifi-s3-prefixlist" {
+  prefix_list_id          = aws_vpc_endpoint.tf-nifi-s3-endpoint.prefix_list_id
+}
+
 # security groups
 resource "aws_security_group" "tf-nifi-pubsg1" {
   name                    = "tf-nifi-pubsg1"
@@ -351,6 +375,47 @@ resource "aws_security_group_rule" "tf-nifi-prisg1-https-out" {
   cidr_blocks             = ["0.0.0.0/0"]
 }
 
+# s3 bucket, object, and ssm association for nifi installation
+resource "aws_s3_bucket" "tf-nifi-bucket-1" {
+  bucket                  = "tf-nifi-bucket-1"
+  acl                     = "private"
+  versioning {
+                            enabled = true
+  }
+  server_side_encryption_configuration {
+    rule {
+      apply_server_side_encryption_by_default {
+        kms_master_key_id = data.aws_kms_key.tf-nifi-s3kmskey.arn
+        sse_algorithm     = "aws:kms"
+      }
+    }
+  }
+}
+
+resource "aws_s3_bucket_object" "tf-nifi-playbook" {
+  bucket                  = aws_s3_bucket.tf-nifi-bucket-1.id
+  key                     = "tf-nifi/tf-nifi-playbook.yml"
+  source                  = "tf-nifi-playbook.yml"
+}
+
+resource "aws_ssm_association" "tf-nifi-ssm-assoc" {
+  association_name        = "tf-nifi-ssm-assoc"
+  name                    = "AWS-ApplyAnsiblePlaybooks"
+  targets {
+    key                   = "tag:Name"
+    values                = ["tf-nifi-goldinstance"]
+  }
+  parameters              = {
+    Check                   = "False"
+    ExtraVariables          = "SSM=True"
+    InstallDependencies     = "True"
+    PlaybookFile            = "tf-nifi-playbook.yml"
+    SourceInfo              = "{\"path\":\"https://s3.${var.aws_region}.amazonaws.com/${aws_s3_bucket.tf-nifi-bucket-1.id}/${aws_s3_bucket_object.tf-nifi-playbook.key}\"}"
+    SourceType              = "S3"
+    Verbose                 = "-v"
+  }
+}
+
 # load balancer
 resource "aws_elb" "tf-nifi-elb1" {
   name                    = "tf-nifi-elb1"
@@ -370,22 +435,90 @@ resource "aws_elb" "tf-nifi-elb1" {
   }
 }
 
+# Instance Role and Profile, Key, Image (Latest RHEL7), and Instance
+data "aws_iam_policy" "tf-nifi-instance-policy-ssm" {
+  arn                     = "arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore"
+}
+
+resource "aws_iam_policy" "tf-nifi-instance-policy-s3" {
+  name                    = "tf-nifi-instance-policy"
+  path                    = "/"
+  description             = "Provides tf-nifi instances access to endpoint and s3 objects in SSM bucket"
+  policy                  = <<EOF
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "ListObjectsinBucket",
+      "Effect": "Allow",
+      "Action": ["s3:ListBucket"],
+      "Resource": ["${aws_s3_bucket.tf-nifi-bucket-1.arn}"]
+    },
+    {
+      "Sid": "GetObjectsinBucketPrefix",
+      "Effect": "Allow",
+      "Action": [
+        "s3:GetObject",
+        "s3:GetObjectVersion"
+      ],
+      "Resource": ["${aws_s3_bucket.tf-nifi-bucket-1.arn}/tf-nifi/*"]
+    }
+  ]
+}
+EOF
+}
+
+resource "aws_iam_role" "tf-nifi-instance-iam-role" {
+  name                    = "tf-nifi-instance-profile"
+  path                    = "/"
+  assume_role_policy      = <<EOF
+{
+  "Version": "2012-10-17",
+  "Statement": [
+      {
+          "Action": "sts:AssumeRole",
+          "Principal": {
+             "Service": "ec2.amazonaws.com"
+          },
+          "Effect": "Allow",
+          "Sid": ""
+      }
+  ]
+}
+EOF
+}
+
+resource "aws_iam_role_policy_attachment" "tf-nifi-iam-attach-ssm" {
+  role                    = aws_iam_role.tf-nifi-instance-iam-role.name
+  policy_arn              = data.aws_iam_policy.tf-nifi-instance-policy-ssm.arn
+}
+
+resource "aws_iam_role_policy_attachment" "tf-nifi-iam-attach-s3" {
+  role                    = aws_iam_role.tf-nifi-instance-iam-role.name
+  policy_arn              = aws_iam_policy.tf-nifi-instance-policy-s3.arn
+}
+
+resource "aws_iam_instance_profile" "tf-nifi-instance-profile" {
+  name                    = "tf-nifi-instance-profile"
+  role                    = aws_iam_role.tf-nifi-instance-iam-role.name
+}
+
 # Instance Key
 resource "aws_key_pair" "tf-nifi-instance-key" {
-  key_name   = "tf-nifi-instance-key"
-  public_key = var.instance_key
+  key_name                = "tf-nifi-instance-key"
+  public_key              = var.instance_key
   tags                    = {
-    Name                  = "tf-nifi-instance-key"
+    Name                    = "tf-nifi-instance-key"
   }
 }
 
-# Latest Ubuntu 18.04
-data "aws_ami" "tf-nifi-ubuntu-ami" {
+# Latest RHEL 7
+data "aws_ami" "tf-nifi-rhel-ami" {
   most_recent             = true
-  owners                  = ["099720109477"]
+  owners                  = ["309956199498"]
   filter {
     name                    = "name"
-    values                  = ["ubuntu/images/hvm-ssd/ubuntu-bionic-18.04-amd64-server-*"]
+    values                  = ["RHEL-7.*GA*"]
   }
   filter {
     name                    = "virtualization-type"
@@ -402,13 +535,15 @@ data "aws_ami" "tf-nifi-ubuntu-ami" {
 }
 
 # Instance(s)
-resource "aws_instance" "tf-nifi-managedinstance1" {
-  ami                       = data.aws_ami.tf-nifi-ubuntu-ami.id
-  instance_type             = "t3a.micro"
-  key_name                  = aws_key_pair.tf-nifi-instance-key.key_name
-  subnet_id                 = aws_subnet.tf-nifi-prinet1.id
-  vpc_security_group_ids    = [aws_security_group.tf-nifi-prisg1.id]
+resource "aws_instance" "tf-nifi-instance1" {
+  ami                     = data.aws_ami.tf-nifi-rhel-ami.id
+  instance_type           = "t3a.micro"
+  iam_instance_profile    = aws_iam_instance_profile.tf-nifi-instance-profile.name
+  key_name                = aws_key_pair.tf-nifi-instance-key.key_name
+  subnet_id               = aws_subnet.tf-nifi-prinet1.id
+  vpc_security_group_ids  = [aws_security_group.tf-nifi-prisg1.id]
   tags                    = {
-    Name                  = "tf-nifi-managedinstance1"
+    Name                    = "tf-nifi-managedinstance1"
   }
+  user_data               = file("tf-nifi-userdata.sh")
 }
