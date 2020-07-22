@@ -1,4 +1,7 @@
 #!/bin/bash
+# set hostname
+sudo hostnamectl set-hostname tf-nifi-1
+
 # update
 sudo yum -y update
 

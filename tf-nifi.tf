@@ -51,6 +51,16 @@ variable "bucket_name" {
   description              = "A unique bucket name to store playbooks and output of SSM"
 }
 
+variable "nifi_version" {
+  type                     = string
+  description              = "The version of Apache NiFi, e.g. 1.11.4"
+}
+
+variable "zk_version" {
+  type                     = string
+  description              = "The version of Apache Zookeeper, e.g. 3.6.1"
+}
+
 provider "aws" {
   region                   = var.aws_region
   profile                  = var.aws_profile
@@ -399,9 +409,11 @@ resource "aws_s3_bucket" "tf-nifi-bucket" {
 }
 
 resource "aws_s3_bucket_object" "tf-nifi-playbook" {
+  for_each                = fileset("playbook/", "*")
   bucket                  = aws_s3_bucket.tf-nifi-bucket.id
-  key                     = "tf-nifi/tf-nifi-playbook.yml"
-  source                  = "tf-nifi-playbook.yml"
+  key                     = "playbook/${each.value}"
+  source                  = "playbook/${each.value}"
+  etag                    = filemd5("playbook/${each.value}")
 }
 
 resource "aws_ssm_association" "tf-nifi-ssm-assoc" {
@@ -409,7 +421,7 @@ resource "aws_ssm_association" "tf-nifi-ssm-assoc" {
   name                    = "AWS-ApplyAnsiblePlaybooks"
   targets {
     key                   = "tag:Name"
-    values                = ["tf-nifi-goldinstance"]
+    values                = ["tf-nifi-1"]
   }
   output_location {
     s3_bucket_name          = aws_s3_bucket.tf-nifi-bucket.id
@@ -417,10 +429,10 @@ resource "aws_ssm_association" "tf-nifi-ssm-assoc" {
   }
   parameters              = {
     Check                   = "False"
-    ExtraVariables          = "SSM=True"
+    ExtraVariables          = "SSM=True zk_version=${var.zk_version} nifi_version=${var.nifi_version} keystore_password=somesecurepassword1 node0=tf-nifi-1 node_id=1"
     InstallDependencies     = "True"
     PlaybookFile            = "tf-nifi-playbook.yml"
-    SourceInfo              = "{\"path\":\"https://s3.${var.aws_region}.amazonaws.com/${aws_s3_bucket.tf-nifi-bucket.id}/${aws_s3_bucket_object.tf-nifi-playbook.key}\"}"
+    SourceInfo              = "{\"path\":\"https://s3.${var.aws_region}.amazonaws.com/${aws_s3_bucket.tf-nifi-bucket.id}/playbook/\"}"
     SourceType              = "S3"
     Verbose                 = "-v"
   }
@@ -471,7 +483,7 @@ resource "aws_iam_policy" "tf-nifi-instance-policy-s3" {
         "s3:GetObject",
         "s3:GetObjectVersion"
       ],
-      "Resource": ["${aws_s3_bucket.tf-nifi-bucket.arn}/tf-nifi/*"]
+      "Resource": ["${aws_s3_bucket.tf-nifi-bucket.arn}/playbook/*"]
     },
     {
       "Sid": "PutObjectsinBucketPrefix",
@@ -554,7 +566,7 @@ data "aws_ami" "tf-nifi-rhel-ami" {
 }
 
 # Instance(s)
-resource "aws_instance" "tf-nifi-goldinstance" {
+resource "aws_instance" "tf-nifi-1" {
   ami                     = data.aws_ami.tf-nifi-rhel-ami.id
   instance_type           = "t3a.micro"
   iam_instance_profile    = aws_iam_instance_profile.tf-nifi-instance-profile.name
@@ -562,7 +574,7 @@ resource "aws_instance" "tf-nifi-goldinstance" {
   subnet_id               = aws_subnet.tf-nifi-prinet1.id
   vpc_security_group_ids  = [aws_security_group.tf-nifi-prisg1.id]
   tags                    = {
-    Name                    = "tf-nifi-goldinstance"
+    Name                    = "tf-nifi-1"
   }
   user_data               = file("tf-nifi-userdata.sh")
 }

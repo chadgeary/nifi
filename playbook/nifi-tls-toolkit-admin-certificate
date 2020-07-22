@@ -1,0 +1,10 @@
+#!/bin/bash
+# This script generates a browser-compatible certificate for local admin using the tls.json keyStorePassword property and the password supplied with the ansible playbook.
+
+# password
+KEYSTORE_PASSWORD=$(awk -F'"' '/keyStorePassword/ { print $4 }' /opt/nifi-certificates/tls.json)
+
+# create certificate
+/opt/nifi-toolkit/bin/tls-toolkit.sh client -a RSA -c {{ node0 }} -p 8443 -D "OU=nifi, CN=admin" -f /opt/nifi-toolkit/tls-client.json -k 2048 -T PKCS12 -t {{ keystore_password }}
+
+# note - use KEYSTORE_PASSWORD to decrypt the certificate when importing to browser.

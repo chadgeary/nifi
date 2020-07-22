@@ -1,0 +1,13 @@
+[Unit]
+Description=zookeeper
+After=network.target
+
+[Service]
+ExecStart=/opt/zookeeper/bin/zkServer.sh start
+ExecStop=/opt/zookeeper/bin/zkServer.sh stop
+Type=forking
+Restart=on-failure   
+RestartSec=5
+
+[Install]
+WantedBy=multiuser.target

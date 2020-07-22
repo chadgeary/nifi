@@ -1,0 +1,276 @@
+---
+- name: tf-nifi-playbook.yml
+  hosts: localhost
+  become: True
+  become_user: root
+  tasks:
+
+    - name: set zookeeper connection string
+      set_fact:
+        zookeeper_nodes: 'tf-nifi-1:2181,tf-nifi-2:2181,tf-nifi-3:2181'
+
+    - name: nifi required packages
+      package:
+        name: "{{ packages }}"
+        state: latest
+      vars:
+        packages:
+        - java-sdk
+        - openssl
+
+    - name: zookeeper systemd unit file
+      copy:
+        src: zookeeper.service
+        dest: /etc/systemd/system/zookeeper.service
+        mode: 0644
+        owner: root
+        group: root
+
+    - name: check zookeeper downloaded
+      stat:
+        path: /opt/zookeeper.tar.gz
+      register: zk_download
+
+    - name: download zookeeper if not downloaded
+      get_url:
+        url: http://mirror.cogentco.com/pub/apache/zookeeper/current/apache-zookeeper-{{ zk_version }}-bin.tar.gz
+        dest: /opt/zookeeper.tar.gz
+        mode: '0644'
+      when: zk_download.stat.exists == false
+
+    - name: check zookeeper unarchived
+      stat:
+        path: /opt/zookeeper-{{ zk_version }}/README
+      register: zk_unarchived
+
+    - name: unarchive zookeeper if not unarchived
+      unarchive:
+        src: /opt/zookeeper.tar.gz
+        dest: /opt
+        remote_src: yes
+
+    - name: link zookeeper version to /opt/zookeeper
+      file:
+        src: /opt/apache-zookeeper-{{ zk_version }}-bin
+        path: /opt/zookeeper
+        state: link
+        mode: 0755
+        owner: root
+        group: root
+
+    - name: nifi systemd service file
+      copy:
+        src: nifi.service
+        dest: /etc/systemd/system/nifi.service
+        mode: 0444
+        owner: root
+        group: root
+
+    - name: check nifi downloaded
+      stat:
+        path: /opt/nifi.tar.gz
+      register: nifi_downloaded
+
+    - name: download nifi if not downloaded
+      get_url:
+        url: http://mirror.cogentco.com/pub/apache/nifi/{{ nifi_version }}/nifi-{{ nifi_version }}-bin.tar.gz
+        dest: /opt/nifi.tar.gz
+        mode: '0440'
+      when: nifi_downloaded.stat.exists == false
+
+    - name: check nifi unarchived
+      stat:
+        path: /opt/nifi-{{ nifi_version }}/README
+      register: nifi_unarchived
+
+    - name: unarchive nifi when not unarchived
+      unarchive:
+        src: /opt/nifi.tar.gz
+        dest: /opt
+        remote_src: yes
+      when: nifi_unarchived.stat.exists == false
+
+    - name: nifi version to /opt/nifi softlink
+      file:
+        src: /opt/nifi-{{ nifi_version }}
+        path: /opt/nifi
+        state: link
+        mode: 0755
+        owner: root
+        group: root
+
+    - name: nifi-tls-toolkit systemd service file
+      template:
+        src: nifi-tls-toolkit-server.service
+        dest: /etc/systemd/system/nifi-tls-toolkit-server.service
+        mode: 0440
+        owner: root
+        group: root
+
+    - name: check nifi-toolkit downloaded file
+      stat:
+        path: /opt/nifi-toolkit.tar.gz
+      register: nifi_toolkit_downloaded
+
+    - name: download nifi-toolkit if not downloaded
+      get_url:
+        url: http://mirror.cogentco.com/pub/apache/nifi/{{ nifi_version }}/nifi-toolkit-{{ nifi_version }}-bin.tar.gz
+        dest: /opt/nifi-toolkit.tar.gz
+        mode: '0440'
+      when: nifi_toolkit_downloaded.stat.exists == false
+
+    - name: check nifi-toolkit unarchived
+      stat:
+        path: /opt/nifi-toolkit-{{ nifi_version }}/README
+      register: nifi_toolkit_unarchived
+
+    - name: unarchive nifi-toolkit if not unarchived
+      unarchive:
+        src: /opt/nifi-toolkit.tar.gz
+        dest: /opt
+        remote_src: yes
+      when: nifi_toolkit_unarchived.stat.exists == false
+
+    - name: nifi-toolkit version to /opt/nifi softlink
+      file:
+        src: /opt/nifi-toolkit-{{ nifi_version }}
+        path: /opt/nifi-toolkit
+        state: link
+        mode: 0755
+        owner: root
+        group: root
+
+    - name: ca certificate directory
+      file:
+        path: /opt/nifi-ca-certificates
+        state: directory
+        mode: 0750
+        owner: root
+        group: root
+
+    - name: certificate directory
+      file:
+        path: /opt/nifi-certificates
+        state: directory
+        mode: 0750
+        owner: root
+        group: root
+
+    - name: place nifi-tls-toolkit-server
+      template:
+        src: nifi-tls-toolkit-server
+        dest: /opt/nifi-toolkit/nifi-tls-toolkit-server
+        mode: 0750
+        owner: root
+        group: root
+
+    - name: check ca tls conf exists
+      stat:
+        path: /opt/nifi-ca-certificates/tls.json
+      register: nifi_ca_tls_conf
+
+    - name: run nifi-tls-toolkit-server if ca tls conf does not exist
+      shell: /opt/nifi-toolkit/nifi-tls-toolkit-server
+      args:
+        chdir: /opt/nifi-ca-certificates/
+        executable: /bin/bash
+      when:
+        - nifi_ca_tls_conf.stat.exists == false
+
+    - name: nifi-tls-toolkit-server systemd service start/enable
+      systemd:
+        state: started
+        enabled: yes
+        name: nifi-tls-toolkit-server
+        daemon_reload: yes
+
+    - name: check ldap keystore exists
+      stat:
+        path: /opt/nifi-certificates/ldap-keystore.jks
+      register: ldap_keystore
+
+    - name: nifi configuration files
+      template:
+        src: "{{ item }}"
+        dest: "/opt/nifi/conf/"
+        owner: root
+        group: root
+        mode: 0440
+      with_items:
+        - "authorizers.xml"
+        - "nifi.properties"
+
+    - name: place nifi-tls-toolkit-client script
+      template:
+        src: nifi-tls-toolkit-client
+        dest: /opt/nifi-toolkit/nifi-tls-toolkit-client
+        owner: root
+        group: wheel
+        mode: 0550
+
+    - name: check client tls conf exists
+      stat:
+        path: /opt/nifi-certificates/tls.json
+      register: nifi_client_tls_conf
+
+    - name: run nifi-tls-toolkit-client if client tls conf does not exist
+      shell: /opt/nifi-toolkit/nifi-tls-toolkit-client
+      args:
+        chdir: /opt/nifi-certificates/
+        executable: /bin/bash
+      when:
+        - nifi_client_tls_conf.stat.exists == false
+
+    - name: place nifi-tls-toolkit-client-passwords-to-properties on clients
+      template:
+        src: nifi-tls-toolkit-client-passwords-to-properties
+        dest: /opt/nifi-toolkit/nifi-tls-toolkit-client-passwords-to-properties
+        owner: root
+        group: wheel
+        mode: 0550
+
+    - name: run nifi-tls-toolkit-client-passwords-to-properties
+      shell: /opt/nifi-toolkit/nifi-tls-toolkit-client-passwords-to-properties
+      args:
+        chdir: /opt/nifi-certificates/
+        executable: /bin/bash
+
+    - name: zookeeper configuration files
+      template:
+        src: "{{ item }}"
+        dest: "/opt/zookeeper/conf/"
+        owner: root
+        group: wheel
+        mode: 0440
+      with_items:
+        - "zoo.cfg"
+
+    - name: zookeeper data directory
+      file:
+        path: /opt/zookeeper/data
+        state: directory
+        mode: 0755
+        owner: root
+        group: root
+
+    - name: zookeeper myid file
+      template:
+        src: myid
+        dest: /opt/zookeeper/data/myid
+        owner: root
+        group: wheel
+        mode: 0444
+
+    - name: zookeeper systemd service start/enable
+      systemd:
+        state: started
+        enabled: yes
+        name: zookeeper
+        daemon_reload: yes
+
+    - name: nifi systemd service start/enable
+      systemd:
+        state: started
+        enabled: yes
+        name: nifi
+        daemon_reload: yes

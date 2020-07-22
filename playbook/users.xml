@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<tenants>
+    <group>
+        <group identifier="12345678-1234-1234-1234-1234567789cd" identity="CN=tf-nifi-group, OU=NiFi"/>
+    <groups/>
+    <users>
+        <user identifier="12345678-1234-1234-1234-1234567789ab" identity="CN=admin, OU=NiFi"/>
+    </users>
+</tenants>
