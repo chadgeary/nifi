@@ -8,37 +8,35 @@ variable "aws_profile" {
 
 variable "vpc_cidr" {
   type                     = string
-  default                  = "10.90.0.0/16"
 }
 
 variable "pubnet1_cidr" {
   type                     = string
-  default                  = "10.90.1.0/24"
 }
 
 variable "prinet1_cidr" {
   type                     = string
-  default                  = "10.90.2.0/24"
 }
 
 variable "pubnet2_cidr" {
   type                     = string
-  default                  = "10.90.3.0/24"
 }
 
 variable "prinet2_cidr" {
   type                     = string
-  default                  = "10.90.4.0/24"
 }
 
 variable "pubnet3_cidr" {
   type                     = string
-  default                  = "10.90.5.0/24"
 }
 
 variable "prinet3_cidr" {
   type                     = string
-  default                  = "10.90.6.0/24"
+}
+
+variable "mgmt_cidr" {
+  type                     = string
+  description              = "Subnet CIDR allowed to access NiFi instance(s) via ELB, e.g. 172.16.10.0/30"
 }
 
 variable "instance_key" {
@@ -49,6 +47,11 @@ variable "instance_key" {
 variable "bucket_name" {
   type                     = string
   description              = "A unique bucket name to store playbooks and output of SSM"
+}
+
+variable "mirror_host" {
+  type                     = string
+  description              = "Mirror host for NiFi and Zookeeper installation files, e.g. mirror.cogentco.com"
 }
 
 variable "nifi_version" {
@@ -318,7 +321,7 @@ resource "aws_security_group_rule" "tf-nifi-pubsg1-rule1-in" {
   from_port               = "80"
   to_port                 = "8080"
   protocol                = "tcp"
-  cidr_blocks             = ["127.0.0.1/32"]
+  cidr_blocks             = [var.mgmt_cidr]
 }
 
 resource "aws_security_group_rule" "tf-nifi-pubsg1-rule1-out" {
@@ -338,7 +341,7 @@ resource "aws_security_group_rule" "tf-nifi-pubsg1-rule2-in" {
   from_port               = "22"
   to_port                 = "22"
   protocol                = "tcp"
-  cidr_blocks             = [var.management_cidr]
+  cidr_blocks             = [var.mgmt_cidr]
 }
 
 resource "aws_security_group_rule" "tf-nifi-pubsg1-rule2-out" {
@@ -429,7 +432,7 @@ resource "aws_ssm_association" "tf-nifi-ssm-assoc" {
   }
   parameters              = {
     Check                   = "False"
-    ExtraVariables          = "SSM=True zk_version=${var.zk_version} nifi_version=${var.nifi_version} keystore_password=somesecurepassword1"
+    ExtraVariables          = "SSM=True zk_version=${var.zk_version} nifi_version=${var.nifi_version} keystore_password=somesecurepassword1 mirror_host=${var.mirror_host}"
     InstallDependencies     = "True"
     PlaybookFile            = "tf-nifi-playbook.yml"
     SourceInfo              = "{\"path\":\"https://s3.${var.aws_region}.amazonaws.com/${aws_s3_bucket.tf-nifi-bucket.id}/playbook/\"}"
@@ -580,6 +583,11 @@ resource "aws_instance" "tf-nifi-1" {
   depends_on              = [aws_nat_gateway.tf-nifi-ng1]
 }
 
+resource "aws_elb_attachment" "tf-nifi-1-elb-attach" {
+  elb                     = aws_elb.tf-nifi-elb1.id
+  instance                = aws_instance.tf-nifi-1.id
+}
+
 resource "aws_instance" "tf-nifi-2" {
   ami                     = data.aws_ami.tf-nifi-rhel-ami.id
   instance_type           = "t3a.medium"
@@ -594,6 +602,11 @@ resource "aws_instance" "tf-nifi-2" {
   depends_on              = [aws_nat_gateway.tf-nifi-ng2]
 }
 
+resource "aws_elb_attachment" "tf-nifi-2-elb-attach" {
+  elb                     = aws_elb.tf-nifi-elb1.id
+  instance                = aws_instance.tf-nifi-2.id
+}
+
 resource "aws_instance" "tf-nifi-3" {
   ami                     = data.aws_ami.tf-nifi-rhel-ami.id
   instance_type           = "t3a.medium"
@@ -606,4 +619,9 @@ resource "aws_instance" "tf-nifi-3" {
   }
   user_data               = file("userdata/tf-nifi-userdata-3.sh")
   depends_on              = [aws_nat_gateway.tf-nifi-ng3]
+}
+
+resource "aws_elb_attachment" "tf-nifi-3-elb-attach" {
+  elb                     = aws_elb.tf-nifi-elb1.id
+  instance                = aws_instance.tf-nifi-3.id
 }

@@ -38,7 +38,7 @@
 
     - name: download zookeeper if not downloaded
       get_url:
-        url: http://mirror.cogentco.com/pub/apache/zookeeper/current/apache-zookeeper-{{ zk_version }}-bin.tar.gz
+        url: http://{{ mirror_host }}/pub/apache/zookeeper/current/apache-zookeeper-{{ zk_version }}-bin.tar.gz
         dest: /opt/zookeeper.tar.gz
         mode: '0644'
       when: zk_download.stat.exists == false
@@ -78,7 +78,7 @@
 
     - name: download nifi if not downloaded
       get_url:
-        url: http://mirror.cogentco.com/pub/apache/nifi/{{ nifi_version }}/nifi-{{ nifi_version }}-bin.tar.gz
+        url: http://{{ mirror_host }}/pub/apache/nifi/{{ nifi_version }}/nifi-{{ nifi_version }}-bin.tar.gz
         dest: /opt/nifi.tar.gz
         mode: '0440'
       when: nifi_downloaded.stat.exists == false
@@ -117,8 +117,16 @@
         src: myid
         dest: /opt/zookeeper/data/myid
         owner: root
-        group: wheel
+        group: root
         mode: 0444
+
+    - name: zookeeper conf
+      template:
+        src: zoo.cfg
+        dest: /opt/zookeeper/conf/zoo.cfg
+        owner: root
+        group: root
+        mode: 0640
 
     - name: zookeeper systemd service start/enable
       systemd:
