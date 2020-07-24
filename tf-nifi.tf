@@ -409,12 +409,32 @@ resource "aws_security_group_rule" "tf-nifi-prisg1-https-out" {
   cidr_blocks             = ["0.0.0.0/0"]
 }
 
+resource "aws_security_group_rule" "tf-nifi-prisg1-self-in" {
+  security_group_id       = aws_security_group.tf-nifi-prisg1.id
+  type                    = "ingress"
+  description             = "IN - SELF"
+  from_port               = "2100"
+  to_port                 = "2299"
+  protocol                = "tcp"
+  source_security_group_id = aws_security_group.tf-nifi-prisg1.id
+}
+
+resource "aws_security_group_rule" "tf-nifi-prisg1-self-out" {
+  security_group_id       = aws_security_group.tf-nifi-prisg1.id
+  type                    = "egress"
+  description             = "OUT - SELF"
+  from_port               = "2100"
+  to_port                 = "2299"
+  protocol                = "tcp"
+  source_security_group_id = aws_security_group.tf-nifi-prisg1.id
+}
+
 # s3 bucket, object, and ssm association for nifi installation
 resource "aws_s3_bucket" "tf-nifi-bucket" {
   bucket                  = var.bucket_name
   acl                     = "private"
   versioning {
-                            enabled = true
+    enabled = true
   }
   server_side_encryption_configuration {
     rule {
@@ -426,16 +446,16 @@ resource "aws_s3_bucket" "tf-nifi-bucket" {
   }
 }
 
-resource "aws_s3_bucket_object" "tf-nifi-playbook" {
-  for_each                = fileset("playbook/", "*")
+resource "aws_s3_bucket_object" "tf-nifi-zookeepers" {
+  for_each                = fileset("zookeepers/", "*")
   bucket                  = aws_s3_bucket.tf-nifi-bucket.id
-  key                     = "playbook/${each.value}"
-  source                  = "playbook/${each.value}"
-  etag                    = filemd5("playbook/${each.value}")
+  key                     = "zookeepers/${each.value}"
+  source                  = "zookeepers/${each.value}"
+  etag                    = filemd5("zookeepers/${each.value}")
 }
 
-resource "aws_ssm_association" "tf-nifi-ssm-assoc" {
-  association_name        = "tf-nifi-ssm-assoc"
+resource "aws_ssm_association" "tf-nifi-zookeepers-ssm-assoc" {
+  association_name        = "tf-nifi-zookeepers"
   name                    = "AWS-ApplyAnsiblePlaybooks"
   targets {
     key                   = "tag:Name"
@@ -447,10 +467,10 @@ resource "aws_ssm_association" "tf-nifi-ssm-assoc" {
   }
   parameters              = {
     Check                   = "False"
-    ExtraVariables          = "SSM=True zk_version=${var.zk_version} nifi_version=${var.nifi_version} keystore_password=somesecurepassword1 mirror_host=${var.mirror_host} node1_ip=${var.node1_ip} node2_ip=${var.node2_ip} node3_ip=${var.node3_ip}"
+    ExtraVariables          = "SSM=True zk_version=${var.zk_version} nifi_version=${var.nifi_version} mirror_host=${var.mirror_host} node1_ip=${var.node1_ip} node2_ip=${var.node2_ip} node3_ip=${var.node3_ip}"
     InstallDependencies     = "True"
-    PlaybookFile            = "tf-nifi-playbook.yml"
-    SourceInfo              = "{\"path\":\"https://s3.${var.aws_region}.amazonaws.com/${aws_s3_bucket.tf-nifi-bucket.id}/playbook/\"}"
+    PlaybookFile            = "zookeepers.yml"
+    SourceInfo              = "{\"path\":\"https://s3.${var.aws_region}.amazonaws.com/${aws_s3_bucket.tf-nifi-bucket.id}/zookeepers/\"}"
     SourceType              = "S3"
     Verbose                 = "-v"
   }
@@ -501,7 +521,7 @@ resource "aws_iam_policy" "tf-nifi-instance-policy-s3" {
         "s3:GetObject",
         "s3:GetObjectVersion"
       ],
-      "Resource": ["${aws_s3_bucket.tf-nifi-bucket.arn}/playbook/*"]
+      "Resource": ["${aws_s3_bucket.tf-nifi-bucket.arn}/zookeepers/*"]
     },
     {
       "Sid": "PutObjectsinBucketPrefix",
