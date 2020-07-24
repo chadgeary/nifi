@@ -34,6 +34,21 @@ variable "prinet3_cidr" {
   type                     = string
 }
 
+variable "node1_ip" {
+  type                     = string
+  description              = "An ip from prinet1_cidr for the first nifi node, which runs zookeeper"
+}
+
+variable "node2_ip" {
+  type                     = string
+  description              = "An ip from prinet2_cidr for the second nifi node, which runs zookeeper"
+}
+
+variable "node3_ip" {
+  type                     = string
+  description              = "An ip from prinet3_cidr for the third nifi node, which runs zookeeper"
+}
+
 variable "mgmt_cidr" {
   type                     = string
   description              = "Subnet CIDR allowed to access NiFi instance(s) via ELB, e.g. 172.16.10.0/30"
@@ -432,7 +447,7 @@ resource "aws_ssm_association" "tf-nifi-ssm-assoc" {
   }
   parameters              = {
     Check                   = "False"
-    ExtraVariables          = "SSM=True zk_version=${var.zk_version} nifi_version=${var.nifi_version} keystore_password=somesecurepassword1 mirror_host=${var.mirror_host}"
+    ExtraVariables          = "SSM=True zk_version=${var.zk_version} nifi_version=${var.nifi_version} keystore_password=somesecurepassword1 mirror_host=${var.mirror_host} node1_ip=${var.node1_ip} node2_ip=${var.node2_ip} node3_ip=${var.node3_ip}"
     InstallDependencies     = "True"
     PlaybookFile            = "tf-nifi-playbook.yml"
     SourceInfo              = "{\"path\":\"https://s3.${var.aws_region}.amazonaws.com/${aws_s3_bucket.tf-nifi-bucket.id}/playbook/\"}"
@@ -575,6 +590,7 @@ resource "aws_instance" "tf-nifi-1" {
   iam_instance_profile    = aws_iam_instance_profile.tf-nifi-instance-profile.name
   key_name                = aws_key_pair.tf-nifi-instance-key.key_name
   subnet_id               = aws_subnet.tf-nifi-prinet1.id
+  private_ip              = var.node1_ip
   vpc_security_group_ids  = [aws_security_group.tf-nifi-prisg1.id]
   tags                    = {
     Name                    = "tf-nifi-1"
@@ -594,6 +610,7 @@ resource "aws_instance" "tf-nifi-2" {
   iam_instance_profile    = aws_iam_instance_profile.tf-nifi-instance-profile.name
   key_name                = aws_key_pair.tf-nifi-instance-key.key_name
   subnet_id               = aws_subnet.tf-nifi-prinet1.id
+  private_ip              = var.node2_ip
   vpc_security_group_ids  = [aws_security_group.tf-nifi-prisg1.id]
   tags                    = {
     Name                    = "tf-nifi-2"
@@ -613,6 +630,7 @@ resource "aws_instance" "tf-nifi-3" {
   iam_instance_profile    = aws_iam_instance_profile.tf-nifi-instance-profile.name
   key_name                = aws_key_pair.tf-nifi-instance-key.key_name
   subnet_id               = aws_subnet.tf-nifi-prinet1.id
+  private_ip              = var.node3_ip
   vpc_security_group_ids  = [aws_security_group.tf-nifi-prisg1.id]
   tags                    = {
     Name                    = "tf-nifi-3"
