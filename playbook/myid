@@ -1,1 +1,1 @@
-{{ node_id }}
+{{ node_id.stdout }}

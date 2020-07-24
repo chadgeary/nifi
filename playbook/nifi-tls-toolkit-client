@@ -1,6 +1,0 @@
-#!/bin/bash
-# set JAVA_HOME
-export JAVA_HOME=/usr/lib/jvm/jre
-
-# run toolkit client to generate certificates
-/opt/nifi-toolkit/bin/tls-toolkit.sh client -a RSA -c {{ node0 }} -p 8443 -D "CN={{ ansible_nodename }},OU=nifi" --subjectAlternativeNames {{ ansible_nodename }} -f /opt/nifi-certificates/tls.json -k 2048 -T jks -t {{ keystore_password }}

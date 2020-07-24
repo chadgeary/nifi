@@ -315,8 +315,8 @@ resource "aws_security_group_rule" "tf-nifi-pubsg1-rule1-in" {
   security_group_id       = aws_security_group.tf-nifi-pubsg1.id
   type                    = "ingress"
   description             = "IN - NiFi Listen 1"
-  from_port               = "3001"
-  to_port                 = "3001"
+  from_port               = "80"
+  to_port                 = "8080"
   protocol                = "tcp"
   cidr_blocks             = ["127.0.0.1/32"]
 }
@@ -325,8 +325,8 @@ resource "aws_security_group_rule" "tf-nifi-pubsg1-rule1-out" {
   security_group_id       = aws_security_group.tf-nifi-pubsg1.id
   type                    = "egress"
   description             = "OUT - NiFi Listen 1"
-  from_port               = "3001"
-  to_port                 = "3001"
+  from_port               = "8080"
+  to_port                 = "8080"
   protocol                = "tcp"
   source_security_group_id = aws_security_group.tf-nifi-prisg1.id
 }
@@ -338,7 +338,7 @@ resource "aws_security_group_rule" "tf-nifi-pubsg1-rule2-in" {
   from_port               = "22"
   to_port                 = "22"
   protocol                = "tcp"
-  cidr_blocks             = ["127.0.0.1/32"]
+  cidr_blocks             = [var.management_cidr]
 }
 
 resource "aws_security_group_rule" "tf-nifi-pubsg1-rule2-out" {
@@ -355,8 +355,8 @@ resource "aws_security_group_rule" "tf-nifi-prisg1-rule1-in" {
   security_group_id       = aws_security_group.tf-nifi-prisg1.id
   type                    = "ingress"
   description             = "IN - NiFi Listen 1"
-  from_port               = "3001"
-  to_port                 = "3001"
+  from_port               = "8080"
+  to_port                 = "8080"
   protocol                = "tcp"
   source_security_group_id = aws_security_group.tf-nifi-pubsg1.id
 }
@@ -421,7 +421,7 @@ resource "aws_ssm_association" "tf-nifi-ssm-assoc" {
   name                    = "AWS-ApplyAnsiblePlaybooks"
   targets {
     key                   = "tag:Name"
-    values                = ["tf-nifi-1"]
+    values                = ["tf-nifi-1","tf-nifi-2","tf-nifi-3"]
   }
   output_location {
     s3_bucket_name          = aws_s3_bucket.tf-nifi-bucket.id
@@ -429,7 +429,7 @@ resource "aws_ssm_association" "tf-nifi-ssm-assoc" {
   }
   parameters              = {
     Check                   = "False"
-    ExtraVariables          = "SSM=True zk_version=${var.zk_version} nifi_version=${var.nifi_version} keystore_password=somesecurepassword1 node0=tf-nifi-1 node_id=1"
+    ExtraVariables          = "SSM=True zk_version=${var.zk_version} nifi_version=${var.nifi_version} keystore_password=somesecurepassword1"
     InstallDependencies     = "True"
     PlaybookFile            = "tf-nifi-playbook.yml"
     SourceInfo              = "{\"path\":\"https://s3.${var.aws_region}.amazonaws.com/${aws_s3_bucket.tf-nifi-bucket.id}/playbook/\"}"
@@ -440,7 +440,7 @@ resource "aws_ssm_association" "tf-nifi-ssm-assoc" {
 
 # load balancer
 resource "aws_elb" "tf-nifi-elb1" {
-  name                    = "tf-nifi-elb1"
+  name                    = "tf-nifi-elb"
   subnets                 = [aws_subnet.tf-nifi-pubnet1.id, aws_subnet.tf-nifi-pubnet2.id, aws_subnet.tf-nifi-pubnet3.id]
   security_groups         = [aws_security_group.tf-nifi-pubsg1.id]
   listener {
@@ -568,7 +568,7 @@ data "aws_ami" "tf-nifi-rhel-ami" {
 # Instance(s)
 resource "aws_instance" "tf-nifi-1" {
   ami                     = data.aws_ami.tf-nifi-rhel-ami.id
-  instance_type           = "t3a.micro"
+  instance_type           = "t3a.medium"
   iam_instance_profile    = aws_iam_instance_profile.tf-nifi-instance-profile.name
   key_name                = aws_key_pair.tf-nifi-instance-key.key_name
   subnet_id               = aws_subnet.tf-nifi-prinet1.id
@@ -576,5 +576,34 @@ resource "aws_instance" "tf-nifi-1" {
   tags                    = {
     Name                    = "tf-nifi-1"
   }
-  user_data               = file("tf-nifi-userdata.sh")
+  user_data               = file("userdata/tf-nifi-userdata-1.sh")
+  depends_on              = [aws_nat_gateway.tf-nifi-ng1]
+}
+
+resource "aws_instance" "tf-nifi-2" {
+  ami                     = data.aws_ami.tf-nifi-rhel-ami.id
+  instance_type           = "t3a.medium"
+  iam_instance_profile    = aws_iam_instance_profile.tf-nifi-instance-profile.name
+  key_name                = aws_key_pair.tf-nifi-instance-key.key_name
+  subnet_id               = aws_subnet.tf-nifi-prinet1.id
+  vpc_security_group_ids  = [aws_security_group.tf-nifi-prisg1.id]
+  tags                    = {
+    Name                    = "tf-nifi-2"
+  }
+  user_data               = file("userdata/tf-nifi-userdata-2.sh")
+  depends_on              = [aws_nat_gateway.tf-nifi-ng2]
+}
+
+resource "aws_instance" "tf-nifi-3" {
+  ami                     = data.aws_ami.tf-nifi-rhel-ami.id
+  instance_type           = "t3a.medium"
+  iam_instance_profile    = aws_iam_instance_profile.tf-nifi-instance-profile.name
+  key_name                = aws_key_pair.tf-nifi-instance-key.key_name
+  subnet_id               = aws_subnet.tf-nifi-prinet1.id
+  vpc_security_group_ids  = [aws_security_group.tf-nifi-prisg1.id]
+  tags                    = {
+    Name                    = "tf-nifi-3"
+  }
+  user_data               = file("userdata/tf-nifi-userdata-3.sh")
+  depends_on              = [aws_nat_gateway.tf-nifi-ng3]
 }
