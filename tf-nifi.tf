@@ -34,6 +34,21 @@ variable "prinet3_cidr" {
   type                     = string
 }
 
+variable "efs1_ip" {
+  type                     = string
+  description              = "An IP from prinet1_cidr for the first efs mount target"
+}
+
+variable "efs2_ip" {
+  type                     = string
+  description              = "An IP from prinet2_cidr for the second efs mount target"
+}
+
+variable "efs3_ip" {
+  type                     = string
+  description              = "An IP from prinet3_cidr for the third efs mount target"
+}
+
 variable "node1_ip" {
   type                     = string
   description              = "An ip from prinet1_cidr for the first nifi node, which runs zookeeper"
@@ -57,6 +72,11 @@ variable "mgmt_cidr" {
 variable "instance_key" {
   type                     = string
   description              = "A public key for SSH access to instance(s)"
+}
+
+variable "kms_manager" {
+  type                     = string
+  description              = "An IAM user for management of KMS key"
 }
 
 variable "bucket_name" {
@@ -89,9 +109,126 @@ data "aws_availability_zones" "tf-nifi-azs" {
   state                    = "available"
 }
 
-# aws managed kms key for s3
-data "aws_kms_key" "tf-nifi-s3kmskey" {
-  key_id                  = "alias/aws/s3"
+# account id
+data "aws_caller_identity" "tf-nifi-aws-account" {
+}
+
+# aws managed kms key (ebs and s3)
+data "aws_iam_user" "tf-nifi-kmsmanager" {
+  user_name               = var.kms_manager
+}
+
+resource "aws_kms_key" "tf-nifi-kmscmk" {
+  description             = "Key for tf-nifi data (EC2, EFS, S3)"
+  key_usage               = "ENCRYPT_DECRYPT"
+  customer_master_key_spec = "SYMMETRIC_DEFAULT"
+  enable_key_rotation     = "true"
+  tags                    = {
+    Name                  = "tf-nifi-kmscmk"
+  }
+  policy                  = <<EOF
+{
+  "Id": "tf-nifi-kmskeypolicy",
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "Enable IAM User Permissions",
+      "Effect": "Allow",
+      "Principal": {
+        "AWS": "${data.aws_iam_user.tf-nifi-kmsmanager.arn}"
+      },
+      "Action": "kms:*",
+      "Resource": "*"
+    },
+    {
+      "Sid": "Allow attachment of persistent resources",
+      "Effect": "Allow",
+      "Principal": {
+        "AWS": "${aws_iam_role.tf-nifi-instance-iam-role.arn}"
+      },
+      "Action": [
+        "kms:CreateGrant",
+        "kms:ListGrants",
+        "kms:RevokeGrant"
+      ],
+      "Resource": "*",
+      "Condition": {
+        "Bool": {
+          "kms:GrantIsForAWSResource": "true"
+        }
+      }
+    },
+    {
+      "Sid": "Allow access through EC2",
+      "Effect": "Allow",
+      "Principal": {
+        "AWS": "${aws_iam_role.tf-nifi-instance-iam-role.arn}"
+      },
+      "Action": [
+        "kms:Encrypt",
+        "kms:Decrypt",
+        "kms:ReEncrypt*",
+        "kms:GenerateDataKey*",
+        "kms:DescribeKey"
+      ],
+      "Resource": "*",
+      "Condition": {
+        "StringEquals": {
+          "kms:CallerAccount": "${data.aws_caller_identity.tf-nifi-aws-account.account_id}",
+          "kms:ViaService": "ec2.${var.aws_region}.amazonaws.com"
+        }
+      }
+    },
+    {
+      "Sid": "Allow access through S3",
+      "Effect": "Allow",
+      "Principal": {
+        "AWS": "${aws_iam_role.tf-nifi-instance-iam-role.arn}"
+      },
+      "Action": [
+        "kms:Encrypt",
+        "kms:Decrypt",
+        "kms:ReEncrypt*",
+        "kms:GenerateDataKey*",
+        "kms:DescribeKey"
+      ],
+      "Resource": "*",
+      "Condition": {
+        "StringEquals": {
+          "kms:CallerAccount": "${data.aws_caller_identity.tf-nifi-aws-account.account_id}",
+          "kms:ViaService": "s3.${var.aws_region}.amazonaws.com"
+        }
+      } 
+    },
+    {
+      "Sid": "Allow access through EFS",
+      "Effect": "Allow",
+      "Principal": {
+        "AWS": "${aws_iam_role.tf-nifi-instance-iam-role.arn}"
+      },
+      "Action": [
+        "kms:Encrypt",
+        "kms:Decrypt",
+        "kms:ReEncrypt*",
+        "kms:GenerateDataKey*",
+        "kms:DescribeKey"
+      ],
+      "Resource": "*",
+      "Condition": {
+        "StringEquals": {
+          "kms:CallerAccount": "${data.aws_caller_identity.tf-nifi-aws-account.account_id}",
+          "kms:ViaService": "elasticfilesystem.${var.aws_region}.amazonaws.com}"
+        }
+      }
+    }
+  ]
+}
+EOF
+}
+
+resource "aws_kms_alias" "tf-nifi-kmscmk-alias" {
+  name                    = "alias/tf-nifi-ksmcmk"
+  target_key_id           = aws_kms_key.tf-nifi-kmscmk.key_id
 }
 
 # vpc and gateway
@@ -439,7 +576,7 @@ resource "aws_s3_bucket" "tf-nifi-bucket" {
   server_side_encryption_configuration {
     rule {
       apply_server_side_encryption_by_default {
-        kms_master_key_id = data.aws_kms_key.tf-nifi-s3kmskey.arn
+        kms_master_key_id = aws_kms_key.tf-nifi-kmscmk.arn
         sse_algorithm     = "aws:kms"
       }
     }
@@ -467,7 +604,7 @@ resource "aws_ssm_association" "tf-nifi-zookeepers-ssm-assoc" {
   }
   parameters              = {
     Check                   = "False"
-    ExtraVariables          = "SSM=True zk_version=${var.zk_version} nifi_version=${var.nifi_version} mirror_host=${var.mirror_host} node1_ip=${var.node1_ip} node2_ip=${var.node2_ip} node3_ip=${var.node3_ip}"
+    ExtraVariables          = "SSM=True zk_version=${var.zk_version} nifi_version=${var.nifi_version} mirror_host=${var.mirror_host} node1_ip=${var.node1_ip} node2_ip=${var.node2_ip} node3_ip=${var.node3_ip} efs_source=${aws_efs_file_system.tf-nifi-efs.id}.efs.${var.aws_region}.amazonaws.com"
     InstallDependencies     = "True"
     PlaybookFile            = "zookeepers.yml"
     SourceInfo              = "{\"path\":\"https://s3.${var.aws_region}.amazonaws.com/${aws_s3_bucket.tf-nifi-bucket.id}/zookeepers/\"}"
@@ -493,6 +630,70 @@ resource "aws_elb" "tf-nifi-elb1" {
     lb_port                 = 8080
     lb_protocol             = "TCP"
   }
+}
+
+# efs
+resource "aws_efs_file_system" "tf-nifi-efs" {
+  creation_token          = "tf-nifi-efs"
+  encrypted               = "true"
+  kms_key_id              = aws_kms_key.tf-nifi-kmscmk.arn
+  tags                    = {
+    Name                    = "tf-nifi-efs"
+  }
+}
+
+resource "aws_efs_file_system_policy" "tf-nifi-efs-policy" {
+  file_system_id          = aws_efs_file_system.tf-nifi-efs.id
+  policy                  = <<POLICY
+{
+  "Version": "2012-10-17",
+  "Id": "tf-nifi-efs-policy",
+  "Statement": [
+    {
+      "Sid": "tf-nifi-mountwrite",
+      "Effect": "Allow",
+      "Principal": {
+        "AWS": "${aws_iam_role.tf-nifi-instance-iam-role.arn}"
+      },
+      "Resource": "${aws_efs_file_system.tf-nifi-efs.arn}",
+      "Action": [
+        "elasticfilesystem:ClientMount",
+        "elasticfilesystem:ClientWrite"
+      ],
+      "Condition": {
+        "Bool": {
+          "aws:SecureTransport": "true"
+        }
+      }
+    }
+  ]
+}
+POLICY
+}
+
+resource "aws_efs_access_point" "tf-nifi-efs-accesspoint" {
+  file_system_id          = aws_efs_file_system.tf-nifi-efs.id
+}
+
+resource "aws_efs_mount_target" "tf-nifi-efs-mounttarget-1" {
+  file_system_id          = aws_efs_file_system.tf-nifi-efs.id
+  subnet_id               = aws_subnet.tf-nifi-prinet1.id
+  security_groups         = [aws_security_group.tf-nifi-prisg1.id]
+  ip_address              = var.efs1_ip
+}
+
+resource "aws_efs_mount_target" "tf-nifi-efs-mounttarget-2" {
+  file_system_id          = aws_efs_file_system.tf-nifi-efs.id
+  subnet_id               = aws_subnet.tf-nifi-prinet2.id
+  security_groups         = [aws_security_group.tf-nifi-prisg1.id]
+  ip_address              = var.efs2_ip
+}
+
+resource "aws_efs_mount_target" "tf-nifi-efs-mounttarget-3" {
+  file_system_id          = aws_efs_file_system.tf-nifi-efs.id
+  subnet_id               = aws_subnet.tf-nifi-prinet3.id
+  security_groups         = [aws_security_group.tf-nifi-prisg1.id]
+  ip_address              = var.efs3_ip
 }
 
 # Instance Role and Profile, Key, Image (Latest RHEL7), and Instance
@@ -531,6 +732,17 @@ resource "aws_iam_policy" "tf-nifi-instance-policy-s3" {
         "s3:PutObjectAcl"
       ],
       "Resource": ["${aws_s3_bucket.tf-nifi-bucket.arn}/ssm/*"]
+    },
+    {
+      "Sid": "KMSforCMK",
+      "Effect": "Allow",
+      "Action": [
+        "kms:Encrypt",
+        "kms:ReEncrypt*",
+        "kms:GenerateDataKey*",
+        "kms:DescribeKey"
+      ],
+      "Resource": ["${aws_kms_alias.tf-nifi-kmscmk-alias.arn}","${aws_kms_key.tf-nifi-kmscmk.arn}"]
     }
   ]
 }
@@ -616,6 +828,10 @@ resource "aws_instance" "tf-nifi-1" {
     Name                    = "tf-nifi-1"
   }
   user_data               = file("userdata/tf-nifi-userdata-1.sh")
+  root_block_device {
+    encrypted               = "true"
+    kms_key_id              = aws_kms_key.tf-nifi-kmscmk.arn
+  }
   depends_on              = [aws_nat_gateway.tf-nifi-ng1]
 }
 
@@ -629,13 +845,17 @@ resource "aws_instance" "tf-nifi-2" {
   instance_type           = "t3a.medium"
   iam_instance_profile    = aws_iam_instance_profile.tf-nifi-instance-profile.name
   key_name                = aws_key_pair.tf-nifi-instance-key.key_name
-  subnet_id               = aws_subnet.tf-nifi-prinet1.id
+  subnet_id               = aws_subnet.tf-nifi-prinet2.id
   private_ip              = var.node2_ip
   vpc_security_group_ids  = [aws_security_group.tf-nifi-prisg1.id]
   tags                    = {
     Name                    = "tf-nifi-2"
   }
   user_data               = file("userdata/tf-nifi-userdata-2.sh")
+  root_block_device {
+    encrypted               = "true"
+    kms_key_id              = aws_kms_key.tf-nifi-kmscmk.arn
+  }
   depends_on              = [aws_nat_gateway.tf-nifi-ng2]
 }
 
@@ -649,13 +869,17 @@ resource "aws_instance" "tf-nifi-3" {
   instance_type           = "t3a.medium"
   iam_instance_profile    = aws_iam_instance_profile.tf-nifi-instance-profile.name
   key_name                = aws_key_pair.tf-nifi-instance-key.key_name
-  subnet_id               = aws_subnet.tf-nifi-prinet1.id
+  subnet_id               = aws_subnet.tf-nifi-prinet3.id
   private_ip              = var.node3_ip
   vpc_security_group_ids  = [aws_security_group.tf-nifi-prisg1.id]
   tags                    = {
     Name                    = "tf-nifi-3"
   }
   user_data               = file("userdata/tf-nifi-userdata-3.sh")
+  root_block_device {
+    encrypted               = "true"
+    kms_key_id              = aws_kms_key.tf-nifi-kmscmk.arn
+  }
   depends_on              = [aws_nat_gateway.tf-nifi-ng3]
 }
 
