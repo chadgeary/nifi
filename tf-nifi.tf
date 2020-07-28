@@ -234,6 +234,8 @@ resource "aws_kms_alias" "tf-nifi-kmscmk-alias" {
 # vpc and gateway
 resource "aws_vpc" "tf-nifi-vpc" {
   cidr_block              = var.vpc_cidr
+  enable_dns_support      = "true"
+  enable_dns_hostnames    = "true"
   tags                    = {
     Name                  = "tf-nifi-vpc"
   }
@@ -657,12 +659,14 @@ resource "aws_efs_file_system_policy" "tf-nifi-efs-policy" {
       },
       "Resource": "${aws_efs_file_system.tf-nifi-efs.arn}",
       "Action": [
-        "elasticfilesystem:ClientMount",
-        "elasticfilesystem:ClientWrite"
+        "elasticfilesystem:Client*"
       ],
       "Condition": {
         "Bool": {
           "aws:SecureTransport": "true"
+        },
+        "StringEquals": {
+          "elasticfilesystem:AccessPointArn":"${aws_efs_access_point.tf-nifi-efs-accesspoint.arn}"
         }
       }
     }
@@ -704,7 +708,7 @@ data "aws_iam_policy" "tf-nifi-instance-policy-ssm" {
 resource "aws_iam_policy" "tf-nifi-instance-policy-s3" {
   name                    = "tf-nifi-instance-policy"
   path                    = "/"
-  description             = "Provides tf-nifi instances access to endpoint and s3 objects in SSM bucket"
+  description             = "Provides tf-nifi instances access to endpoint, s3 objects, SSM bucket, and EFS"
   policy                  = <<EOF
 {
   "Version": "2012-10-17",
@@ -732,6 +736,15 @@ resource "aws_iam_policy" "tf-nifi-instance-policy-s3" {
         "s3:PutObjectAcl"
       ],
       "Resource": ["${aws_s3_bucket.tf-nifi-bucket.arn}/ssm/*"]
+    },
+    {
+      "Sid": "EFSMountWrite",
+      "Effect": "Allow",
+      "Action": [
+        "elasticfilesystem:ClientWrite",
+        "elasticfilesystem:ClientMount"
+      ],
+      "Resource": ["${aws_efs_file_system.tf-nifi-efs.arn}"]
     },
     {
       "Sid": "KMSforCMK",

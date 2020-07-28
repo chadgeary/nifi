@@ -23,6 +23,28 @@
         - java-sdk
         - openssl
         - nfs-utils
+        - git
+        - make
+        - rpm-build
+        - binutils
+
+    - name: Clone efs-utils
+      git:
+        repo: https://github.com/aws/efs-utils
+        dest: /opt/efs-utils
+        clone: yes
+        update: no
+
+    - name: Prep RPM
+      shell: |
+        make rpm
+      args:
+        chdir: /opt/efs-utils
+
+    - name: Install efs-utils
+      yum:
+        name: /opt/efs-utils/build/amazon-efs-utils*rpm
+        state: latest
 
     - name: path tf-nifi-efs
       file:
@@ -35,10 +57,10 @@
     - name: mount tf-nifi-efs
       mount:
         state: mounted
-        fstype: nfs4
+        fstype: efs
         path: /mnt/tf-nifi-efs
-        src: "{{ efs_source }}"
-        opts: nfsvers=4.1,rsize=1048576,wsize=1048576,hard,timeo=600,retrans=2,noresvport
+        src: "{{ efs_source }}:/"
+        opts: tls,iam
 
     - name: zookeeper systemd unit file
       copy:
