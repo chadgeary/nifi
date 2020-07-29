@@ -472,8 +472,8 @@ resource "aws_security_group_rule" "tf-nifi-pubsg1-rule1-in" {
   security_group_id       = aws_security_group.tf-nifi-pubsg1.id
   type                    = "ingress"
   description             = "IN - NiFi Listen 1"
-  from_port               = "80"
-  to_port                 = "8080"
+  from_port               = "443"
+  to_port                 = "8443"
   protocol                = "tcp"
   cidr_blocks             = [var.mgmt_cidr]
 }
@@ -482,8 +482,8 @@ resource "aws_security_group_rule" "tf-nifi-pubsg1-rule1-out" {
   security_group_id       = aws_security_group.tf-nifi-pubsg1.id
   type                    = "egress"
   description             = "OUT - NiFi Listen 1"
-  from_port               = "8080"
-  to_port                 = "8080"
+  from_port               = "8443"
+  to_port                 = "8443"
   protocol                = "tcp"
   source_security_group_id = aws_security_group.tf-nifi-prisg1.id
 }
@@ -512,8 +512,8 @@ resource "aws_security_group_rule" "tf-nifi-prisg1-rule1-in" {
   security_group_id       = aws_security_group.tf-nifi-prisg1.id
   type                    = "ingress"
   description             = "IN - NiFi Listen 1"
-  from_port               = "8080"
-  to_port                 = "8080"
+  from_port               = "8443"
+  to_port                 = "8443"
   protocol                = "tcp"
   source_security_group_id = aws_security_group.tf-nifi-pubsg1.id
 }
@@ -552,7 +552,7 @@ resource "aws_security_group_rule" "tf-nifi-prisg1-self-in" {
   security_group_id       = aws_security_group.tf-nifi-prisg1.id
   type                    = "ingress"
   description             = "IN - SELF"
-  from_port               = "2100"
+  from_port               = "2000"
   to_port                 = "2299"
   protocol                = "tcp"
   source_security_group_id = aws_security_group.tf-nifi-prisg1.id
@@ -562,7 +562,7 @@ resource "aws_security_group_rule" "tf-nifi-prisg1-self-out" {
   security_group_id       = aws_security_group.tf-nifi-prisg1.id
   type                    = "egress"
   description             = "OUT - SELF"
-  from_port               = "2100"
+  from_port               = "2000"
   to_port                 = "2299"
   protocol                = "tcp"
   source_security_group_id = aws_security_group.tf-nifi-prisg1.id
@@ -627,10 +627,17 @@ resource "aws_elb" "tf-nifi-elb1" {
     lb_protocol             = "TCP"
   }
   listener {
-    instance_port           = 8080
+    instance_port           = 8443
     instance_protocol       = "TCP"
-    lb_port                 = 8080
+    lb_port                 = 8443
     lb_protocol             = "TCP"
+  }
+  health_check {
+    healthy_threshold       = 2
+    unhealthy_threshold     = 2
+    timeout                 = 3
+    target                  = "TCP:8443"
+    interval                = 30
   }
 }
 
@@ -658,9 +665,7 @@ resource "aws_efs_file_system_policy" "tf-nifi-efs-policy" {
         "AWS": "${aws_iam_role.tf-nifi-instance-iam-role.arn}"
       },
       "Resource": "${aws_efs_file_system.tf-nifi-efs.arn}",
-      "Action": [
-        "elasticfilesystem:Client*"
-      ],
+      "Action": "elasticfilesystem:Client*",
       "Condition": {
         "Bool": {
           "aws:SecureTransport": "true"
@@ -742,7 +747,8 @@ resource "aws_iam_policy" "tf-nifi-instance-policy-s3" {
       "Effect": "Allow",
       "Action": [
         "elasticfilesystem:ClientWrite",
-        "elasticfilesystem:ClientMount"
+        "elasticfilesystem:ClientMount",
+        "elasticfilesystem:ClientRootAccess"
       ],
       "Resource": ["${aws_efs_file_system.tf-nifi-efs.arn}"]
     },
@@ -845,7 +851,7 @@ resource "aws_instance" "tf-nifi-1" {
     encrypted               = "true"
     kms_key_id              = aws_kms_key.tf-nifi-kmscmk.arn
   }
-  depends_on              = [aws_nat_gateway.tf-nifi-ng1]
+  depends_on              = [aws_nat_gateway.tf-nifi-ng1,aws_ssm_association.tf-nifi-zookeepers-ssm-assoc,aws_efs_mount_target.tf-nifi-efs-mounttarget-1]
 }
 
 resource "aws_elb_attachment" "tf-nifi-1-elb-attach" {
@@ -869,7 +875,7 @@ resource "aws_instance" "tf-nifi-2" {
     encrypted               = "true"
     kms_key_id              = aws_kms_key.tf-nifi-kmscmk.arn
   }
-  depends_on              = [aws_nat_gateway.tf-nifi-ng2]
+  depends_on              = [aws_nat_gateway.tf-nifi-ng2,aws_ssm_association.tf-nifi-zookeepers-ssm-assoc,aws_efs_mount_target.tf-nifi-efs-mounttarget-2]
 }
 
 resource "aws_elb_attachment" "tf-nifi-2-elb-attach" {
@@ -893,7 +899,7 @@ resource "aws_instance" "tf-nifi-3" {
     encrypted               = "true"
     kms_key_id              = aws_kms_key.tf-nifi-kmscmk.arn
   }
-  depends_on              = [aws_nat_gateway.tf-nifi-ng3]
+  depends_on              = [aws_nat_gateway.tf-nifi-ng3,aws_ssm_association.tf-nifi-zookeepers-ssm-assoc,aws_efs_mount_target.tf-nifi-efs-mounttarget-3]
 }
 
 resource "aws_elb_attachment" "tf-nifi-3-elb-attach" {

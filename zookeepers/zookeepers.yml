@@ -14,6 +14,16 @@
         cat /opt/node_id
       register: node_id
 
+    - name: set zookeeper ips in /etc/hosts
+      lineinfile:
+        line: "{{ item }}"
+        path: /etc/hosts
+      with_items:
+        - "# zookeepers"
+        - "{{ node1_ip }} tf-nifi-1"
+        - "{{ node2_ip }} tf-nifi-2"
+        - "{{ node3_ip }} tf-nifi-3"
+
     - name: nifi required packages
       package:
         name: "{{ packages }}"
@@ -35,16 +45,34 @@
         clone: yes
         update: no
 
-    - name: Prep RPM
+    - name: make efs-utils RPM
       shell: |
         make rpm
       args:
         chdir: /opt/efs-utils
 
+    - name: find rpm file for yum
+      find:
+        paths: /opt/efs-utils/build
+        patterns: 'amazon-efs-utils*.rpm'
+      register: efs_rpm
+
     - name: Install efs-utils
       yum:
-        name: /opt/efs-utils/build/amazon-efs-utils*rpm
-        state: latest
+        name: "{{ item.path }}"
+        state: installed
+      with_items: "{{ efs_rpm.files }}"
+
+    - name: set efs hostname checking for EL7 false
+      lineinfile:
+        path: /etc/amazon/efs/efs-utils.conf
+        regexp: '^stunnel_check_cert_hostname = true'
+        line: 'stunnel_check_cert_hostname = false'
+
+    - name: check mount path exists
+      stat:
+        path: /mnt/tf-nifi-efs
+      register: efs_mount
 
     - name: path tf-nifi-efs
       file:
@@ -53,6 +81,7 @@
         owner: root
         group: root
         mode: '0750'
+      when: efs_mount.stat.exists == false
 
     - name: mount tf-nifi-efs
       mount:
@@ -61,6 +90,33 @@
         path: /mnt/tf-nifi-efs
         src: "{{ efs_source }}:/"
         opts: tls,iam
+
+    - name: check password generated
+      stat:
+        path: /mnt/tf-nifi-efs/generated_password
+      register: password_generated
+      when:
+        - ansible_default_ipv4.address == node1_ip
+
+    - name: generate password if not generated
+      shell: |
+        head /dev/urandom | tr -dc A-Za-z0-9 | head -c 20 > /mnt/tf-nifi-efs/generated_password
+      ignore_errors: True
+      when:
+        - ansible_default_ipv4.address == node1_ip
+        - password_generated.stat.exists == false
+
+    - name: wait for generated_password file
+      wait_for:
+        path: /mnt/tf-nifi-efs/generated_password
+        state: present
+        delay: 5
+        timeout: 300
+
+    - name: set generated_password var
+      shell: |
+        cat /mnt/tf-nifi-efs/generated_password
+      register: generated_password
 
     - name: zookeeper systemd unit file
       copy:
@@ -134,7 +190,7 @@
         remote_src: yes
       when: nifi_unarchived.stat.exists == false
 
-    - name: nifi version to /opt/nifi softlink
+    - name: link nifi version to /opt/nifi
       file:
         src: /opt/nifi-{{ nifi_version }}
         path: /opt/nifi
@@ -142,6 +198,141 @@
         mode: 0755
         owner: root
         group: root
+
+    - name: check toolkit downloaded
+      stat:
+        path: /opt/nifi-toolkit.tar.gz
+      register: toolkit_downloaded
+
+    - name: download toolkit if not downloaded
+      get_url:
+        url: http://{{ mirror_host }}/pub/apache/nifi/{{ nifi_version }}/nifi-toolkit-{{ nifi_version }}-bin.tar.gz
+        dest: /opt/nifi-toolkit.tar.gz
+        mode: '0440'
+      when: toolkit_downloaded.stat.exists == false
+
+    - name: check toolkit unarchived
+      stat:
+        path: /opt/nifi-toolkit-{{ nifi_version }}/README
+      register: toolkit_unarchived
+
+    - name: unarchive toolkit when not unarchived
+      unarchive:
+        src: /opt/nifi-toolkit.tar.gz
+        dest: /opt
+        remote_src: yes
+      when: toolkit_unarchived.stat.exists == false
+
+    - name: link toolkit version to /opt/nifi-toolkit
+      file:
+        src: /opt/nifi-toolkit-{{ nifi_version }}
+        path: /opt/nifi-toolkit
+        state: link
+        mode: 0755
+        owner: root
+        group: root
+
+    - name: cert dirs
+      file:
+        path: "{{ item }}"
+        state: directory
+      with_items:
+        - /mnt/tf-nifi-efs/nifi-ca-certificates
+        - /mnt/tf-nifi-efs/nifi-certificates
+
+    - name: node1 - toolkit server script
+      template:
+        src: toolkit-server.sh
+        dest: /usr/local/bin/toolkit-server.sh
+        owner: root
+        group: root
+        mode: 0750
+      when: ansible_default_ipv4.address == node1_ip
+
+    - name: node1 - check tls.json generated
+      stat:
+        path: /mnt/tf-nifi-efs/nifi-ca-certificates/tls.json
+      register: ca_tls
+
+    - name: node1 - toolkit server script exec
+      shell: |
+        /usr/local/bin/toolkit-server.sh
+      args:
+        chdir: /mnt/tf-nifi-efs/nifi-ca-certificates/
+        executable: /bin/bash
+      when:
+        - ansible_default_ipv4.address == node1_ip
+        - ca_tls.stat.exists == false
+
+    - name: node1 - toolkit service
+      template:
+        src: toolkit-server.service
+        dest: /etc/systemd/system/toolkit-server.service
+        owner: root
+        group: root
+        mode: 0644
+      when: ansible_default_ipv4.address == node1_ip
+
+    - name: node1 - toolkit start
+      systemd:
+        state: started
+        enabled: yes
+        name: toolkit-server
+        daemon_reload: yes
+      when: ansible_default_ipv4.address == node1_ip
+
+    - name: node1 - admin certificate dir
+      file:
+        path: /mnt/tf-nifi-efs/admin-certificates
+        state: directory
+        owner: root
+        group: root
+        mode: 0750
+      when: ansible_default_ipv4.address == node1_ip
+
+    - name: node1 - check admin certificate
+      stat:
+        path: /mnt/tf-nifi-efs/admin-certificates/tls.json
+      register: admin_certificate
+      when: ansible_default_ipv4.address == node1_ip
+
+    - name: node1 - admin certificate
+      shell: |
+        /opt/nifi-toolkit/bin/tls-toolkit.sh client -a RSA -c tf-nifi-1 -p 2170 -D "OU=nifi, CN=admin" -f /mnt/tf-nifi-efs/admin-certificates/tls.json -k 2048 -T PKCS12 -t {{ generated_password.stdout }}
+      args:
+        chdir: /mnt/tf-nifi-efs/admin-certificates
+        executable: /bin/bash
+      when:
+        - ansible_default_ipv4.address == node1_ip
+        - admin_certificate.stat.exists == false
+
+    - name: nodes - wait for toolkit server
+      wait_for:
+        host: "{{ node1_ip }}"
+        port: 2170
+        delay: 15
+        timeout: 300
+
+    - name: nodes - toolkit client script
+      template:
+        src: toolkit-client.sh
+        dest: /usr/local/bin/toolkit-client.sh
+        owner: root
+        group: root
+        mode: 0750
+
+    - name: nodes - check tls.json
+      stat:
+        path: /mnt/tf-nifi-efs/nifi-certificates/{{ ansible_nodename }}/tls.json
+      register: node_tls
+
+    - name: nodes - toolkit client script exec
+      shell:
+        /usr/local/bin/toolkit-client.sh
+      args:
+        chdir: /mnt/tf-nifi-efs/nifi-certificates/{{ ansible_nodename }}
+        executable: /bin/bash
+      when: node_tls.stat.exists == false
 
     - name: zookeeper data directory
       file:
@@ -173,6 +364,14 @@
         enabled: yes
         name: zookeeper
         daemon_reload: yes
+
+    - name: nfii properties
+      template:
+        src: nifi.properties
+        dest: /opt/nifi/conf/nifi.properties
+        owner: root
+        group: root
+        mode: 0640
 
     - name: nifi systemd service start/enable
       systemd:
