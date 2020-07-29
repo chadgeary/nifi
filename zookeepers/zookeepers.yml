@@ -199,6 +199,22 @@
         owner: root
         group: root
 
+    - name: authorizers.xml
+      copy:
+        src: authorizers.xml
+        dest: /opt/nifi/conf/authorizers.xml
+        owner: root
+        group: root
+        mode: 0640
+
+    - name: nifi properties
+      template:
+        src: nifi.properties
+        dest: /opt/nifi/conf/nifi.properties
+        owner: root
+        group: root
+        mode: 0640
+
     - name: check toolkit downloaded
       stat:
         path: /opt/nifi-toolkit.tar.gz
@@ -326,6 +342,14 @@
         path: /mnt/tf-nifi-efs/nifi-certificates/{{ ansible_nodename }}/tls.json
       register: node_tls
 
+    - name: nodes - create certificate directory
+      file:
+        path: /mnt/tf-nifi-efs/nifi-certificates/{{ ansible_nodename }}
+        state: directory
+        owner: root
+        group: root
+        mode: 0750
+
     - name: nodes - toolkit client script exec
       shell:
         /usr/local/bin/toolkit-client.sh
@@ -365,17 +389,76 @@
         name: zookeeper
         daemon_reload: yes
 
-    - name: nfii properties
-      template:
-        src: nifi.properties
-        dest: /opt/nifi/conf/nifi.properties
-        owner: root
-        group: root
-        mode: 0640
-
-    - name: nifi systemd service start/enable
+    - name: node1 - nifi systemd service start/enable
       systemd:
         state: started
         enabled: yes
         name: nifi
         daemon_reload: yes
+      when:
+        - ansible_default_ipv4.address == node1_ip
+
+    - name: node1 - wait for users.xml, authorizations.xml, and flow.xml.gz
+      wait_for:
+        path: "/opt/nifi/conf/{{ item }}"
+        state: present
+        delay: 30
+        timeout: 60
+      with_items:
+        - users.xml
+        - authorizations.xml
+        - flow.xml.gz
+      when:
+        - ansible_default_ipv4.address == node1_ip
+
+    - name: node1 - copy users.xml, authorizations.xml, and flow.xml.gz to nfs
+      copy:
+        src: "/opt/nifi/conf/{{ item }}"
+        dest: "/mnt/tf-nifi-efs/conf/{{ item }}"
+        remote_src: true
+        owner: root
+        group: root
+        mode: 0640
+      with_items:
+        - users.xml
+        - authorizations.xml
+        - flow.xml.gz
+      when:
+        - ansible_default_ipv4.address == node1_ip
+
+    - name: other nodes - wait for users.xml, authorizations.xml, and flow.xml.gz
+      wait_for:
+        path: "/mnt/tf-nifi-efs/conf/{{ item }}"
+        state: present
+        delay: 60
+        timeout: 120
+      with_items:
+        - users.xml
+        - authorizations.xml
+        - flow.xml.gz
+      when:
+        - ansible_default_ipv4.address != node1_ip
+
+    - name: other nodes - copy users.xml, authorizations.xml, and flow.xml.gz from nfs
+      copy:
+        dest: "/opt/nifi/conf/{{ item }}"
+        src: "/mnt/tf-nifi-efs/conf/{{ item }}"
+        remote_src: true
+        owner: root
+        group: root
+        mode: 0640
+      with_items:
+        - users.xml
+        - authorizations.xml
+        - flow.xml.gz
+      when:
+        - ansible_default_ipv4.address != node1_ip
+
+    - name: other nodes - nifi systemd service start/enable
+      systemd:
+        state: started
+        enabled: yes
+        name: nifi
+        daemon_reload: yes
+      when:
+        - ansible_default_ipv4.address != node1_ip
