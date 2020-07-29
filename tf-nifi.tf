@@ -521,11 +521,31 @@ resource "aws_security_group_rule" "tf-nifi-prisg1-rule1-in" {
 resource "aws_security_group_rule" "tf-nifi-prisg1-rule2-in" {
   security_group_id       = aws_security_group.tf-nifi-prisg1.id
   type                    = "ingress"
+  description             = "IN - NiFi Listen 2"
+  from_port               = "8443"
+  to_port                 = "8443"
+  protocol                = "tcp"
+  source_security_group_id = aws_security_group.tf-nifi-prisg1.id
+}
+
+resource "aws_security_group_rule" "tf-nifi-prisg1-rule3-in" {
+  security_group_id       = aws_security_group.tf-nifi-prisg1.id
+  type                    = "ingress"
   description             = "IN - SSH MGMT"
   from_port               = "22"
   to_port                 = "22"
   protocol                = "tcp"
   source_security_group_id = aws_security_group.tf-nifi-pubsg1.id
+}
+
+resource "aws_security_group_rule" "tf-nifi-prisg1-rule2-out" {
+  security_group_id       = aws_security_group.tf-nifi-prisg1.id
+  type                    = "egress"
+  description             = "OUT - NiFi Listen 2"
+  from_port               = "8443"
+  to_port                 = "8443"
+  protocol                = "tcp"
+  source_security_group_id = aws_security_group.tf-nifi-prisg1.id
 }
 
 resource "aws_security_group_rule" "tf-nifi-prisg1-http-out" {

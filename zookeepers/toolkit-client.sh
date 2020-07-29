@@ -6,7 +6,11 @@ export JAVA_HOME=/usr/lib/jvm/jre
 mkdir -p /mnt/tf-nifi-efs/nifi-certificates/{{ ansible_nodename }}
 
 # run toolkit client to generate certificates
-/opt/nifi-toolkit/bin/tls-toolkit.sh client -a RSA -c tf-nifi-1 -p 2170 -D "CN={{ ansible_nodename }},OU=nifi" --subjectAlternativeNames {{ ansible_nodename }} -f /mnt/tf-nifi-efs/nifi-certificates/{{ ansible_nodename }}/tls.json -k 2048 -T jks -t {{ generated_password.stdout }}
+grep --quiet "REPLACEDBYTOOLKIT" /opt/nifi/conf/nifi.properties
+if [ $? -eq 0 ]
+then
+  /opt/nifi-toolkit/bin/tls-toolkit.sh client -a RSA -c tf-nifi-1 -p 2170 -D "CN={{ ansible_nodename }},OU=NIFI" --subjectAlternativeNames {{ ansible_nodename }} -f /mnt/tf-nifi-efs/nifi-certificates/{{ ansible_nodename }}/tls.json -k 2048 -T jks -t {{ generated_password.stdout }}
+fi
 
 # replace password in properties
 KEYSTORE_PASSWORD=$(awk -F'"' '/keyStorePassword/ { print $4 }' /mnt/tf-nifi-efs/nifi-certificates/{{ ansible_nodename }}/tls.json)

@@ -314,7 +314,7 @@
 
     - name: node1 - admin certificate
       shell: |
-        /opt/nifi-toolkit/bin/tls-toolkit.sh client -a RSA -c tf-nifi-1 -p 2170 -D "OU=nifi, CN=admin" -f /mnt/tf-nifi-efs/admin-certificates/tls.json -k 2048 -T PKCS12 -t {{ generated_password.stdout }}
+        /opt/nifi-toolkit/bin/tls-toolkit.sh client -a RSA -c tf-nifi-1 -p 2170 -D "CN=admin,OU=NIFI" -f /mnt/tf-nifi-efs/admin-certificates/tls.json -k 2048 -T PKCS12 -t {{ generated_password.stdout }}
       args:
         chdir: /mnt/tf-nifi-efs/admin-certificates
         executable: /bin/bash
@@ -356,7 +356,6 @@
       args:
         chdir: /mnt/tf-nifi-efs/nifi-certificates/{{ ansible_nodename }}
         executable: /bin/bash
-      when: node_tls.stat.exists == false
 
     - name: zookeeper data directory
       file:
@@ -402,14 +401,22 @@
       wait_for:
         path: "/opt/nifi/conf/{{ item }}"
         state: present
-        delay: 30
-        timeout: 60
+        delay: 20
+        timeout: 120
       with_items:
         - users.xml
         - authorizations.xml
         - flow.xml.gz
       when:
         - ansible_default_ipv4.address == node1_ip
+
+    - name: conf dir
+      file:
+        path: /mnt/tf-nifi-efs/conf
+        state: directory
+        owner: root
+        group: root
+        mode: 0750
 
     - name: node1 - copy users.xml, authorizations.xml, and flow.xml.gz to nfs
       copy:
@@ -430,8 +437,8 @@
       wait_for:
         path: "/mnt/tf-nifi-efs/conf/{{ item }}"
         state: present
-        delay: 60
-        timeout: 120
+        delay: 40
+        timeout: 240
       with_items:
         - users.xml
         - authorizations.xml
