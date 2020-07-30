@@ -45,23 +45,33 @@
         clone: yes
         update: no
 
+    - name: find previously created rpm for efs-utils
+      find:
+        paths: /opt/efs-utils/build
+        patterns: 'amazon-efs-utils*.rpm'
+      register: efs_rpm_found
+      ignore_errors: true
+
     - name: make efs-utils RPM
       shell: |
         make rpm
       args:
         chdir: /opt/efs-utils
+      when: efs_rpm_found.matched == 0
 
-    - name: find rpm file for yum
+    - name: find newly created rpm for efs-utils
       find:
         paths: /opt/efs-utils/build
         patterns: 'amazon-efs-utils*.rpm'
-      register: efs_rpm
+      register: efs_rpm_make
+      when: efs_rpm_found.matched == 0
 
     - name: Install efs-utils
       yum:
         name: "{{ item.path }}"
         state: installed
-      with_items: "{{ efs_rpm.files }}"
+      with_items: "{{ efs_rpm_make.files }}"
+      when: efs_rpm_found.matched == 0
 
     - name: set efs hostname checking for EL7 false
       lineinfile:
@@ -306,13 +316,13 @@
         mode: 0750
       when: ansible_default_ipv4.address == node1_ip
 
-    - name: node1 - check admin certificate
+    - name: node1 - check admin tls.json
       stat:
         path: /mnt/tf-nifi-efs/admin-certificates/tls.json
       register: admin_certificate
       when: ansible_default_ipv4.address == node1_ip
 
-    - name: node1 - admin certificate
+    - name: node1 - toolkit admin 
       shell: |
         /opt/nifi-toolkit/bin/tls-toolkit.sh client -a RSA -c tf-nifi-1 -p 2170 -D "CN=admin,OU=NIFI" -f /mnt/tf-nifi-efs/admin-certificates/tls.json -k 2048 -T PKCS12 -t {{ generated_password.stdout }}
       args:
@@ -326,23 +336,10 @@
       wait_for:
         host: "{{ node1_ip }}"
         port: 2170
-        delay: 15
+        delay: 30
         timeout: 300
 
-    - name: nodes - toolkit client script
-      template:
-        src: toolkit-client.sh
-        dest: /usr/local/bin/toolkit-client.sh
-        owner: root
-        group: root
-        mode: 0750
-
-    - name: nodes - check tls.json
-      stat:
-        path: /mnt/tf-nifi-efs/nifi-certificates/{{ ansible_nodename }}/tls.json
-      register: node_tls
-
-    - name: nodes - create certificate directory
+    - name: nodes - certificate directory
       file:
         path: /mnt/tf-nifi-efs/nifi-certificates/{{ ansible_nodename }}
         state: directory
@@ -350,12 +347,47 @@
         group: root
         mode: 0750
 
-    - name: nodes - toolkit client script exec
-      shell:
-        /usr/local/bin/toolkit-client.sh
+    - name: nodes - check client tls.json
+      stat:
+        path: /mnt/tf-nifi-efs/nifi-certificates/{{ ansible_nodename }}/tls.json
+      register: node_tls
+
+    - name: nodes - toolkit client exec if no tls.json
+      shell: |
+        export JAVA_HOME=/usr/lib/jvm/jre
+        /opt/nifi-toolkit/bin/tls-toolkit.sh client -a RSA -c tf-nifi-1 -p 2170 -D "CN={{ ansible_nodename }},OU=NIFI" --subjectAlternativeNames {{ ansible_nodename }} -f /mnt/tf-nifi-efs/nifi-certificates/{{ ansible_nodename }}/tls.json -k 2048 -T jks -t {{ generated_password.stdout }}
       args:
         chdir: /mnt/tf-nifi-efs/nifi-certificates/{{ ansible_nodename }}
         executable: /bin/bash
+      when: node_tls.stat.exists == false
+
+    - name: register KEYSTORE_PASS
+      shell: |
+        awk -F'"' '/keyStorePassword/ { print $4 }' /mnt/tf-nifi-efs/nifi-certificates/{{ ansible_nodename }}/tls.json
+      register: keystore_pass
+
+    - name: register TRUSTSTORE_PASS
+      shell: |
+        awk -F'"' '/trustStorePassword/ { print $4 }' /mnt/tf-nifi-efs/nifi-certificates/{{ ansible_nodename }}/tls.json
+      register: truststore_pass
+
+    - name: set keystorePasswd in nifi.properties
+      lineinfile:
+        path: /opt/nifi/conf/nifi.properties
+        regexp: '^nifi\.security\.keystorePasswd=.*'
+        line: "nifi.security.keystorePasswd={{ keystore_pass.stdout }}"
+
+    - name: set keyPasswd in nifi.properties
+      lineinfile:
+        path: /opt/nifi/conf/nifi.properties
+        regexp: '^nifi\.security\.keyPasswd=.*'
+        line: "nifi.security.keyPasswd={{ keystore_pass.stdout }}"
+
+    - name: set truststorePasswd in nifi.properties
+      lineinfile:
+        path: /opt/nifi/conf/nifi.properties
+        regexp: '^nifi\.security\.truststorePasswd=.*'
+        line: "nifi.security.truststorePasswd={{ truststore_pass.stdout }}"
 
     - name: zookeeper data directory
       file:
