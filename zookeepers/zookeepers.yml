@@ -101,61 +101,97 @@
         src: "{{ efs_source }}:/"
         opts: tls,iam
 
-    - name: check password generated
-      stat:
-        path: /mnt/tf-nifi-efs/generated_password
-      register: password_generated
-      when:
-        - ansible_default_ipv4.address == node1_ip
-
-    - name: generate password if not generated
-      shell: |
-        head /dev/urandom | tr -dc A-Za-z0-9 | head -c 20 > /mnt/tf-nifi-efs/generated_password
-      ignore_errors: True
-      when:
-        - ansible_default_ipv4.address == node1_ip
-        - password_generated.stat.exists == false
-
-    - name: wait for generated_password file
-      wait_for:
-        path: /mnt/tf-nifi-efs/generated_password
-        state: present
-        delay: 5
-        timeout: 300
-
-    - name: set generated_password var
-      shell: |
-        cat /mnt/tf-nifi-efs/generated_password
-      register: generated_password
-
-    - name: zookeeper systemd unit file
-      copy:
-        src: zookeeper.service
-        dest: /etc/systemd/system/zookeeper.service
-        mode: 0644
+    - name: efs dirs
+      file:
+        path: "{{ item }}"
+        state: directory
         owner: root
         group: root
+        mode: 0750
+      with_items:
+        - /mnt/tf-nifi-efs/admin-certificates
+        - /mnt/tf-nifi-efs/nifi-ca-certificates
+        - /mnt/tf-nifi-efs/nifi-certificates
+        - /mnt/tf-nifi-efs/conf
+        - /mnt/tf-nifi-efs/downloads
+      when:
+        - ansible_default_ipv4.address == node1_ip
+
+    - name: nodes - certificate directory
+      file:
+        path: /mnt/tf-nifi-efs/nifi-certificates/{{ ansible_nodename }}
+        state: directory
+        owner: root
+        group: root
+        mode: 0750
 
     - name: check zookeeper downloaded
       stat:
-        path: /opt/zookeeper.tar.gz
+        path: /mnt/tf-nifi-efs/downloads/zookeeper.tar.gz
       register: zk_download
+      when: ansible_default_ipv4.address == node1_ip
 
     - name: download zookeeper if not downloaded
       get_url:
         url: http://{{ mirror_host }}/pub/apache/zookeeper/current/apache-zookeeper-{{ zk_version }}-bin.tar.gz
-        dest: /opt/zookeeper.tar.gz
+        dest: /mnt/tf-nifi-efs/downloads/zookeeper.tar.gz
         mode: '0644'
-      when: zk_download.stat.exists == false
+      when: 
+        - ansible_default_ipv4.address == node1_ip
+        - zk_download.stat.exists == false
+
+    - name: check nifi downloaded
+      stat:
+        path: /mnt/tf-nifi-efs/downloads/nifi.tar.gz
+      register: nifi_downloaded
+      when: ansible_default_ipv4.address == node1_ip
+
+    - name: download nifi if not downloaded
+      get_url:
+        url: http://{{ mirror_host }}/pub/apache/nifi/{{ nifi_version }}/nifi-{{ nifi_version }}-bin.tar.gz
+        dest: /mnt/tf-nifi-efs/downloads/nifi.tar.gz
+        mode: '0440'
+      when:
+        - ansible_default_ipv4.address == node1_ip
+        - nifi_downloaded.stat.exists == false
+
+    - name: check toolkit downloaded
+      stat:
+        path: /mnt/tf-nifi-efs/downloads/nifi-toolkit.tar.gz
+      register: toolkit_downloaded
+      when: ansible_default_ipv4.address == node1_ip
+
+    - name: download toolkit if not downloaded
+      get_url:
+        url: http://{{ mirror_host }}/pub/apache/nifi/{{ nifi_version }}/nifi-toolkit-{{ nifi_version }}-bin.tar.gz
+        dest: /mnt/tf-nifi-efs/downloads/nifi-toolkit.tar.gz
+        mode: '0440'
+      when:
+        - ansible_default_ipv4.address == node1_ip
+        - toolkit_downloaded.stat.exists == false
+
+    - name: nodes - wait for downloads
+      wait_for:
+        path: "/mnt/tf-nifi-efs/downloads/{{ item }}"
+        state: present
+        delay: 15
+        timeout: 720
+      with_items:
+        - zookeeper.tar.gz
+        - nifi.tar.gz
+        - nifi-toolkit.tar.gz
+      when:
+        - ansible_default_ipv4.address != node1_ip
 
     - name: check zookeeper unarchived
       stat:
         path: /opt/zookeeper-{{ zk_version }}/README
       register: zk_unarchived
+      when: ansible_default_ipv4.address == node1_ip
 
     - name: unarchive zookeeper if not unarchived
       unarchive:
-        src: /opt/zookeeper.tar.gz
+        src: /mnt/tf-nifi-efs/downloads/zookeeper.tar.gz
         dest: /opt
         remote_src: yes
 
@@ -168,26 +204,6 @@
         owner: root
         group: root
 
-    - name: nifi systemd service file
-      copy:
-        src: nifi.service
-        dest: /etc/systemd/system/nifi.service
-        mode: 0444
-        owner: root
-        group: root
-
-    - name: check nifi downloaded
-      stat:
-        path: /opt/nifi.tar.gz
-      register: nifi_downloaded
-
-    - name: download nifi if not downloaded
-      get_url:
-        url: http://{{ mirror_host }}/pub/apache/nifi/{{ nifi_version }}/nifi-{{ nifi_version }}-bin.tar.gz
-        dest: /opt/nifi.tar.gz
-        mode: '0440'
-      when: nifi_downloaded.stat.exists == false
-
     - name: check nifi unarchived
       stat:
         path: /opt/nifi-{{ nifi_version }}/README
@@ -195,7 +211,7 @@
 
     - name: unarchive nifi when not unarchived
       unarchive:
-        src: /opt/nifi.tar.gz
+        src: /mnt/tf-nifi-efs/downloads/nifi.tar.gz
         dest: /opt
         remote_src: yes
       when: nifi_unarchived.stat.exists == false
@@ -204,6 +220,27 @@
       file:
         src: /opt/nifi-{{ nifi_version }}
         path: /opt/nifi
+        state: link
+        mode: 0755
+        owner: root
+        group: root
+
+    - name: check toolkit unarchived
+      stat:
+        path: /opt/nifi-toolkit-{{ nifi_version }}/README
+      register: toolkit_unarchived
+
+    - name: unarchive toolkit when not unarchived
+      unarchive:
+        src: /mnt/tf-nifi-efs/downloads/nifi-toolkit.tar.gz
+        dest: /opt
+        remote_src: yes
+      when: toolkit_unarchived.stat.exists == false
+
+    - name: link toolkit version to /opt/nifi-toolkit
+      file:
+        src: /opt/nifi-toolkit-{{ nifi_version }}
+        path: /opt/nifi-toolkit
         state: link
         mode: 0755
         owner: root
@@ -225,46 +262,50 @@
         group: root
         mode: 0640
 
-    - name: check toolkit downloaded
-      stat:
-        path: /opt/nifi-toolkit.tar.gz
-      register: toolkit_downloaded
-
-    - name: download toolkit if not downloaded
-      get_url:
-        url: http://{{ mirror_host }}/pub/apache/nifi/{{ nifi_version }}/nifi-toolkit-{{ nifi_version }}-bin.tar.gz
-        dest: /opt/nifi-toolkit.tar.gz
-        mode: '0440'
-      when: toolkit_downloaded.stat.exists == false
-
-    - name: check toolkit unarchived
-      stat:
-        path: /opt/nifi-toolkit-{{ nifi_version }}/README
-      register: toolkit_unarchived
-
-    - name: unarchive toolkit when not unarchived
-      unarchive:
-        src: /opt/nifi-toolkit.tar.gz
-        dest: /opt
-        remote_src: yes
-      when: toolkit_unarchived.stat.exists == false
-
-    - name: link toolkit version to /opt/nifi-toolkit
-      file:
-        src: /opt/nifi-toolkit-{{ nifi_version }}
-        path: /opt/nifi-toolkit
-        state: link
-        mode: 0755
+    - name: nifi systemd service file
+      copy:
+        src: nifi.service
+        dest: /etc/systemd/system/nifi.service
+        mode: 0444
         owner: root
         group: root
 
-    - name: cert dirs
-      file:
-        path: "{{ item }}"
-        state: directory
-      with_items:
-        - /mnt/tf-nifi-efs/nifi-ca-certificates
-        - /mnt/tf-nifi-efs/nifi-certificates
+    - name: zookeeper systemd unit file
+      copy:
+        src: zookeeper.service
+        dest: /etc/systemd/system/zookeeper.service
+        mode: 0644
+        owner: root
+        group: root
+
+    - name: check password generated
+      stat:
+        path: /mnt/tf-nifi-efs/generated_password
+      register: password_generated
+      when:
+        - ansible_default_ipv4.address == node1_ip
+
+    - name: generate password if not generated
+      shell: |
+        head /dev/urandom | tr -dc A-Za-z0-9 | head -c 20 > /mnt/tf-nifi-efs/generated_password
+      ignore_errors: True
+      when:
+        - ansible_default_ipv4.address == node1_ip
+        - password_generated.stat.exists == false
+
+    - name: wait for generated_password file
+      wait_for:
+        path: /mnt/tf-nifi-efs/generated_password
+        state: present
+        delay: 15
+        timeout: 720
+      when:
+        - ansible_default_ipv4.address != node1_ip
+
+    - name: set generated_password var
+      shell: |
+        cat /mnt/tf-nifi-efs/generated_password
+      register: generated_password
 
     - name: node1 - toolkit server script
       template:
@@ -307,15 +348,6 @@
         daemon_reload: yes
       when: ansible_default_ipv4.address == node1_ip
 
-    - name: node1 - admin certificate dir
-      file:
-        path: /mnt/tf-nifi-efs/admin-certificates
-        state: directory
-        owner: root
-        group: root
-        mode: 0750
-      when: ansible_default_ipv4.address == node1_ip
-
     - name: node1 - check admin tls.json
       stat:
         path: /mnt/tf-nifi-efs/admin-certificates/tls.json
@@ -338,14 +370,6 @@
         port: 2170
         delay: 30
         timeout: 300
-
-    - name: nodes - certificate directory
-      file:
-        path: /mnt/tf-nifi-efs/nifi-certificates/{{ ansible_nodename }}
-        state: directory
-        owner: root
-        group: root
-        mode: 0750
 
     - name: nodes - check client tls.json
       stat:
@@ -441,14 +465,6 @@
         - flow.xml.gz
       when:
         - ansible_default_ipv4.address == node1_ip
-
-    - name: conf dir
-      file:
-        path: /mnt/tf-nifi-efs/conf
-        state: directory
-        owner: root
-        group: root
-        mode: 0750
 
     - name: node1 - copy users.xml, authorizations.xml, and flow.xml.gz to nfs
       copy:
