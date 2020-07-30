@@ -32,7 +32,7 @@ data "aws_ami" "tf-nifi-rhel-ami" {
 # Instance(s)
 resource "aws_instance" "tf-nifi-1" {
   ami                     = data.aws_ami.tf-nifi-rhel-ami.id
-  instance_type           = "t3a.medium"
+  instance_type           = var.instance_type
   iam_instance_profile    = aws_iam_instance_profile.tf-nifi-instance-profile.name
   key_name                = aws_key_pair.tf-nifi-instance-key.key_name
   subnet_id               = aws_subnet.tf-nifi-prinet1.id
@@ -51,7 +51,7 @@ resource "aws_instance" "tf-nifi-1" {
 
 resource "aws_instance" "tf-nifi-2" {
   ami                     = data.aws_ami.tf-nifi-rhel-ami.id
-  instance_type           = "t3a.medium"
+  instance_type           = var.instance_type
   iam_instance_profile    = aws_iam_instance_profile.tf-nifi-instance-profile.name
   key_name                = aws_key_pair.tf-nifi-instance-key.key_name
   subnet_id               = aws_subnet.tf-nifi-prinet2.id
@@ -70,7 +70,7 @@ resource "aws_instance" "tf-nifi-2" {
 
 resource "aws_instance" "tf-nifi-3" {
   ami                     = data.aws_ami.tf-nifi-rhel-ami.id
-  instance_type           = "t3a.medium"
+  instance_type           = var.instance_type
   iam_instance_profile    = aws_iam_instance_profile.tf-nifi-instance-profile.name
   key_name                = aws_key_pair.tf-nifi-instance-key.key_name
   subnet_id               = aws_subnet.tf-nifi-prinet3.id

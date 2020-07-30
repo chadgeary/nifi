@@ -69,6 +69,11 @@ variable "mgmt_cidr" {
   description              = "Subnet CIDR allowed to access NiFi instance(s) via ELB, e.g. 172.16.10.0/30"
 }
 
+variable "instance_type" {
+  type                     = string
+  description              = "The type of EC2 instance to deploy"
+}
+
 variable "instance_key" {
   type                     = string
   description              = "A public key for SSH access to instance(s)"
