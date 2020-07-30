@@ -21,3 +21,6 @@ terraform apply -var-file="tf-nifi.tfvars"
 # with keyStorePassword in
 /mnt/tf-nifi-efs/admin-certificates/tls.json
 ```
+
+# Todo
+- Autoscaling
