@@ -12,3 +12,12 @@ terraform init
 # Apply terraform
 terraform apply -var-file="tf-nifi.tfvars"
 ```
+
+# WebUI Access
+```
+# Import to browser
+/mnt/tf-nifi-efs/admin-certificates/keystore.pkcs12
+
+# with keyStorePassword in
+/mnt/tf-nifi-efs/admin-certificates/tls.json
+```
