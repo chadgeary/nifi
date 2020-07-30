@@ -3,7 +3,7 @@ Terraform to create/manage an AWS-based Apache NiFi stack from scratch.
 
 # Deploy
 ```
-# Set vars in .tfvars file
+# Set vars in .tfvars file - mgmt_cidr is granted WebUI access.
 vi tf-nifi.tfvars
 
 # Initialize terraform
