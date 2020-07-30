@@ -1,5 +1,5 @@
 # Reference
-Terraform to create/manage an AWS-based Apache NiFi stack from scratch.
+Terraform with Ansible to create/manage a fullstack AWS-based secure Apache NiFi cluster.
 
 # Deploy
 ```
@@ -24,3 +24,8 @@ terraform apply -var-file="tf-nifi.tfvars"
 
 # Todo
 - Autoscaling
+
+# Notes
+- AMI for nodes is RHEL7
+- Zookeepers/ is the Ansible playbook for NiFi (w/ Zookeeper)
+- Watch [SSM State Manager](https://console.aws.amazon.com/systems-manager/state-manager) and/or [ELB Instances](https://console.aws.amazon.com/ec2/v2/home?LoadBalancers%3Asort=loadBalancerName#LoadBalancers:sort=loadBalancerName) for Node status. 
