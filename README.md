@@ -11,6 +11,9 @@ terraform init
 
 # Apply terraform
 terraform apply -var-file="tf-nifi.tfvars"
+
+# Wait for SSM Ansible Playbook, watch:
+https://console.aws.amazon.com/systems-manager/state-manager
 ```
 
 # WebUI Access
@@ -26,5 +29,3 @@ WebUI access is permitted to the mgmt_cidr defined in tf-nifi.tfvars. Authentica
 
 # Notes
 - AMI is [Latest Official RHEL7](https://access.redhat.com/solutions/15356)
-- Directory zookeepers holds the Ansible playbook for NiFi (w/ Zookeeper)
-- Watch [SSM State Manager](https://console.aws.amazon.com/systems-manager/state-manager) and/or [ELB Instances](https://console.aws.amazon.com/ec2/v2/home?LoadBalancers%3Asort=loadBalancerName#LoadBalancers:sort=loadBalancerName) for Node status. 
