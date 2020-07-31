@@ -32,7 +32,7 @@ resource "aws_iam_policy" "tf-nifi-instance-policy-s3" {
         "s3:PutObject",
         "s3:PutObjectAcl"
       ],
-      "Resource": ["${aws_s3_bucket.tf-nifi-bucket.arn}/ssm/*"]
+      "Resource": ["${aws_s3_bucket.tf-nifi-bucket.arn}/ssm/*","${aws_s3_bucket.tf-nifi-bucket.arn}/admin-certificates/*"]
     },
     {
       "Sid": "EFSMountWrite",

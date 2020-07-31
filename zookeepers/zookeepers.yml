@@ -38,6 +38,15 @@
         - rpm-build
         - binutils
 
+    - name: node1 - pip for boto3 for s3
+      package:
+        name: "{{ item }}"
+        state: latest
+      with_items:
+        - https://dl.fedoraproject.org/pub/epel/epel-release-latest-7.noarch.rpm
+        - python2-pip
+      when: ansible_default_ipv4.address == node1_ip
+
     - name: Clone efs-utils
       git:
         repo: https://github.com/aws/efs-utils
@@ -363,6 +372,23 @@
       when:
         - ansible_default_ipv4.address == node1_ip
         - admin_certificate.stat.exists == false
+
+    - name: node1 - ensure boto3 for pip
+      pip:
+        executable: /bin/pip
+        name: boto3
+      when: ansible_default_ipv4.address == node1_ip
+
+    - name: node1 - place admin tls on s3
+      aws_s3:
+        bucket: "{{ s3_bucket }}"
+        object: "/admin-certificates/{{ item }}"
+        src: "/mnt/tf-nifi-efs/admin-certificates/{{ item }}"
+        mode: put
+      with_items:
+        - tls.json
+        - keystore.pkcs12
+      when: ansible_default_ipv4.address == node1_ip
 
     - name: nodes - wait for toolkit server
       wait_for:

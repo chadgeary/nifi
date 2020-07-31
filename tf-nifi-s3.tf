@@ -15,6 +15,15 @@ resource "aws_s3_bucket" "tf-nifi-bucket" {
   }
 }
 
+# s3 block all public access to bucket
+resource "aws_s3_bucket_public_access_block" "tf-nifi-bucket-pubaccessblock" {
+  bucket                  = aws_s3_bucket.tf-nifi-bucket.id
+  block_public_acls       = true
+  block_public_policy     = true
+  ignore_public_acls      = true
+  restrict_public_buckets = true
+}
+
 # s3 objects (zookeeper playbook)
 resource "aws_s3_bucket_object" "tf-nifi-zookeepers" {
   for_each                = fileset("zookeepers/", "*")
