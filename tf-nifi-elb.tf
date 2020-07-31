@@ -10,7 +10,7 @@ resource "aws_elb" "tf-nifi-elb1" {
     lb_protocol             = "TCP"
   }
   listener {
-    instance_port           = 8443
+    instance_port           = 443
     instance_protocol       = "TCP"
     lb_port                 = 8443
     lb_protocol             = "TCP"
