@@ -23,7 +23,7 @@ resource "aws_iam_policy" "tf-nifi-instance-policy-s3" {
         "s3:GetObject",
         "s3:GetObjectVersion"
       ],
-      "Resource": ["${aws_s3_bucket.tf-nifi-bucket.arn}/zookeepers/*"]
+      "Resource": ["${aws_s3_bucket.tf-nifi-bucket.arn}/zookeepers/*","${aws_s3_bucket.tf-nifi-bucket.arn}/admin-certificates/*"]
     },
     {
       "Sid": "PutObjectsinBucketPrefix",
