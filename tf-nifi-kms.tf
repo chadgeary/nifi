@@ -100,6 +100,72 @@ resource "aws_kms_key" "tf-nifi-kmscmk" {
           "kms:ViaService": "elasticfilesystem.${var.aws_region}.amazonaws.com}"
         }
       }
+    },
+    {
+      "Sid": "Allow access through Autoscaling",
+      "Effect": "Allow",
+      "Principal": {
+        "AWS": "${aws_iam_service_linked_role.tf-nifi-autoscale-slr.arn}"
+      },
+      "Action": [
+        "kms:Encrypt",
+        "kms:Decrypt",
+        "kms:ReEncrypt*",
+        "kms:GenerateDataKey*",
+        "kms:DescribeKey"
+      ],
+      "Resource": "*"
+    },
+    {
+      "Sid": "Allow access through Autoscaling 2",
+      "Effect": "Allow",
+      "Principal": {
+        "AWS": "${aws_iam_service_linked_role.tf-nifi-autoscale-slr.arn}"
+      },
+      "Action": [
+        "kms:CreateGrant"
+      ],
+      "Resource": "*",
+      "Condition": {
+        "Bool": {
+          "kms:GrantIsForAWSResource": true
+        }
+      }
+    },
+    {
+      "Sid": "Allow access through Autoscaling Lifecycle",
+      "Effect": "Allow",
+      "Principal": {
+        "AWS": "${aws_iam_role.tf-nifi-autoscale-snsrole.arn}"
+      },
+      "Action": [
+        "kms:Encrypt",
+        "kms:Decrypt",
+        "kms:ReEncrypt*",
+        "kms:GenerateDataKey*",
+        "kms:DescribeKey"
+      ],
+      "Resource": "*"
+    },
+    {
+      "Sid": "Allow access through Lambda",
+      "Effect": "Allow",
+      "Principal": {
+        "AWS": "${aws_iam_role.tf-nifi-lambda-iam-role.arn}"
+      },
+      "Action": [
+        "kms:Encrypt",
+        "kms:ReEncrypt*",
+        "kms:GenerateDataKey*",
+        "kms:DescribeKey"
+      ],
+      "Resource": "*",
+      "Condition": {
+        "StringEquals": {
+          "kms:CallerAccount": "${data.aws_caller_identity.tf-nifi-aws-account.account_id}",
+          "kms:ViaService": "lambda.${var.aws_region}.amazonaws.com}"
+        }
+      }
     }
   ]
 }

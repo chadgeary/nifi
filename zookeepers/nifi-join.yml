@@ -1,0 +1,69 @@
+---
+- name: nifi-join.yml
+  hosts: localhost
+  become: True
+  become_user: root
+  gather_facts: false
+  tasks:
+
+    - name: determine lock
+      stat:
+        path: /mnt/tf-nifi-efs/cluster/lock
+      register: cluster_lock
+
+    - name: end if cluster lock
+      meta: end_host
+      when:
+        - cluster_lock.stat.exists == true
+
+    - name: find cluster requests
+      find:
+        paths: /mnt/tf-nifi-efs/cluster/join
+        patterns: '*'
+      register: cluster_requests
+
+    - name: end if no files match
+      meta: end_host
+      when:
+        - cluster_requests.matched == 0
+
+    - name: set lock
+      file:
+        path: /mnt/tf-nifi-efs/cluster/lock
+        state: directory
+        owner: root
+        group: root
+        mode: 0640
+      register: set_lock
+
+    - name: copy live conf files to nfs
+      copy:
+        src: "/opt/nifi/conf/{{ item }}"
+        dest: "/mnt/tf-nifi-efs/conf/{{ item }}"
+        owner: root
+        group: root
+        mode: 0640
+      with_items:
+        - authorizations.xml
+        - flow.xml.gz
+        - users.xml
+
+    - name: remove request(s)
+      file:
+        path: "{{ item.path }}"
+        state: absent
+      with_items: "{{ cluster_requests.files }}"
+
+    - name: touch join(s)
+      file:
+        path: "/mnt/tf-nifi-efs/cluster/invite/{{ item.path | basename }}"
+        state: touch
+        owner: root
+        group: root
+        mode: 0640
+      with_items: "{{ cluster_requests.files }}"
+
+    - name: remove lock
+      file:
+        path: /mnt/tf-nifi-efs/cluster/lock
+        state: absent

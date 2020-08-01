@@ -1,5 +1,5 @@
 ---
-- name: tf-nifi-playbook.yml
+- name: zookeepers.yml
   hosts: localhost
   become: True
   become_user: root
@@ -123,6 +123,10 @@
         - /mnt/tf-nifi-efs/nifi-certificates
         - /mnt/tf-nifi-efs/conf
         - /mnt/tf-nifi-efs/downloads
+        - /mnt/tf-nifi-efs/cluster
+        - /mnt/tf-nifi-efs/cluster/join
+        - /mnt/tf-nifi-efs/cluster/invite
+        - /mnt/tf-nifi-efs/cluster/leave
       when:
         - ansible_default_ipv4.address == node1_ip
 
@@ -183,7 +187,7 @@
       wait_for:
         path: "/mnt/tf-nifi-efs/downloads/{{ item }}"
         state: present
-        delay: 15
+        delay: 10
         timeout: 720
       with_items:
         - zookeeper.tar.gz
@@ -306,7 +310,7 @@
       wait_for:
         path: /mnt/tf-nifi-efs/generated_password
         state: present
-        delay: 15
+        delay: 10
         timeout: 720
       when:
         - ansible_default_ipv4.address != node1_ip
@@ -373,6 +377,30 @@
         - ansible_default_ipv4.address == node1_ip
         - admin_certificate.stat.exists == false
 
+    - name: register ADMIN_KEYSTORE_PASS
+      shell: |
+        awk -F'"' '/keyStorePassword/ { print $4 }' /mnt/tf-nifi-efs/admin-certificates/tls.json
+      register: admin_keystore_pass
+      when:
+        - ansible_default_ipv4.address == node1_ip
+
+    - name: register ADMIN_TRUSTSTORE_PASS
+      shell: |
+        awk -F'"' '/trustStorePassword/ { print $4 }' /mnt/tf-nifi-efs/admin-certificates/tls.json
+      register: admin_truststore_pass
+      when:
+        - ansible_default_ipv4.address == node1_ip
+
+    - name: admin cli.properties template
+      template:
+        src: cli.properties
+        dest: /mnt/tf-nifi-efs/admin-certificates/cli.properties
+        owner: root
+        group: root
+        mode: '0640'
+      when:
+        - ansible_default_ipv4.address == node1_ip
+
     - name: node1 - ensure boto3 for pip
       pip:
         executable: /bin/pip
@@ -394,7 +422,7 @@
       wait_for:
         host: "{{ node1_ip }}"
         port: 2170
-        delay: 30
+        delay: 10
         timeout: 300
 
     - name: nodes - check client tls.json
@@ -483,7 +511,7 @@
       wait_for:
         path: "/opt/nifi/conf/{{ item }}"
         state: present
-        delay: 20
+        delay: 10
         timeout: 120
       with_items:
         - users.xml
@@ -511,7 +539,7 @@
       wait_for:
         path: "/mnt/tf-nifi-efs/conf/{{ item }}"
         state: present
-        delay: 40
+        delay: 10
         timeout: 240
       with_items:
         - users.xml
@@ -543,3 +571,32 @@
         daemon_reload: yes
       when:
         - ansible_default_ipv4.address != node1_ip
+
+    - name: nodes - nifi-join play
+      copy:
+        src: nifi-join.yml
+        dest: /mnt/tf-nifi-efs/cluster/nifi-join.yml
+        owner: root
+        group: root
+        mode: 0640
+
+    - name: nodes - nifi-join service and timer
+      copy:
+        src: "{{ item }}"
+        dest: "/etc/systemd/system/{{ item }}"
+        owner: root
+        group: root
+        mode: 0640
+      with_items:
+        - nifi-join.service
+        - nifi-join.timer
+
+    - name: nodes - nifi-join systemd
+      systemd:
+        name: "nifi-join.{{ item }}"
+        daemon_reload: yes
+        state: started
+        enabled: yes
+      with_items:
+        - service
+        - timer

@@ -32,3 +32,12 @@ resource "aws_s3_bucket_object" "tf-nifi-zookeepers" {
   source                  = "zookeepers/${each.value}"
   etag                    = filemd5("zookeepers/${each.value}")
 }
+
+# s3 objects (nodes playbook)
+resource "aws_s3_bucket_object" "tf-nifi-nodes" {
+  for_each                = fileset("nodes/", "*")
+  bucket                  = aws_s3_bucket.tf-nifi-bucket.id
+  key                     = "nodes/${each.value}"
+  source                  = "nodes/${each.value}"
+  etag                    = filemd5("nodes/${each.value}")
+}
