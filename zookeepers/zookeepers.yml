@@ -422,8 +422,8 @@
       wait_for:
         host: "{{ node1_ip }}"
         port: 2170
-        delay: 10
-        timeout: 300
+        delay: 5
+        timeout: 360
 
     - name: nodes - check client tls.json
       stat:
@@ -511,8 +511,8 @@
       wait_for:
         path: "/opt/nifi/conf/{{ item }}"
         state: present
-        delay: 10
-        timeout: 120
+        delay: 5
+        timeout: 240
       with_items:
         - users.xml
         - authorizations.xml
@@ -539,8 +539,8 @@
       wait_for:
         path: "/mnt/tf-nifi-efs/conf/{{ item }}"
         state: present
-        delay: 10
-        timeout: 240
+        delay: 5
+        timeout: 480
       with_items:
         - users.xml
         - authorizations.xml

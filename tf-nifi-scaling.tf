@@ -42,4 +42,5 @@ resource "aws_autoscaling_group" "tf-nifi-autoscalegroup" {
       }
     ]
   )
+  depends_on              = [aws_instance.tf-nifi-1,aws_instance.tf-nifi-2,aws_instance.tf-nifi-3]
 }

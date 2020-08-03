@@ -108,7 +108,7 @@
       wait_for:
         path: "/mnt/tf-nifi-efs/downloads/{{ item }}"
         state: present
-        delay: 10
+        delay: 5
         timeout: 720
       with_items:
         - nifi.tar.gz
@@ -184,7 +184,7 @@
       wait_for:
         path: /mnt/tf-nifi-efs/generated_password
         state: present
-        delay: 10
+        delay: 5
         timeout: 720
 
     - name: set generated_password var
@@ -196,8 +196,8 @@
       wait_for:
         host: "{{ node1_ip }}"
         port: 2170
-        delay: 10
-        timeout: 300
+        delay: 5
+        timeout: 360
 
     - name: nodes - check client tls.json
       stat:
@@ -254,7 +254,7 @@
         path: "/mnt/tf-nifi-efs/cluster/invite/{{ ansible_nodename }}"
         state: present
         delay: 5
-        timeout: 180
+        timeout: 360
 
     - name: remove invite in cluster/invite
       file:
