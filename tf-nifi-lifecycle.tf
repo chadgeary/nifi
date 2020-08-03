@@ -1,4 +1,4 @@
-# lifecycle hook to terminate
+# lifecycle hook when scaling down to terminate an instance
 resource "aws_autoscaling_lifecycle_hook" "tf-nifi-lch-node-down" {
   name                    = "tf-nifi-lch-node-down"
   autoscaling_group_name  = aws_autoscaling_group.tf-nifi-autoscalegroup.name
@@ -33,14 +33,14 @@ resource "aws_sns_topic" "tf-nifi-sns-node-down" {
 EOF
 }
 
-# lambda function
+# lambda function source code
 data "archive_file" "tf-nifi-lambda-file-node-down" {
   type                    = "zip"
   source_file             = "tf-nifi-lambda-node-down.js"
   output_path             = "tf-nifi-lambda-node-down.zip"
 }
 
-# lambda called by sns topic
+# lambda function conf
 resource "aws_lambda_function" "tf-nifi-lambda-node-down" {
   filename                = "tf-nifi-lambda-node-down.zip"
   source_code_hash        = data.archive_file.tf-nifi-lambda-file-node-down.output_base64sha256
@@ -57,7 +57,7 @@ resource "aws_lambda_function" "tf-nifi-lambda-node-down" {
   }
 }
 
-# lambda called by sns permission
+# allow sns to call lambda
 resource "aws_lambda_permission" "tf-nifi-lambda-permission-node-down" {
   statement_id            = "AllowExecutionFromSNS"
   action                  = "lambda:InvokeFunction"
@@ -66,7 +66,7 @@ resource "aws_lambda_permission" "tf-nifi-lambda-permission-node-down" {
   source_arn              = aws_sns_topic.tf-nifi-sns-node-down.arn
 }
 
-# ssm document
+# ssm document run by the lambda function, executes scale-down shell script, then notifies lifecycle hook complete
 resource "aws_ssm_document" "tf-nifi-ssmdoc-node-down" {
   name                    = "tf-nifi-ssmdoc-node-down"
   document_type           = "Command"

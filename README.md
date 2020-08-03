@@ -1,11 +1,20 @@
 # Reference
 Terraform with Ansible to create/manage a fullstack AWS-based secure Apache NiFi cluster.
 
+# Requirements
+- Terraform installed.
+- AWS credentials (e.g. `aws configure` if awscli is installed)
+- Customized variables
+
+# Variables
+Edit the vars file (.tfvars) to customize the deployment, especially:
+- bucket_name, a unique bucket name, terraform will create the bucket to store various resources.
+- mgmt_cidr, an IP range granted NiFi webUI access (deploying from home? `dig +short myip.opendns.com @resolver1.opendns.com | awk '{ print $1"/32" }'`)
+- kms_manager, an AWS user account (not root) that will be granted access to the KMS key (to read S3 objects).
+- instance_key, a public SSH key for SSH access to instances.
+
 # Deploy
 ```
-# Set vars in .tfvars file - mgmt_cidr is granted WebUI access.
-vi tf-nifi.tfvars
-
 # Initialize terraform
 terraform init
 
