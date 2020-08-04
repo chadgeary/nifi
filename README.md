@@ -1,5 +1,5 @@
 # Reference
-Terraform with Ansible to create/manage a fullstack AWS-based secure Apache NiFi cluster.
+Terraform with Ansible to create/manage a full AWS-based secure Apache NiFi cluster/stack.
 
 # Requirements
 - Terraform installed.
