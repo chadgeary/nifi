@@ -66,13 +66,20 @@ resource "aws_lambda_permission" "tf-nifi-lambda-permission-node-down" {
   source_arn              = aws_sns_topic.tf-nifi-sns-node-down.arn
 }
 
+# sns subscription for lambda
+resource "aws_sns_topic_subscription" "tf-nifi-lambda-sub-sns-node-down" {
+  topic_arn               = aws_sns_topic.tf-nifi-sns-node-down.arn
+  protocol                = "lambda"
+  endpoint                = aws_lambda_function.tf-nifi-lambda-node-down.arn
+}
+
 # ssm document run by the lambda function, executes scale-down shell script, then notifies lifecycle hook complete
 resource "aws_ssm_document" "tf-nifi-ssmdoc-node-down" {
   name                    = "tf-nifi-ssmdoc-node-down"
   document_type           = "Command"
   content                 = <<DOC
 {
- "schemaVersion": "1.2",
+ "schemaVersion": "2.2",
  "description": "Autoscaling for NiFi",
  "parameters": {
   "ASGNAME": {
@@ -88,23 +95,24 @@ resource "aws_ssm_document" "tf-nifi-ssmdoc-node-down" {
    "description":"SNS Target"
   }
  },
- "runtimeConfig": {
-  "aws:runShellScript": {
-   "properties": [{
-    "id": "0.aws:runShellScript",
+ "mainSteps": [
+  {
+   "action": "aws:runShellScript",
+   "name": "runShellScript",
+   "inputs": {
+    "timeoutSeconds": "120",
     "runCommand": [
-     "",
      "#!/bin/bash",
      "INSTANCEID=$(curl http://169.254.169.254/latest/meta-data/instance-id)",
      "HOOKRESULT='CONTINUE'",
      "REGION=$(curl -s 169.254.169.254/latest/meta-data/placement/availability-zones | sed 's/.$//')",
-     "/bin/pip install --user awscli",
+     "/usr/bin/pip3 install awscli",
      "/usr/local/bin/scale-down",
      "/usr/local/bin/aws autoscaling complete-lifecycle-action --lifecycle-hook-name {{LIFECYCLEHOOKNAME}} --auto-scaling-group-name {{ASGNAME}} --lifecycle-action-result $${HOOKRESULT} --instance-id $${INSTANCEID} --region $${REGION}"
     ]
-   }]
+   }
   }
- }
+ ]
 }
 DOC
 }

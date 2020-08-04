@@ -29,30 +29,30 @@ data "aws_ami" "tf-nifi-latest-rhel-ami" {
   }
 }
 
-# Instance from Latest RHEL7 (Redhat doesnt allow AMI copies)
-resource "aws_instance" "tf-nifi-latest" {
+# Build instance from RHEL7 with KMS CMK
+resource "aws_instance" "tf-nifi-encrypted-instance" {
   ami                     = data.aws_ami.tf-nifi-latest-rhel-ami.id
   instance_type           = var.instance_type
   iam_instance_profile    = aws_iam_instance_profile.tf-nifi-instance-profile.name
   key_name                = aws_key_pair.tf-nifi-instance-key.key_name
   subnet_id               = aws_subnet.tf-nifi-prinet1.id
+  private_ip              = var.encrypted_ami_ip
   vpc_security_group_ids  = [aws_security_group.tf-nifi-prisg1.id]
   tags                    = {
-    Name                    = "tf-nifi-latest-ami"
+    Name                    = "tf-nifi-encrypted-instance"
   }
   root_block_device {
     encrypted               = "true"
     kms_key_id              = aws_kms_key.tf-nifi-kmscmk.arn
   }
-  user_data               = file("userdata/tf-nifi-userdata-latest-ami.sh")
+  user_data               = file("userdata/tf-nifi-userdata-encrypted-instance.sh")
 }
 
-
-# Create AMI from Latest instance (now encrypted)
+# Create AMI from KMS CMK encrypted instance
 resource "aws_ami_from_instance" "tf-nifi-ami" {
   name                    = "tf-nifi-rhel7"
   description             = "KMS CMK encrypted copy of RHEL7 official AMI (${data.aws_ami.tf-nifi-latest-rhel-ami.id})"
-  source_instance_id      = aws_instance.tf-nifi-latest.id
+  source_instance_id      = aws_instance.tf-nifi-encrypted-instance.id
   tags                    = {
     Name                    = "tf-nifi-ami"
   }

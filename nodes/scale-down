@@ -1,0 +1,42 @@
+#!/bin/bash
+# Gracefully exits node from cluster
+export JAVA_HOME=/usr/lib/jvm/jre
+CLUSTERJSON=$(mktemp)
+
+# LIST
+/opt/nifi-toolkit/bin/cli.sh nifi get-nodes -p /mnt/tf-nifi-efs/admin-certificates/cli.properties -ot json > $CLUSTERJSON
+
+# NODEID from HOSTNAME
+NODEID=$(jq -r '.cluster[] | map(select(.address | contains("'$(hostname)'")).nodeId) | @tsv' $CLUSTERJSON)
+rm -f $CLUSTERJSON
+
+# DISCONNECT
+/opt/nifi-toolkit/bin/cli.sh nifi disconnect-node --nifiNodeId $NODEID -p /mnt/tf-nifi-efs/admin-certificates/cli.properties
+
+# OFFLOAD after DISCONNECTED
+while true
+do
+  /opt/nifi-toolkit/bin/cli.sh nifi get-node --nifiNodeId $NODEID -p /mnt/tf-nifi-efs/admin-certificates/cli.properties | grep --quiet DISCONNECTED
+  if [ $? -eq 0 ]
+  then
+    echo "DISCONNECTED, OFFLOADING"
+    /opt/nifi-toolkit/bin/cli.sh nifi offload-node --nifiNodeId $NODEID -p /mnt/tf-nifi-efs/admin-certificates/cli.properties
+    break
+  else
+    sleep 2
+  fi
+done
+
+# DELETE after OFFLOADED
+while true
+do
+  /opt/nifi-toolkit/bin/cli.sh nifi get-node --nifiNodeId $NODEID -p /mnt/tf-nifi-efs/admin-certificates/cli.properties | grep --quiet OFFLOADED
+  if [ $? -eq 0 ]
+  then
+    echo "OFFLOADED, DELETING"
+    /opt/nifi-toolkit/bin/cli.sh nifi delete-node --nifiNodeId $NODEID -p /mnt/tf-nifi-efs/admin-certificates/cli.properties
+    break
+  else
+    sleep 2
+  fi
+done

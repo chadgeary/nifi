@@ -56,6 +56,14 @@ resource "aws_iam_policy" "tf-nifi-instance-policy" {
         "kms:DescribeKey"
       ],
       "Resource": ["${aws_kms_alias.tf-nifi-kmscmk-alias.arn}","${aws_kms_key.tf-nifi-kmscmk.arn}"]
+    },
+    {
+      "Sid": "CompleteAutoScale",
+      "Effect": "Allow",
+      "Action": [
+        "autoscaling:CompleteLifecycleAction"
+      ],
+      "Resource": ["${aws_autoscaling_group.tf-nifi-autoscalegroup.arn}"]
     }
   ]
 }

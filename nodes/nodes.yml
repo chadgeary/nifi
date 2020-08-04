@@ -19,6 +19,11 @@
         - "{{ node2_ip }} tf-nifi-2"
         - "{{ node3_ip }} tf-nifi-3"
 
+    - name: epel
+      package:
+        name: https://dl.fedoraproject.org/pub/epel/epel-release-latest-7.noarch.rpm
+        state: latest
+
     - name: nifi required packages
       package:
         name: "{{ packages }}"
@@ -27,6 +32,7 @@
         packages:
         - java-sdk
         - openssl
+        - jq
         - nfs-utils
         - git
         - make
@@ -272,6 +278,14 @@
         - authorizations.xml
         - flow.xml.gz
         - users.xml
+
+    - name: copy scale-down script executed by autoscaling ssm doc
+      copy:
+        src: scale-down
+        dest: /usr/local/bin/scale-down
+        owner: root
+        group: root
+        mode: 0550
 
     - name: nodes - nifi systemd service start/enable
       systemd:

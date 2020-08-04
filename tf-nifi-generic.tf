@@ -64,6 +64,11 @@ variable "node3_ip" {
   description              = "An ip from prinet3_cidr for the third nifi node, which runs zookeeper"
 }
 
+variable "encrypted_ami_ip" {
+  type                     = string
+  description              = "An ip from prinet1_cidr for the instance used to create an encrypted AMI with a custom KMS CMK"
+}
+
 variable "mgmt_cidr" {
   type                     = string
   description              = "Subnet CIDR allowed to access NiFi instance(s) via ELB, e.g. 172.16.10.0/30"
