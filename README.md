@@ -18,7 +18,7 @@ Edit the vars file (.tfvars) to customize the deployment, especially:
 # Initialize terraform
 terraform init
 
-# Apply terraform
+# Apply terraform - the first apply takes a significant amount of time - ask RedHat to mark their AMI EBS volumes public!
 terraform apply -var-file="tf-nifi.tfvars"
 
 # Wait for SSM Ansible Playbook, watch:
