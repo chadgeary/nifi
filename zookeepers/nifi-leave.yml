@@ -40,14 +40,19 @@
       shell: |
         /opt/nifi-toolkit/bin/cli.sh nifi delete-node --nifiNodeId {{ item.path | basename }} -p /mnt/tf-nifi-efs/admin-certificates/cli.properties
       with_items: "{{ cluster_leave.files }}"
-
-    - name: remove leave
-      file:
-        path: "{{ item.path }}"
-        state: absent
-      with_items: "{{ cluster_leave.files }}"
+      when: set_lock.changed
+      ignore_errors: True
 
     - name: remove lock
       file:
         path: /mnt/tf-nifi-efs/cluster/lock-leave
         state: absent
+      when: set_lock.changed
+
+    - name: check node no longer in cluster and remove from leave queue
+      shell: |
+        /opt/nifi-toolkit/bin/cli.sh nifi get-nodes -p /mnt/tf-nifi-efs/admin-certificates/cli.properties | grep --quiet {{ item }}
+        if [ $? -eq 0 ]
+          then rm /mnt/tf-nifi-efs/cluster/leave/{{ item }}
+        fi
+      with_items: "{{ cluster_leave.files }}"
