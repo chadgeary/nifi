@@ -34,4 +34,5 @@ WebUI access is permitted to the mgmt_cidr defined in tf-nifi.tfvars. Authentica
   - Use tls.json's keyStorePassword value when prompted for password
 
 # Notes
-- AMI is [Latest Official RHEL7](https://access.redhat.com/solutions/15356)
+- AMI is [Latest Official RHEL7](https://access.redhat.com/solutions/15356), but takes a considerable amount of time to clone. This method may change in the future, or Ubuntu may be used.
+- The RedHat AMI [has this misconfiguration](https://bugzilla.redhat.com/show_bug.cgi?id=1865991).
