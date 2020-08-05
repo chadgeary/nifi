@@ -59,11 +59,11 @@ Special actions take place during scaling to handle NiFi cluster management:
 - The Autoscaling Group has a Lifecycle Hook to an SNS topic.
 - The SNS topic has a subscription from a Lambda function.
 - The Lambda function executes an SSM RunCommand with an SSM Document.
-- The SSM document executes the node shell script `scale-down` on the terminating instances.
+- The SSM Document executes the node shell script (see: `nodes/scale-down`) on the terminating instances.
 - `scale-down` perform several steps:
- - Retrieves the NodeId from the cluster.
- - Disconnects the NodeId from the cluster.
- - Offloads the NodeId from the cluster.
- - Touches a delete file in EFS:/cluster/leave/
- - Notifies AWS Autoscaling the lifecycle action is complete (and the instance may be terminated)
+  - Retrieves the NodeId from the cluster.
+  - Disconnects the NodeId from the cluster.
+  - Offloads the NodeId from the cluster.
+  - Touches a delete file in EFS:/cluster/leave/
+  - Notifies AWS Autoscaling the lifecycle action is complete (and the instance may be terminated)
 - Zookeepers watch EFS:/cluster/leave/, if leave file(s) are found, a Zookeeper will delete the matching NodeId from the cluster.
