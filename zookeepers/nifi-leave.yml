@@ -1,0 +1,53 @@
+---
+- name: nifi-leave.yml
+  hosts: localhost
+  become: True
+  become_user: root
+  gather_facts: false
+  tasks:
+
+    - name: determine lock
+      stat:
+        path: /mnt/tf-nifi-efs/cluster/lock-leave
+      register: cluster_lock
+
+    - name: end if cluster lock
+      meta: end_host
+      when:
+        - cluster_lock.stat.exists == true
+
+    - name: find cluster leave
+      find:
+        paths: /mnt/tf-nifi-efs/cluster/leave
+        patterns: '*'
+      register: cluster_leave
+
+    - name: end if no files match
+      meta: end_host
+      when:
+        - cluster_leave.matched == 0
+
+    - name: set lock
+      file:
+        path: /mnt/tf-nifi-efs/cluster/lock-leave
+        state: directory
+        owner: root
+        group: root
+        mode: 0640
+      register: set_lock
+
+    - name: process leaves by deleting from cluster
+      shell: |
+        /opt/nifi-toolkit/bin/cli.sh nifi delete-node --nifiNodeId {{ item.path | basename }} -p /mnt/tf-nifi-efs/admin-certificates/cli.properties
+      with_items: "{{ cluster_leave.files }}"
+
+    - name: remove leave
+      file:
+        path: "{{ item.path }}"
+        state: absent
+      with_items: "{{ cluster_leave.files }}"
+
+    - name: remove lock
+      file:
+        path: /mnt/tf-nifi-efs/cluster/lock-leave
+        state: absent

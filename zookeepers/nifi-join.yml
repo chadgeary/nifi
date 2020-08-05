@@ -8,7 +8,7 @@
 
     - name: determine lock
       stat:
-        path: /mnt/tf-nifi-efs/cluster/lock
+        path: /mnt/tf-nifi-efs/cluster/lock-join
       register: cluster_lock
 
     - name: end if cluster lock
@@ -29,7 +29,7 @@
 
     - name: set lock
       file:
-        path: /mnt/tf-nifi-efs/cluster/lock
+        path: /mnt/tf-nifi-efs/cluster/lock-join
         state: directory
         owner: root
         group: root
@@ -65,5 +65,5 @@
 
     - name: remove lock
       file:
-        path: /mnt/tf-nifi-efs/cluster/lock
+        path: /mnt/tf-nifi-efs/cluster/lock-join
         state: absent

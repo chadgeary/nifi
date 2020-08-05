@@ -572,15 +572,18 @@
       when:
         - ansible_default_ipv4.address != node1_ip
 
-    - name: nodes - nifi-join play
+    - name: nodes - nifi-join and leave play
       copy:
-        src: nifi-join.yml
-        dest: /mnt/tf-nifi-efs/cluster/nifi-join.yml
+        src: "{{ item }}"
+        dest: "/mnt/tf-nifi-efs/cluster/{{ item }}"
         owner: root
         group: root
         mode: 0640
+      with_items:
+        - nifi-join.yml
+        - nifi-leave.yml
 
-    - name: nodes - nifi-join service and timer
+    - name: nodes - nifi-join and leave service and timer
       copy:
         src: "{{ item }}"
         dest: "/etc/systemd/system/{{ item }}"
@@ -590,10 +593,22 @@
       with_items:
         - nifi-join.service
         - nifi-join.timer
+        - nifi-leave.service
+        - nifi-leave.timer
 
     - name: nodes - nifi-join systemd
       systemd:
         name: "nifi-join.{{ item }}"
+        daemon_reload: yes
+        state: started
+        enabled: yes
+      with_items:
+        - service
+        - timer
+
+    - name: nodes - nifi-leave systemd
+      systemd:
+        name: "nifi-leave.{{ item }}"
         daemon_reload: yes
         state: started
         enabled: yes

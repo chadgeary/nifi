@@ -1,7 +1,14 @@
 #!/bin/bash
 # Gracefully exits node from cluster
+INSTANCEID=$(curl http://169.254.169.254/latest/meta-data/instance-id)
+HOOKRESULT='CONTINUE'
+REGION=$(curl -s 169.254.169.254/latest/meta-data/placement/availability-zone | sed 's/.$//')
+INSTANCEID=$(curl http://169.254.169.254/latest/meta-data/instance-id)
 export JAVA_HOME=/usr/lib/jvm/jre
 CLUSTERJSON=$(mktemp)
+
+# Ensure awscli installed
+/usr/bin/pip3 install awscli
 
 # LIST
 /opt/nifi-toolkit/bin/cli.sh nifi get-nodes -p /mnt/tf-nifi-efs/admin-certificates/cli.properties -ot json > $CLUSTERJSON
@@ -9,6 +16,7 @@ CLUSTERJSON=$(mktemp)
 # NODEID from HOSTNAME
 NODEID=$(jq -r '.cluster[] | map(select(.address | contains("'$(hostname)'")).nodeId) | @tsv' $CLUSTERJSON)
 rm -f $CLUSTERJSON
+echo "$DATE NODEID $NODEID"
 
 # DISCONNECT
 /opt/nifi-toolkit/bin/cli.sh nifi disconnect-node --nifiNodeId $NODEID -p /mnt/tf-nifi-efs/admin-certificates/cli.properties
@@ -19,7 +27,7 @@ do
   /opt/nifi-toolkit/bin/cli.sh nifi get-node --nifiNodeId $NODEID -p /mnt/tf-nifi-efs/admin-certificates/cli.properties | grep --quiet DISCONNECTED
   if [ $? -eq 0 ]
   then
-    echo "DISCONNECTED, OFFLOADING"
+    echo "$DATE DISCONNECTED, OFFLOADING"
     /opt/nifi-toolkit/bin/cli.sh nifi offload-node --nifiNodeId $NODEID -p /mnt/tf-nifi-efs/admin-certificates/cli.properties
     break
   else
@@ -27,16 +35,22 @@ do
   fi
 done
 
-# DELETE after OFFLOADED
+# place DELETE after OFFLOADED
 while true
 do
   /opt/nifi-toolkit/bin/cli.sh nifi get-node --nifiNodeId $NODEID -p /mnt/tf-nifi-efs/admin-certificates/cli.properties | grep --quiet OFFLOADED
   if [ $? -eq 0 ]
   then
-    echo "OFFLOADED, DELETING"
-    /opt/nifi-toolkit/bin/cli.sh nifi delete-node --nifiNodeId $NODEID -p /mnt/tf-nifi-efs/admin-certificates/cli.properties
+    echo "$DATE OFFLOADED, placing DELETE note"
+    touch /mnt/tf-nifi-efs/cluster/leave/$NODEID
     break
   else
     sleep 2
   fi
 done
+
+# notify lifecycle hook
+/usr/local/bin/aws autoscaling complete-lifecycle-action --lifecycle-hook-name $LIFECYCLEHOOKNAME --auto-scaling-group-name $ASGNAME --lifecycle-action-result $HOOKRESULT --instance-id $INSTANCEID --region $REGION
+
+# remove temp file
+rm -f $CLUSTERJSON

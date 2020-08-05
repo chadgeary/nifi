@@ -1,0 +1,12 @@
+[Unit]
+Description=nifi service to manage leave notifications to cluster from scale down nodes
+After=network.target
+
+[Service]
+ExecStart=/usr/local/bin/ansible-playbook /mnt/tf-nifi-efs/cluster/nifi-leave.yml
+Type=simple
+Restart=on-failure   
+RestartSec=5
+
+[Install]
+WantedBy=multiuser.target

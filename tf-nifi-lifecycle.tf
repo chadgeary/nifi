@@ -89,10 +89,6 @@ resource "aws_ssm_document" "tf-nifi-ssmdoc-node-down" {
   "LIFECYCLEHOOKNAME": {
    "type":"String",
    "description":"LCH Name"
-  },
-  "SNSTARGET": {
-   "type":"String",
-   "description":"SNS Target"
   }
  },
  "mainSteps": [
@@ -103,12 +99,9 @@ resource "aws_ssm_document" "tf-nifi-ssmdoc-node-down" {
     "timeoutSeconds": "120",
     "runCommand": [
      "#!/bin/bash",
-     "INSTANCEID=$(curl http://169.254.169.254/latest/meta-data/instance-id)",
-     "HOOKRESULT='CONTINUE'",
-     "REGION=$(curl -s 169.254.169.254/latest/meta-data/placement/availability-zones | sed 's/.$//')",
-     "/usr/bin/pip3 install awscli",
-     "/usr/local/bin/scale-down",
-     "/usr/local/bin/aws autoscaling complete-lifecycle-action --lifecycle-hook-name {{LIFECYCLEHOOKNAME}} --auto-scaling-group-name {{ASGNAME}} --lifecycle-action-result $${HOOKRESULT} --instance-id $${INSTANCEID} --region $${REGION}"
+     "export LIFECYCLEHOOKNAME='{{ LIFECYCLEHOOKNAME }}'",
+     "export ASGNAME='{{ ASGNAME }}'",
+     "/usr/local/bin/scale-down"
     ]
    }
   }

@@ -3,7 +3,6 @@ const ssm = new AWS.SSM();
 
 // from lambda environment vars
 const SSMDOCUMENTNAME = process.env.SSMDOCUMENTNAME;
-const SNSTARGET = process.env.SNSTARGET;
 
 // construct sendcommand with document to instance via ssm
 const sendCommand = (instanceId, autoScalingGroup, lifecycleHook) => {
@@ -12,8 +11,7 @@ const sendCommand = (instanceId, autoScalingGroup, lifecycleHook) => {
     InstanceIds: [instanceId],
     Parameters: {
       'ASGNAME': [autoScalingGroup],
-      'LIFECYCLEHOOKNAME': [lifecycleHook],
-      'SNSTARGET': [SNSTARGET],
+      'LIFECYCLEHOOKNAME': [lifecycleHook]
     },
     TimeoutSeconds: 300
   };
