@@ -37,3 +37,8 @@ node2_ip = "10.10.10.133"
 efs3_ip = "10.10.10.196"
 node3_ip = "10.10.10.197"
 encrypted_ami_ip = "10.10.10.72"
+
+# the initial size and min/max of non-zookeeper NiFi nodes. There are always three zookeepers.
+desired_node_count = 1
+minimum_node_count = 1
+maximum_node_count = 3

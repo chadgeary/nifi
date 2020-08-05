@@ -109,6 +109,21 @@ variable "zk_version" {
   description              = "The version of Apache Zookeeper, e.g. 3.6.1"
 }
 
+variable "desired_node_count" {
+  type                     = number
+  description              = "The initial number of non-zookeeper NiFi nodes in the Autoscaling Group"
+}
+
+variable "minimum_node_count" {
+  type                     = number
+  description              = "The minimum number of non-zookeeper NiFi nodes in the Autoscaling Group"
+}
+
+variable "maximum_node_count" {
+  type                     = number
+  description              = "The maximum number of non-zookeeper NiFi nodes in the Autoscaling Group"
+}
+
 provider "aws" {
   region                   = var.aws_region
   profile                  = var.aws_profile
