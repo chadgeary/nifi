@@ -47,7 +47,7 @@ resource "aws_iam_policy" "tf-nifi-instance-policy" {
       "Resource": ["${aws_efs_file_system.tf-nifi-efs.arn}"]
     },
     {
-      "Sid": "KMSforCMK",
+      "Sid": "EFSCMK",
       "Effect": "Allow",
       "Action": [
         "kms:Encrypt",
@@ -55,7 +55,29 @@ resource "aws_iam_policy" "tf-nifi-instance-policy" {
         "kms:GenerateDataKey*",
         "kms:DescribeKey"
       ],
-      "Resource": ["${aws_kms_alias.tf-nifi-kmscmk-alias.arn}","${aws_kms_key.tf-nifi-kmscmk.arn}"]
+      "Resource": ["${aws_kms_key.tf-nifi-kmscmk-efs.arn}"]
+    },
+    {
+      "Sid": "S3CMK",
+      "Effect": "Allow",
+      "Action": [
+        "kms:Encrypt",
+        "kms:ReEncrypt*",
+        "kms:GenerateDataKey*",
+        "kms:DescribeKey"
+      ],
+      "Resource": ["${aws_kms_key.tf-nifi-kmscmk-s3.arn}"]
+    },
+    {
+      "Sid": "EC2CMK",
+      "Effect": "Allow",
+      "Action": [
+        "kms:Encrypt",
+        "kms:ReEncrypt*",
+        "kms:GenerateDataKey*",
+        "kms:DescribeKey"
+      ],
+      "Resource": ["${aws_kms_key.tf-nifi-kmscmk-ec2.arn}"]
     },
     {
       "Sid": "CompleteAutoScale",
@@ -133,7 +155,7 @@ resource "aws_iam_policy" "tf-nifi-lambda-policy-3" {
   "Version": "2012-10-17",
   "Statement": [
     {
-      "Sid": "KMSforCMK1",
+      "Sid": "LambdaCMK",
       "Effect": "Allow",
       "Action": [
         "kms:Encrypt",
@@ -142,10 +164,10 @@ resource "aws_iam_policy" "tf-nifi-lambda-policy-3" {
         "kms:GenerateDataKey*",
         "kms:DescribeKey"
       ],
-      "Resource": ["${aws_kms_alias.tf-nifi-kmscmk-alias.arn}","${aws_kms_key.tf-nifi-kmscmk.arn}"]
+      "Resource": ["${aws_kms_key.tf-nifi-kmscmk-lambda.arn}"]
     },
     {
-      "Sid": "KMSforCMK2",
+      "Sid": "LambdaAutoscale",
       "Effect": "Allow",
       "Action": [
         "kms:ListKeys"
@@ -212,7 +234,7 @@ resource "aws_iam_policy" "tf-nifi-autoscale-snspolicy-1" {
   "Version": "2012-10-17",
   "Statement": [
     {
-      "Sid": "KMSforCMK1",
+      "Sid": "SNSCMK",
       "Effect": "Allow",
       "Action": [
         "kms:Encrypt",
@@ -221,10 +243,10 @@ resource "aws_iam_policy" "tf-nifi-autoscale-snspolicy-1" {
         "kms:GenerateDataKey*",
         "kms:DescribeKey"
       ],
-      "Resource": ["${aws_kms_alias.tf-nifi-kmscmk-alias.arn}","${aws_kms_key.tf-nifi-kmscmk.arn}"]
+      "Resource": ["${aws_kms_key.tf-nifi-kmscmk-sns.arn}"]
     },
     {
-      "Sid": "KMSforCMK2",
+      "Sid": "SNSPublish",
       "Effect": "Allow",
       "Action": [
         "kms:ListKeys"

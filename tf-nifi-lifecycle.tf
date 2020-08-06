@@ -11,7 +11,7 @@ resource "aws_autoscaling_lifecycle_hook" "tf-nifi-lch-node-down" {
 # sns topic called by lifecycle hook
 resource "aws_sns_topic" "tf-nifi-sns-node-down" {
   name                    = "tf-nifi-sns-node-down"
-  kms_master_key_id       = aws_kms_key.tf-nifi-kmscmk.arn
+  kms_master_key_id       = aws_kms_key.tf-nifi-kmscmk-sns.arn
   delivery_policy         = <<EOF
 {
   "http": {
@@ -46,6 +46,7 @@ resource "aws_lambda_function" "tf-nifi-lambda-node-down" {
   source_code_hash        = data.archive_file.tf-nifi-lambda-file-node-down.output_base64sha256
   function_name           = "tf-nifi-lambda-node-down"
   role                    = aws_iam_role.tf-nifi-lambda-iam-role.arn
+  kms_key_arn             = aws_kms_key.tf-nifi-kmscmk-lambda.arn
   handler                 = "tf-nifi-lambda-node-down.handler"
   runtime                 = "nodejs12.x"
   timeout                 = 60

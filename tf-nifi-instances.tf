@@ -43,7 +43,7 @@ resource "aws_instance" "tf-nifi-encrypted-instance" {
   }
   root_block_device {
     encrypted               = "true"
-    kms_key_id              = aws_kms_key.tf-nifi-kmscmk.arn
+    kms_key_id              = aws_kms_key.tf-nifi-kmscmk-ec2.arn
   }
   user_data               = file("userdata/tf-nifi-userdata-encrypted-instance.sh")
 }

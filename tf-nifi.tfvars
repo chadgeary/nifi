@@ -38,6 +38,6 @@ efs3_ip = "10.10.10.196"
 node3_ip = "10.10.10.197"
 encrypted_ami_ip = "10.10.10.72"
 
-# the initial size and min/max of non-zookeeper Autoscaling Group NiFi nodes.
-minimum_node_count = 1
+# the initial size (min) and max count of non-zookeeper Autoscaling Group NiFi nodes, scale is based on CPU load (see tf-nifi-scaling.tf)
+minimum_node_count = 0
 maximum_node_count = 3

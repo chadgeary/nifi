@@ -23,6 +23,7 @@ resource "aws_autoscaling_group" "tf-nifi-autoscalegroup" {
   load_balancers          = [aws_elb.tf-nifi-elb1.name]
   vpc_zone_identifier     = [aws_subnet.tf-nifi-prinet1.id, aws_subnet.tf-nifi-prinet2.id, aws_subnet.tf-nifi-prinet3.id]
   service_linked_role_arn = aws_iam_service_linked_role.tf-nifi-autoscale-slr.arn
+  termination_policies    = ["ClosestToNextInstanceHour"]
   min_size                = var.minimum_node_count
   max_size                = var.maximum_node_count
   lifecycle {

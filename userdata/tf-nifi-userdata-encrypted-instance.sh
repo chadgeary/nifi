@@ -1,5 +1,2 @@
 #!/bin/bash
-
-# shutdown
-sleep 10
-systemctl poweroff
+init 0

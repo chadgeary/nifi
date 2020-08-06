@@ -6,6 +6,36 @@
   gather_facts: false
   tasks:
 
+    - name: stat live conf files 1 of 3
+      stat:
+        path: /opt/nifi/conf/authorizations.xml
+      register: live_file_1
+
+    - name: end if conf file not found 1 of 3
+      meta: end_host
+      when:
+        - live_file_1.stat.exists == false
+
+    - name: stat live conf files 2 of 3
+      stat:
+        path: /opt/nifi/conf/flow.xml.gz
+      register: live_file_2
+
+    - name: end if conf file not found 2 of 3
+      meta: end_host
+      when:
+        - live_file_2.stat.exists == false
+
+    - name: stat live conf files 3 of 3
+      stat:
+        path: /opt/nifi/conf/users.xml
+      register: live_file_3
+
+    - name: end if conf file not found 3 of 3
+      meta: end_host
+      when:
+        - live_file_3.stat.exists == false
+
     - name: determine lock
       stat:
         path: /mnt/tf-nifi-efs/cluster/lock-join
@@ -16,13 +46,13 @@
       when:
         - cluster_lock.stat.exists == true
 
-    - name: find cluster requests
+    - name: find cluster join requests
       find:
         paths: /mnt/tf-nifi-efs/cluster/join
         patterns: '*'
       register: cluster_requests
 
-    - name: end if no files match
+    - name: end if no join requests
       meta: end_host
       when:
         - cluster_requests.matched == 0
@@ -47,14 +77,16 @@
         - authorizations.xml
         - flow.xml.gz
         - users.xml
+      when: set_lock.changed
 
-    - name: remove request(s)
+    - name: remove join request(s)
       file:
         path: "{{ item.path }}"
         state: absent
       with_items: "{{ cluster_requests.files }}"
+      when: set_lock.changed
 
-    - name: touch join(s)
+    - name: touch join invite(s)
       file:
         path: "/mnt/tf-nifi-efs/cluster/invite/{{ item.path | basename }}"
         state: touch
@@ -62,8 +94,10 @@
         group: root
         mode: 0640
       with_items: "{{ cluster_requests.files }}"
+      when: set_lock.changed
 
     - name: remove lock
       file:
         path: /mnt/tf-nifi-efs/cluster/lock-join
         state: absent
+      when: set_lock.changed

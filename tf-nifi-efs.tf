@@ -1,7 +1,7 @@
 resource "aws_efs_file_system" "tf-nifi-efs" {
   creation_token          = "tf-nifi-efs"
   encrypted               = "true"
-  kms_key_id              = aws_kms_key.tf-nifi-kmscmk.arn
+  kms_key_id              = aws_kms_key.tf-nifi-kmscmk-efs.arn
   tags                    = {
     Name                    = "tf-nifi-efs"
   }
