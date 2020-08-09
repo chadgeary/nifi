@@ -8,14 +8,14 @@ Terraform with Ansible to create/manage a full AWS-based secure Apache NiFi clus
 
 # Variables
 Edit the vars file (.tfvars) to customize the deployment, especially:
-### bucket_name
+**bucket_name**
 - a unique bucket name, terraform will create the bucket to store various resources.
-### mgmt_cidr
+**mgmt_cidr**
 - an IP range granted NiFi webUI and EC2 SSH access via the ELB hostname.
 - deploying from home? `dig +short myip.opendns.com @resolver1.opendns.com | awk '{ print $1"/32" }'`
-### kms_manager
+**kms_manager**
 - an AWS user account (not root) that will be granted access to the KMS key (to read S3 objects).
-### instance_key
+**instance_key**
 - a public SSH key for SSH access to instances.
 
 # Deploy
@@ -50,7 +50,7 @@ There are two Ansible playbooks deployed via terraform to AWS SSM, zookeepers/zo
 
 # Scaling Notes
 Special actions take place during scaling to handle NiFi cluster management.
-## Scale Up
+**Scale Up**
 Every node spawned via Autoscale applies the nodes.yml playbook via SSM, which:
 - installs pre-requisting packages/libraries and the Apache NiFi software
 - touches a file in EFS:/mnt/nifi/cluster/join/<node name>
@@ -59,7 +59,7 @@ Every node spawned via Autoscale applies the nodes.yml playbook via SSM, which:
 - copies the up-to-date NiFi configuration from EFS:/mnt/nifi/cluster/conf/ to /opt/nifi/conf/
 - starts the NiFi service, joining the cluster.
 
-## Scale Down
+**Scale Down**
 Every node terminated via Autoscale uses special actions to gracefully exit the cluster:
 - Autoscale uses a Lifecycle Hook to notify an SNS topic of scale down.
 - SNS topic has a subscription: a Lambda function.
