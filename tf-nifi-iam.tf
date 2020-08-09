@@ -25,7 +25,7 @@ resource "aws_iam_policy" "tf-nifi-instance-policy" {
         "s3:GetObject",
         "s3:GetObjectVersion"
       ],
-      "Resource": ["${aws_s3_bucket.tf-nifi-bucket.arn}/zookeepers/*","${aws_s3_bucket.tf-nifi-bucket.arn}/nodes/*","${aws_s3_bucket.tf-nifi-bucket.arn}/admin-certificates/*"]
+      "Resource": ["${aws_s3_bucket.tf-nifi-bucket.arn}/nifi/*"]
     },
     {
       "Sid": "PutObjectsinBucketPrefix",
@@ -34,7 +34,7 @@ resource "aws_iam_policy" "tf-nifi-instance-policy" {
         "s3:PutObject",
         "s3:PutObjectAcl"
       ],
-      "Resource": ["${aws_s3_bucket.tf-nifi-bucket.arn}/ssm/*","${aws_s3_bucket.tf-nifi-bucket.arn}/admin-certificates/*"]
+      "Resource": ["${aws_s3_bucket.tf-nifi-bucket.arn}/nifi/*","${aws_s3_bucket.tf-nifi-bucket.arn}/ssm/*"]
     },
     {
       "Sid": "EFSMountWrite",

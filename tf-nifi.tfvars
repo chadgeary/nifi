@@ -17,6 +17,13 @@ instance_key = "ssh-rsa AAAAB3NzaD2yc2EAAAADAQABAAABAQCNsxnMWfrG3SoLr4uJMavf43Yk
 # size according to workloads, t3a.small is -just- enough
 instance_type = "r5a.large"
 
+# the name tag of the ami to use
+ami_name_tag = "tf-nifi-encrypted-base-ami"
+
+# the vendor supplying the AMI and the AMI name - default is official Ubuntu 1804 
+vendor_ami_account_number = "099720109477"
+vendor_ami_name_string = "ubuntu/images/hvm-ssd/ubuntu-bionic-18.04-amd64-server-20200729*"
+
 # the mirror nifi / zookeeper / toolkit are downloaded from - and the versions
 mirror_host = "mirror.cogentco.com"
 nifi_version = "1.11.4"

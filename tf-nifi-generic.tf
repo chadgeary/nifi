@@ -119,6 +119,21 @@ variable "maximum_node_count" {
   description              = "The maximum number of non-zookeeper NiFi nodes in the Autoscaling Group"
 }
 
+variable "ami_name_tag" {
+  type                     = string
+  description              = "The KMS CMK-encrypted AMI's name and name tag"
+}
+
+variable "vendor_ami_account_number" {
+  type                     = string
+  description              = "The account number of the vendor supplying the base AMI"
+}
+
+variable "vendor_ami_name_string" {
+  type                     = string
+  description              = "The search string for the name of the AMI from the AMI Vendor"
+}
+
 provider "aws" {
   region                   = var.aws_region
   profile                  = var.aws_profile

@@ -3,7 +3,7 @@ Description=nifi service to manage join requests to cluster from new nodes
 After=network.target
 
 [Service]
-ExecStart=/usr/local/bin/ansible-playbook /mnt/tf-nifi-efs/cluster/nifi-join.yml
+ExecStart=/usr/local/bin/ansible-playbook /mnt/nifi/cluster/nifi-join.yml
 Type=simple
 Restart=on-failure   
 RestartSec=5

@@ -15,7 +15,7 @@ resource "aws_ssm_association" "tf-nifi-zookeepers-ssm-assoc" {
     ExtraVariables          = "SSM=True zk_version=${var.zk_version} nifi_version=${var.nifi_version} mirror_host=${var.mirror_host} node1_ip=${var.node1_ip} node2_ip=${var.node2_ip} node3_ip=${var.node3_ip} efs_source=${aws_efs_file_system.tf-nifi-efs.id}.efs.${var.aws_region}.amazonaws.com elb_dns=${aws_elb.tf-nifi-elb1.dns_name} s3_bucket=${aws_s3_bucket.tf-nifi-bucket.id}"
     InstallDependencies     = "True"
     PlaybookFile            = "zookeepers.yml"
-    SourceInfo              = "{\"path\":\"https://s3.${var.aws_region}.amazonaws.com/${aws_s3_bucket.tf-nifi-bucket.id}/zookeepers/\"}"
+    SourceInfo              = "{\"path\":\"https://s3.${var.aws_region}.amazonaws.com/${aws_s3_bucket.tf-nifi-bucket.id}/nifi/zookeepers/\"}"
     SourceType              = "S3"
     Verbose                 = "-v"
   }
@@ -39,7 +39,7 @@ resource "aws_ssm_association" "tf-nifi-nodes-ssm-assoc" {
     ExtraVariables          = "SSM=True nifi_version=${var.nifi_version} mirror_host=${var.mirror_host} node1_ip=${var.node1_ip} node2_ip=${var.node2_ip} node3_ip=${var.node3_ip} efs_source=${aws_efs_file_system.tf-nifi-efs.id}.efs.${var.aws_region}.amazonaws.com elb_dns=${aws_elb.tf-nifi-elb1.dns_name} s3_bucket=${aws_s3_bucket.tf-nifi-bucket.id}"
     InstallDependencies     = "True"
     PlaybookFile            = "nodes.yml"
-    SourceInfo              = "{\"path\":\"https://s3.${var.aws_region}.amazonaws.com/${aws_s3_bucket.tf-nifi-bucket.id}/nodes/\"}"
+    SourceInfo              = "{\"path\":\"https://s3.${var.aws_region}.amazonaws.com/${aws_s3_bucket.tf-nifi-bucket.id}/nifi/nodes/\"}"
     SourceType              = "S3"
     Verbose                 = "-v"
   }

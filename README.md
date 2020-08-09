@@ -39,8 +39,7 @@ WebUI access is permitted to the mgmt_cidr defined in tf-nifi.tfvars. Authentica
   - Use tls.json's keyStorePassword value when prompted for password
 
 # AMI Notes
-- AMI is [Latest Official RHEL7](https://access.redhat.com/solutions/15356), but takes a considerable amount of time to clone. This method may change in the future, or Ubuntu may be used.
-- The RedHat AMI [has this misconfiguration](https://bugzilla.redhat.com/show_bug.cgi?id=1865991).
+- AMI is [Ubuntu 1804](https://cloud-images.ubuntu.com/locator/ec2/), change the vendor_ami_name_string var as needed (especially the date).
 
 # Ansible / SSM Notes
 There are two Ansible playbooks deployed via terraform to AWS SSM, zookeepers/zookeepers.yml and nodes/nodes.yml.
@@ -49,21 +48,27 @@ There are two Ansible playbooks deployed via terraform to AWS SSM, zookeepers/zo
 - Playbooks are deployed to instances via SSM at instance launch time, though an administrator may reapply the SSM association at any time.
 
 # Scaling Notes
-Special actions take place during scaling to handle NiFi cluster management:
+Special actions take place during scaling to handle NiFi cluster management.
 ## Scale Up
-- At node EC2 instance creation, the nodes.yml playbook installs NiFi and touches a file in the EFS mount dir cluster/join/.
-- Zookeepers watch EFS:/cluster/join/, if join file(s) are found, a Zookeeper will copy up-to-date NiFi configurations to EFS:/conf/, remove the join file(s), and touch invite file(s).
-- Nodes wait for the invite file(s), then copy the up-to-date EFS:/conf/ files to their local NiFi dir and start the NiFi service.
+Every node spawned via Autoscale applies the nodes.yml playbook via SSM, which:
+- installs pre-requisting packages/libraries and the Apache NiFi software
+- touches a file in EFS:/mnt/nifi/cluster/join/<node name>
+- a Zookeeper monitoring the join directory copies the latest NiFi conf to EFS:/mnt/nifi/cluster/conf/
+- a Zookeeper touches files EFS:/mnt/nifi/cluster/invite/<node name>
+- copies the up-to-date NiFi configuration from EFS:/mnt/nifi/cluster/conf/ to /opt/nifi/conf/
+- starts the NiFi service, joining the cluster.
 
 ## Scale Down
-- The Autoscaling Group has a Lifecycle Hook to an SNS topic.
-- The SNS topic has a subscription from a Lambda function.
-- The Lambda function executes an SSM RunCommand with an SSM Document.
-- The SSM Document executes the node shell script (see: `nodes/scale-down`) on the terminating instances.
-- `scale-down` perform several steps:
-  - Retrieves the NodeId from the cluster.
-  - Disconnects the NodeId from the cluster.
-  - Offloads the NodeId from the cluster.
-  - Touches a delete file in EFS:/cluster/leave/
-  - Notifies AWS Autoscaling the lifecycle action is complete (and the instance may be terminated)
-- Zookeepers watch EFS:/cluster/leave/, if leave file(s) are found, a Zookeeper will delete the matching NodeId from the cluster.
+Every node terminated via Autoscale uses special actions to gracefully exit the cluster:
+- Autoscale uses a Lifecycle Hook to notify an SNS topic of scale down.
+- SNS topic has a subscription: a Lambda function.
+- Lambda function spawns an SSM RunCommand.
+- SSM RunCommand executes a shell script: `nodes/scale-down` on the terminating instance(s).
+- `scale-down` actions include:
+  - Retrieve instance's NodeId (node's ID within the NiFi cluster).
+  - Disconnects from the NiFi cluster.
+  - Offloads in-flight work from the cluster.
+  - Touches a file in EFS:/cluster/leave/<node id>
+  - a Zookeeper touches files EFS:/mnt/nifi/cluster/leave/ deletes the NodeId.
+  - Completes the Autoscale Lifecycle Hook
+  - AWS terminates the instance.

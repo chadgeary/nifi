@@ -1,12 +1,11 @@
 # launch conf
 resource "aws_launch_configuration" "tf-nifi-launchconf" {
   name_prefix             = "tf-nifi-launchconf-"
-  image_id                = aws_ami_from_instance.tf-nifi-ami.id
+  image_id                = aws_ami_copy.tf-nifi-latest-vendor-ami-with-cmk.id
   instance_type           = var.instance_type
   key_name                = aws_key_pair.tf-nifi-instance-key.key_name
   iam_instance_profile    = aws_iam_instance_profile.tf-nifi-instance-profile.name
   security_groups         = [aws_security_group.tf-nifi-prisg1.id]
-  user_data               = file("userdata/tf-nifi-userdata-nodes.sh")
   root_block_device {
     encrypted               = "true"
   }

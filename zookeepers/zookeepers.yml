@@ -30,22 +30,12 @@
         state: latest
       vars:
         packages:
-        - java-sdk
+        - default-jre
         - openssl
-        - nfs-utils
+        - nfs-common
         - git
-        - make
-        - rpm-build
         - binutils
-
-    - name: node1 - pip for boto3 for s3
-      package:
-        name: "{{ item }}"
-        state: latest
-      with_items:
-        - https://dl.fedoraproject.org/pub/epel/epel-release-latest-7.noarch.rpm
-        - python2-pip
-      when: ansible_default_ipv4.address == node1_ip
+        - python-pip
 
     - name: Clone efs-utils
       git:
@@ -54,35 +44,33 @@
         clone: yes
         update: no
 
-    - name: find previously created rpm for efs-utils
+    - name: find previously created efs-utils
       find:
         paths: /opt/efs-utils/build
-        patterns: 'amazon-efs-utils*.rpm'
-      register: efs_rpm_found
+        patterns: 'amazon-efs-utils*.deb'
+      register: efs_utils_found
       ignore_errors: true
 
-    - name: make efs-utils RPM
+    - name: build efs-utils
       shell: |
-        make rpm
+        ./build-deb.sh
       args:
         chdir: /opt/efs-utils
-      when: efs_rpm_found.matched == 0
+      when: efs_utils_found.matched == 0
 
-    - name: find newly created rpm for efs-utils
+    - name: find newly created efs-utils
       find:
         paths: /opt/efs-utils/build
-        patterns: 'amazon-efs-utils*.rpm'
-      register: efs_rpm_make
-      when: efs_rpm_found.matched == 0
+        patterns: 'amazon-efs-utils*.deb'
+      register: efs_utils_build
 
     - name: Install efs-utils
-      yum:
-        name: "{{ item.path }}"
-        state: installed
-      with_items: "{{ efs_rpm_make.files }}"
-      when: efs_rpm_found.matched == 0
+      apt:
+        deb: "{{ item.path }}"
+      with_items: "{{ efs_utils_build.files }}"
+      when: efs_utils_found.matched != 0
 
-    - name: set efs hostname checking for EL7 false
+    - name: set efs hostname checking false
       lineinfile:
         path: /etc/amazon/efs/efs-utils.conf
         regexp: '^stunnel_check_cert_hostname = true'
@@ -90,23 +78,23 @@
 
     - name: check mount path exists
       stat:
-        path: /mnt/tf-nifi-efs
+        path: /mnt/nifi
       register: efs_mount
 
-    - name: path tf-nifi-efs
+    - name: path /mnt/nifi
       file:
-        path: /mnt/tf-nifi-efs
+        path: /mnt/nifi
         state: directory
         owner: root
         group: root
         mode: '0750'
       when: efs_mount.stat.exists == false
 
-    - name: mount tf-nifi-efs
+    - name: mount nifi
       mount:
         state: mounted
         fstype: efs
-        path: /mnt/tf-nifi-efs
+        path: /mnt/nifi
         src: "{{ efs_source }}:/"
         opts: tls,iam
 
@@ -118,21 +106,21 @@
         group: root
         mode: 0750
       with_items:
-        - /mnt/tf-nifi-efs/admin-certificates
-        - /mnt/tf-nifi-efs/nifi-ca-certificates
-        - /mnt/tf-nifi-efs/nifi-certificates
-        - /mnt/tf-nifi-efs/conf
-        - /mnt/tf-nifi-efs/downloads
-        - /mnt/tf-nifi-efs/cluster
-        - /mnt/tf-nifi-efs/cluster/join
-        - /mnt/tf-nifi-efs/cluster/invite
-        - /mnt/tf-nifi-efs/cluster/leave
+        - /mnt/nifi/admin-certificates
+        - /mnt/nifi/nifi-ca-certificates
+        - /mnt/nifi/nifi-certificates
+        - /mnt/nifi/conf
+        - /mnt/nifi/downloads
+        - /mnt/nifi/cluster
+        - /mnt/nifi/cluster/join
+        - /mnt/nifi/cluster/invite
+        - /mnt/nifi/cluster/leave
       when:
         - ansible_default_ipv4.address == node1_ip
 
     - name: nodes - certificate directory
       file:
-        path: /mnt/tf-nifi-efs/nifi-certificates/{{ ansible_nodename }}
+        path: /mnt/nifi/nifi-certificates/{{ ansible_nodename }}
         state: directory
         owner: root
         group: root
@@ -140,14 +128,14 @@
 
     - name: check zookeeper downloaded
       stat:
-        path: /mnt/tf-nifi-efs/downloads/zookeeper.tar.gz
+        path: /mnt/nifi/downloads/zookeeper.tar.gz
       register: zk_download
       when: ansible_default_ipv4.address == node1_ip
 
     - name: download zookeeper if not downloaded
       get_url:
         url: http://{{ mirror_host }}/pub/apache/zookeeper/current/apache-zookeeper-{{ zk_version }}-bin.tar.gz
-        dest: /mnt/tf-nifi-efs/downloads/zookeeper.tar.gz
+        dest: /mnt/nifi/downloads/zookeeper.tar.gz
         mode: '0644'
       when: 
         - ansible_default_ipv4.address == node1_ip
@@ -155,14 +143,14 @@
 
     - name: check nifi downloaded
       stat:
-        path: /mnt/tf-nifi-efs/downloads/nifi.tar.gz
+        path: /mnt/nifi/downloads/nifi.tar.gz
       register: nifi_downloaded
       when: ansible_default_ipv4.address == node1_ip
 
     - name: download nifi if not downloaded
       get_url:
         url: http://{{ mirror_host }}/pub/apache/nifi/{{ nifi_version }}/nifi-{{ nifi_version }}-bin.tar.gz
-        dest: /mnt/tf-nifi-efs/downloads/nifi.tar.gz
+        dest: /mnt/nifi/downloads/nifi.tar.gz
         mode: '0440'
       when:
         - ansible_default_ipv4.address == node1_ip
@@ -170,14 +158,14 @@
 
     - name: check toolkit downloaded
       stat:
-        path: /mnt/tf-nifi-efs/downloads/nifi-toolkit.tar.gz
+        path: /mnt/nifi/downloads/nifi-toolkit.tar.gz
       register: toolkit_downloaded
       when: ansible_default_ipv4.address == node1_ip
 
     - name: download toolkit if not downloaded
       get_url:
         url: http://{{ mirror_host }}/pub/apache/nifi/{{ nifi_version }}/nifi-toolkit-{{ nifi_version }}-bin.tar.gz
-        dest: /mnt/tf-nifi-efs/downloads/nifi-toolkit.tar.gz
+        dest: /mnt/nifi/downloads/nifi-toolkit.tar.gz
         mode: '0440'
       when:
         - ansible_default_ipv4.address == node1_ip
@@ -185,9 +173,8 @@
 
     - name: nodes - wait for downloads
       wait_for:
-        path: "/mnt/tf-nifi-efs/downloads/{{ item }}"
+        path: "/mnt/nifi/downloads/{{ item }}"
         state: present
-        delay: 10
         timeout: 720
       with_items:
         - zookeeper.tar.gz
@@ -204,7 +191,7 @@
 
     - name: unarchive zookeeper if not unarchived
       unarchive:
-        src: /mnt/tf-nifi-efs/downloads/zookeeper.tar.gz
+        src: /mnt/nifi/downloads/zookeeper.tar.gz
         dest: /opt
         remote_src: yes
 
@@ -224,7 +211,7 @@
 
     - name: unarchive nifi when not unarchived
       unarchive:
-        src: /mnt/tf-nifi-efs/downloads/nifi.tar.gz
+        src: /mnt/nifi/downloads/nifi.tar.gz
         dest: /opt
         remote_src: yes
       when: nifi_unarchived.stat.exists == false
@@ -245,7 +232,7 @@
 
     - name: unarchive toolkit when not unarchived
       unarchive:
-        src: /mnt/tf-nifi-efs/downloads/nifi-toolkit.tar.gz
+        src: /mnt/nifi/downloads/nifi-toolkit.tar.gz
         dest: /opt
         remote_src: yes
       when: toolkit_unarchived.stat.exists == false
@@ -293,14 +280,14 @@
 
     - name: check password generated
       stat:
-        path: /mnt/tf-nifi-efs/generated_password
+        path: /mnt/nifi/generated_password
       register: password_generated
       when:
         - ansible_default_ipv4.address == node1_ip
 
     - name: generate password if not generated
       shell: |
-        head /dev/urandom | tr -dc A-Za-z0-9 | head -c 20 > /mnt/tf-nifi-efs/generated_password
+        head /dev/urandom | tr -dc A-Za-z0-9 | head -c 20 > /mnt/nifi/generated_password
       ignore_errors: True
       when:
         - ansible_default_ipv4.address == node1_ip
@@ -308,16 +295,15 @@
 
     - name: wait for generated_password file
       wait_for:
-        path: /mnt/tf-nifi-efs/generated_password
+        path: /mnt/nifi/generated_password
         state: present
-        delay: 10
         timeout: 720
       when:
         - ansible_default_ipv4.address != node1_ip
 
     - name: set generated_password var
       shell: |
-        cat /mnt/tf-nifi-efs/generated_password
+        cat /mnt/nifi/generated_password
       register: generated_password
 
     - name: node1 - toolkit server script
@@ -331,14 +317,14 @@
 
     - name: node1 - check tls.json generated
       stat:
-        path: /mnt/tf-nifi-efs/nifi-ca-certificates/tls.json
+        path: /mnt/nifi/nifi-ca-certificates/tls.json
       register: ca_tls
 
     - name: node1 - toolkit server script exec
       shell: |
         /usr/local/bin/toolkit-server.sh
       args:
-        chdir: /mnt/tf-nifi-efs/nifi-ca-certificates/
+        chdir: /mnt/nifi/nifi-ca-certificates/
         executable: /bin/bash
       when:
         - ansible_default_ipv4.address == node1_ip
@@ -363,15 +349,15 @@
 
     - name: node1 - check admin tls.json
       stat:
-        path: /mnt/tf-nifi-efs/admin-certificates/tls.json
+        path: /mnt/nifi/admin-certificates/tls.json
       register: admin_certificate
       when: ansible_default_ipv4.address == node1_ip
 
     - name: node1 - toolkit admin 
       shell: |
-        /opt/nifi-toolkit/bin/tls-toolkit.sh client -a RSA -c tf-nifi-1 -p 2170 -D "CN=admin,OU=NIFI" -f /mnt/tf-nifi-efs/admin-certificates/tls.json -k 2048 -T PKCS12 -t {{ generated_password.stdout }}
+        /opt/nifi-toolkit/bin/tls-toolkit.sh client -a RSA -c tf-nifi-1 -p 2170 -D "CN=admin,OU=NIFI" -f /mnt/nifi/admin-certificates/tls.json -k 2048 -T PKCS12 -t {{ generated_password.stdout }}
       args:
-        chdir: /mnt/tf-nifi-efs/admin-certificates
+        chdir: /mnt/nifi/admin-certificates
         executable: /bin/bash
       when:
         - ansible_default_ipv4.address == node1_ip
@@ -379,14 +365,14 @@
 
     - name: register ADMIN_KEYSTORE_PASS
       shell: |
-        awk -F'"' '/keyStorePassword/ { print $4 }' /mnt/tf-nifi-efs/admin-certificates/tls.json
+        awk -F'"' '/keyStorePassword/ { print $4 }' /mnt/nifi/admin-certificates/tls.json
       register: admin_keystore_pass
       when:
         - ansible_default_ipv4.address == node1_ip
 
     - name: register ADMIN_TRUSTSTORE_PASS
       shell: |
-        awk -F'"' '/trustStorePassword/ { print $4 }' /mnt/tf-nifi-efs/admin-certificates/tls.json
+        awk -F'"' '/trustStorePassword/ { print $4 }' /mnt/nifi/admin-certificates/tls.json
       register: admin_truststore_pass
       when:
         - ansible_default_ipv4.address == node1_ip
@@ -394,24 +380,23 @@
     - name: admin cli.properties template
       template:
         src: cli.properties
-        dest: /mnt/tf-nifi-efs/admin-certificates/cli.properties
+        dest: /mnt/nifi/admin-certificates/cli.properties
         owner: root
         group: root
         mode: '0640'
       when:
         - ansible_default_ipv4.address == node1_ip
 
-    - name: node1 - ensure boto3 for pip
+    - name: ensure boto3 for pip
       pip:
-        executable: /bin/pip
+        executable: /usr/bin/pip
         name: boto3
-      when: ansible_default_ipv4.address == node1_ip
 
     - name: node1 - place admin tls on s3
       aws_s3:
         bucket: "{{ s3_bucket }}"
-        object: "/admin-certificates/{{ item }}"
-        src: "/mnt/tf-nifi-efs/admin-certificates/{{ item }}"
+        object: "/nifi/admin-certificates/{{ item }}"
+        src: "/mnt/nifi/admin-certificates/{{ item }}"
         mode: put
       with_items:
         - tls.json
@@ -422,31 +407,30 @@
       wait_for:
         host: "{{ node1_ip }}"
         port: 2170
-        delay: 5
         timeout: 360
 
     - name: nodes - check client tls.json
       stat:
-        path: /mnt/tf-nifi-efs/nifi-certificates/{{ ansible_nodename }}/tls.json
+        path: /mnt/nifi/nifi-certificates/{{ ansible_nodename }}/tls.json
       register: node_tls
 
     - name: nodes - toolkit client exec if no tls.json
       shell: |
-        export JAVA_HOME=/usr/lib/jvm/jre
-        /opt/nifi-toolkit/bin/tls-toolkit.sh client -a RSA -c tf-nifi-1 -p 2170 -D "CN={{ ansible_nodename }},OU=NIFI" --subjectAlternativeNames {{ ansible_nodename }} -f /mnt/tf-nifi-efs/nifi-certificates/{{ ansible_nodename }}/tls.json -k 2048 -T jks -t {{ generated_password.stdout }}
+        export JAVA_HOME=/usr/lib/jvm/default-java 
+        /opt/nifi-toolkit/bin/tls-toolkit.sh client -a RSA -c tf-nifi-1 -p 2170 -D "CN={{ ansible_nodename }},OU=NIFI" --subjectAlternativeNames {{ ansible_nodename }} -f /mnt/nifi/nifi-certificates/{{ ansible_nodename }}/tls.json -k 2048 -T jks -t {{ generated_password.stdout }}
       args:
-        chdir: /mnt/tf-nifi-efs/nifi-certificates/{{ ansible_nodename }}
+        chdir: /mnt/nifi/nifi-certificates/{{ ansible_nodename }}
         executable: /bin/bash
       when: node_tls.stat.exists == false
 
     - name: register KEYSTORE_PASS
       shell: |
-        awk -F'"' '/keyStorePassword/ { print $4 }' /mnt/tf-nifi-efs/nifi-certificates/{{ ansible_nodename }}/tls.json
+        awk -F'"' '/keyStorePassword/ { print $4 }' /mnt/nifi/nifi-certificates/{{ ansible_nodename }}/tls.json
       register: keystore_pass
 
     - name: register TRUSTSTORE_PASS
       shell: |
-        awk -F'"' '/trustStorePassword/ { print $4 }' /mnt/tf-nifi-efs/nifi-certificates/{{ ansible_nodename }}/tls.json
+        awk -F'"' '/trustStorePassword/ { print $4 }' /mnt/nifi/nifi-certificates/{{ ansible_nodename }}/tls.json
       register: truststore_pass
 
     - name: set keystorePasswd in nifi.properties
@@ -511,7 +495,6 @@
       wait_for:
         path: "/opt/nifi/conf/{{ item }}"
         state: present
-        delay: 5
         timeout: 240
       with_items:
         - users.xml
@@ -523,7 +506,7 @@
     - name: node1 - copy users.xml, authorizations.xml, and flow.xml.gz to nfs
       copy:
         src: "/opt/nifi/conf/{{ item }}"
-        dest: "/mnt/tf-nifi-efs/conf/{{ item }}"
+        dest: "/mnt/nifi/conf/{{ item }}"
         remote_src: true
         owner: root
         group: root
@@ -537,9 +520,8 @@
 
     - name: other nodes - wait for users.xml, authorizations.xml, and flow.xml.gz
       wait_for:
-        path: "/mnt/tf-nifi-efs/conf/{{ item }}"
+        path: "/mnt/nifi/conf/{{ item }}"
         state: present
-        delay: 5
         timeout: 480
       with_items:
         - users.xml
@@ -551,7 +533,7 @@
     - name: other nodes - copy users.xml, authorizations.xml, and flow.xml.gz from nfs
       copy:
         dest: "/opt/nifi/conf/{{ item }}"
-        src: "/mnt/tf-nifi-efs/conf/{{ item }}"
+        src: "/mnt/nifi/conf/{{ item }}"
         remote_src: true
         owner: root
         group: root
@@ -575,7 +557,7 @@
     - name: nodes - nifi-join and leave play
       copy:
         src: "{{ item }}"
-        dest: "/mnt/tf-nifi-efs/cluster/{{ item }}"
+        dest: "/mnt/nifi/cluster/{{ item }}"
         owner: root
         group: root
         mode: 0640

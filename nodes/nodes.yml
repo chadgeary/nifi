@@ -19,25 +19,18 @@
         - "{{ node2_ip }} tf-nifi-2"
         - "{{ node3_ip }} tf-nifi-3"
 
-    - name: epel
-      package:
-        name: https://dl.fedoraproject.org/pub/epel/epel-release-latest-7.noarch.rpm
-        state: latest
-
     - name: nifi required packages
       package:
         name: "{{ packages }}"
         state: latest
       vars:
         packages:
-        - java-sdk
+        - default-jre
         - openssl
-        - jq
-        - nfs-utils
+        - nfs-common
         - git
-        - make
-        - rpm-build
         - binutils
+        - python3-pip
 
     - name: Clone efs-utils
       git:
@@ -46,35 +39,33 @@
         clone: yes
         update: no
 
-    - name: find previously created rpm for efs-utils
+    - name: find previously created efs-utils
       find:
         paths: /opt/efs-utils/build
-        patterns: 'amazon-efs-utils*.rpm'
-      register: efs_rpm_found
+        patterns: 'amazon-efs-utils*.deb'
+      register: efs_utils_found
       ignore_errors: true
 
-    - name: make efs-utils RPM
+    - name: build efs-utils
       shell: |
-        make rpm
+        ./build-deb.sh
       args:
         chdir: /opt/efs-utils
-      when: efs_rpm_found.matched == 0
+      when: efs_utils_found.matched == 0
 
-    - name: find newly created rpm for efs-utils
+    - name: find newly created efs-utils
       find:
         paths: /opt/efs-utils/build
-        patterns: 'amazon-efs-utils*.rpm'
-      register: efs_rpm_make
-      when: efs_rpm_found.matched == 0
+        patterns: 'amazon-efs-utils*.deb'
+      register: efs_utils_build
 
     - name: Install efs-utils
-      yum:
-        name: "{{ item.path }}"
-        state: installed
-      with_items: "{{ efs_rpm_make.files }}"
-      when: efs_rpm_found.matched == 0
+      apt:
+        deb: "{{ item.path }}"
+      with_items: "{{ efs_utils_build.files }}"
+      when: efs_utils_found.matched != 0
 
-    - name: set efs hostname checking for EL7 false
+    - name: set efs hostname checking false
       lineinfile:
         path: /etc/amazon/efs/efs-utils.conf
         regexp: '^stunnel_check_cert_hostname = true'
@@ -82,29 +73,29 @@
 
     - name: check mount path exists
       stat:
-        path: /mnt/tf-nifi-efs
+        path: /mnt/nifi
       register: efs_mount
 
-    - name: path tf-nifi-efs
+    - name: path nifi
       file:
-        path: /mnt/tf-nifi-efs
+        path: /mnt/nifi
         state: directory
         owner: root
         group: root
         mode: '0750'
       when: efs_mount.stat.exists == false
 
-    - name: mount tf-nifi-efs
+    - name: mount nifi
       mount:
         state: mounted
         fstype: efs
-        path: /mnt/tf-nifi-efs
+        path: /mnt/nifi
         src: "{{ efs_source }}:/"
         opts: tls,iam
 
     - name: nodes - certificate directory
       file:
-        path: /mnt/tf-nifi-efs/nifi-certificates/{{ ansible_nodename }}
+        path: /mnt/nifi/nifi-certificates/{{ ansible_nodename }}
         state: directory
         owner: root
         group: root
@@ -112,7 +103,7 @@
 
     - name: nodes - wait for downloads
       wait_for:
-        path: "/mnt/tf-nifi-efs/downloads/{{ item }}"
+        path: "/mnt/nifi/downloads/{{ item }}"
         state: present
         delay: 5
         timeout: 720
@@ -127,7 +118,7 @@
 
     - name: unarchive nifi when not unarchived
       unarchive:
-        src: /mnt/tf-nifi-efs/downloads/nifi.tar.gz
+        src: /mnt/nifi/downloads/nifi.tar.gz
         dest: /opt
         remote_src: yes
       when: nifi_unarchived.stat.exists == false
@@ -148,7 +139,7 @@
 
     - name: unarchive toolkit when not unarchived
       unarchive:
-        src: /mnt/tf-nifi-efs/downloads/nifi-toolkit.tar.gz
+        src: /mnt/nifi/downloads/nifi-toolkit.tar.gz
         dest: /opt
         remote_src: yes
       when: toolkit_unarchived.stat.exists == false
@@ -188,14 +179,14 @@
 
     - name: wait for generated_password file
       wait_for:
-        path: /mnt/tf-nifi-efs/generated_password
+        path: /mnt/nifi/generated_password
         state: present
         delay: 5
         timeout: 720
 
     - name: set generated_password var
       shell: |
-        cat /mnt/tf-nifi-efs/generated_password
+        cat /mnt/nifi/generated_password
       register: generated_password
 
     - name: nodes - wait for toolkit server
@@ -207,26 +198,26 @@
 
     - name: nodes - check client tls.json
       stat:
-        path: /mnt/tf-nifi-efs/nifi-certificates/{{ ansible_nodename }}/tls.json
+        path: /mnt/nifi/nifi-certificates/{{ ansible_nodename }}/tls.json
       register: node_tls
 
     - name: nodes - toolkit client exec if no tls.json
       shell: |
-        export JAVA_HOME=/usr/lib/jvm/jre
-        /opt/nifi-toolkit/bin/tls-toolkit.sh client -a RSA -c tf-nifi-1 -p 2170 -D "CN={{ ansible_nodename }},OU=NIFI" --subjectAlternativeNames {{ ansible_nodename }} -f /mnt/tf-nifi-efs/nifi-certificates/{{ ansible_nodename }}/tls.json -k 2048 -T jks -t {{ generated_password.stdout }}
+        export JAVA_HOME=/usr/lib/jvm/default-java
+        /opt/nifi-toolkit/bin/tls-toolkit.sh client -a RSA -c tf-nifi-1 -p 2170 -D "CN={{ ansible_nodename }},OU=NIFI" --subjectAlternativeNames {{ ansible_nodename }} -f /mnt/nifi/nifi-certificates/{{ ansible_nodename }}/tls.json -k 2048 -T jks -t {{ generated_password.stdout }}
       args:
-        chdir: /mnt/tf-nifi-efs/nifi-certificates/{{ ansible_nodename }}
+        chdir: /mnt/nifi/nifi-certificates/{{ ansible_nodename }}
         executable: /bin/bash
       when: node_tls.stat.exists == false
 
     - name: register KEYSTORE_PASS
       shell: |
-        awk -F'"' '/keyStorePassword/ { print $4 }' /mnt/tf-nifi-efs/nifi-certificates/{{ ansible_nodename }}/tls.json
+        awk -F'"' '/keyStorePassword/ { print $4 }' /mnt/nifi/nifi-certificates/{{ ansible_nodename }}/tls.json
       register: keystore_pass
 
     - name: register TRUSTSTORE_PASS
       shell: |
-        awk -F'"' '/trustStorePassword/ { print $4 }' /mnt/tf-nifi-efs/nifi-certificates/{{ ansible_nodename }}/tls.json
+        awk -F'"' '/trustStorePassword/ { print $4 }' /mnt/nifi/nifi-certificates/{{ ansible_nodename }}/tls.json
       register: truststore_pass
 
     - name: set keystorePasswd in nifi.properties
@@ -249,7 +240,7 @@
 
     - name: place request in cluster/join
       file:
-        path: "/mnt/tf-nifi-efs/cluster/join/{{ ansible_nodename }}"
+        path: "/mnt/nifi/cluster/join/{{ ansible_nodename }}"
         state: touch
         owner: root
         group: root
@@ -257,19 +248,19 @@
 
     - name: wait for invite in cluster/invite
       wait_for:
-        path: "/mnt/tf-nifi-efs/cluster/invite/{{ ansible_nodename }}"
+        path: "/mnt/nifi/cluster/invite/{{ ansible_nodename }}"
         state: present
         delay: 5
         timeout: 360
 
     - name: remove invite in cluster/invite
       file:
-        path: "/mnt/tf-nifi-efs/cluster/invite/{{ ansible_nodename }}"
+        path: "/mnt/nifi/cluster/invite/{{ ansible_nodename }}"
         state: absent
 
     - name: copy cluster files to /opt/nifi/conf
       copy:
-        src: "/mnt/tf-nifi-efs/conf/{{ item }}"
+        src: "/mnt/nifi/conf/{{ item }}"
         dest: "/opt/nifi/conf/{{ item }}"
         owner: root
         group: root

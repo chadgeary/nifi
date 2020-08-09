@@ -11,7 +11,7 @@ CLUSTERJSON=$(mktemp)
 /usr/bin/pip3 install awscli
 
 # LIST
-/opt/nifi-toolkit/bin/cli.sh nifi get-nodes -p /mnt/tf-nifi-efs/admin-certificates/cli.properties -ot json > $CLUSTERJSON
+/opt/nifi-toolkit/bin/cli.sh nifi get-nodes -p /mnt/nifi/admin-certificates/cli.properties -ot json > $CLUSTERJSON
 
 # NODEID from HOSTNAME
 NODEID=$(jq -r '.cluster[] | map(select(.address | contains("'$(hostname)'")).nodeId) | @tsv' $CLUSTERJSON)
@@ -19,16 +19,16 @@ rm -f $CLUSTERJSON
 echo "$DATE NODEID $NODEID"
 
 # DISCONNECT
-/opt/nifi-toolkit/bin/cli.sh nifi disconnect-node --nifiNodeId $NODEID -p /mnt/tf-nifi-efs/admin-certificates/cli.properties
+/opt/nifi-toolkit/bin/cli.sh nifi disconnect-node --nifiNodeId $NODEID -p /mnt/nifi/admin-certificates/cli.properties
 
 # OFFLOAD after DISCONNECTED
 while true
 do
-  /opt/nifi-toolkit/bin/cli.sh nifi get-node --nifiNodeId $NODEID -p /mnt/tf-nifi-efs/admin-certificates/cli.properties | grep --quiet DISCONNECTED
+  /opt/nifi-toolkit/bin/cli.sh nifi get-node --nifiNodeId $NODEID -p /mnt/nifi/admin-certificates/cli.properties | grep --quiet DISCONNECTED
   if [ $? -eq 0 ]
   then
     echo "$DATE DISCONNECTED, OFFLOADING"
-    /opt/nifi-toolkit/bin/cli.sh nifi offload-node --nifiNodeId $NODEID -p /mnt/tf-nifi-efs/admin-certificates/cli.properties
+    /opt/nifi-toolkit/bin/cli.sh nifi offload-node --nifiNodeId $NODEID -p /mnt/nifi/admin-certificates/cli.properties
     break
   else
     sleep 2
@@ -38,11 +38,11 @@ done
 # place DELETE after OFFLOADED
 while true
 do
-  /opt/nifi-toolkit/bin/cli.sh nifi get-node --nifiNodeId $NODEID -p /mnt/tf-nifi-efs/admin-certificates/cli.properties | grep --quiet OFFLOADED
+  /opt/nifi-toolkit/bin/cli.sh nifi get-node --nifiNodeId $NODEID -p /mnt/nifi/admin-certificates/cli.properties | grep --quiet OFFLOADED
   if [ $? -eq 0 ]
   then
     echo "$DATE OFFLOADED, placing DELETE note"
-    touch /mnt/tf-nifi-efs/cluster/leave/$NODEID
+    touch /mnt/nifi/cluster/leave/$NODEID
     break
   else
     sleep 2

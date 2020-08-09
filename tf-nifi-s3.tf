@@ -28,7 +28,7 @@ resource "aws_s3_bucket_public_access_block" "tf-nifi-bucket-pubaccessblock" {
 resource "aws_s3_bucket_object" "tf-nifi-zookeepers" {
   for_each                = fileset("zookeepers/", "*")
   bucket                  = aws_s3_bucket.tf-nifi-bucket.id
-  key                     = "zookeepers/${each.value}"
+  key                     = "nifi/zookeepers/${each.value}"
   source                  = "zookeepers/${each.value}"
   etag                    = filemd5("zookeepers/${each.value}")
 }
@@ -37,7 +37,7 @@ resource "aws_s3_bucket_object" "tf-nifi-zookeepers" {
 resource "aws_s3_bucket_object" "tf-nifi-nodes" {
   for_each                = fileset("nodes/", "*")
   bucket                  = aws_s3_bucket.tf-nifi-bucket.id
-  key                     = "nodes/${each.value}"
+  key                     = "nifi/nodes/${each.value}"
   source                  = "nodes/${each.value}"
   etag                    = filemd5("nodes/${each.value}")
 }

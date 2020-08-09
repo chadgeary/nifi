@@ -8,7 +8,7 @@
 
     - name: determine lock
       stat:
-        path: /mnt/tf-nifi-efs/cluster/lock-leave
+        path: /mnt/nifi/cluster/lock-leave
       register: cluster_lock
 
     - name: end if cluster lock
@@ -18,7 +18,7 @@
 
     - name: find cluster leave
       find:
-        paths: /mnt/tf-nifi-efs/cluster/leave
+        paths: /mnt/nifi/cluster/leave
         patterns: '*'
       register: cluster_leave
 
@@ -29,7 +29,7 @@
 
     - name: set lock
       file:
-        path: /mnt/tf-nifi-efs/cluster/lock-leave
+        path: /mnt/nifi/cluster/lock-leave
         state: directory
         owner: root
         group: root
@@ -38,21 +38,21 @@
 
     - name: process leaves by deleting from cluster
       shell: |
-        /opt/nifi-toolkit/bin/cli.sh nifi delete-node --nifiNodeId {{ item.path | basename }} -p /mnt/tf-nifi-efs/admin-certificates/cli.properties
+        /opt/nifi-toolkit/bin/cli.sh nifi delete-node --nifiNodeId {{ item.path | basename }} -p /mnt/nifi/admin-certificates/cli.properties
       with_items: "{{ cluster_leave.files }}"
       when: set_lock.changed
       ignore_errors: True
 
     - name: remove lock
       file:
-        path: /mnt/tf-nifi-efs/cluster/lock-leave
+        path: /mnt/nifi/cluster/lock-leave
         state: absent
       when: set_lock.changed
 
     - name: check node no longer in cluster and remove from leave queue
       shell: |
-        /opt/nifi-toolkit/bin/cli.sh nifi get-nodes -p /mnt/tf-nifi-efs/admin-certificates/cli.properties | grep --quiet {{ item }}
+        /opt/nifi-toolkit/bin/cli.sh nifi get-nodes -p /mnt/nifi/admin-certificates/cli.properties | grep --quiet {{ item }}
         if [ $? -eq 0 ]
-          then rm /mnt/tf-nifi-efs/cluster/leave/{{ item }}
+          then rm /mnt/nifi/cluster/leave/{{ item }}
         fi
       with_items: "{{ cluster_leave.files }}"

@@ -7,60 +7,9 @@ resource "aws_key_pair" "tf-nifi-instance-key" {
   }
 }
 
-# Latest RHEL 7
-data "aws_ami" "tf-nifi-latest-rhel-ami" {
-  most_recent             = true
-  owners                  = ["309956199498"]
-  filter {
-    name                    = "name"
-    values                  = ["RHEL-7.*GA*"]
-  }
-  filter {
-    name                    = "virtualization-type"
-    values                  = ["hvm"]
-  }
-  filter {
-    name                    = "architecture"
-    values                  = ["x86_64"]
-  }
-  filter {
-    name                    = "root-device-type"
-    values                  = ["ebs"]
-  }
-}
-
-# Build instance from RHEL7 with KMS CMK
-resource "aws_instance" "tf-nifi-encrypted-instance" {
-  ami                     = data.aws_ami.tf-nifi-latest-rhel-ami.id
-  instance_type           = var.instance_type
-  iam_instance_profile    = aws_iam_instance_profile.tf-nifi-instance-profile.name
-  key_name                = aws_key_pair.tf-nifi-instance-key.key_name
-  subnet_id               = aws_subnet.tf-nifi-prinet1.id
-  private_ip              = var.encrypted_ami_ip
-  vpc_security_group_ids  = [aws_security_group.tf-nifi-prisg1.id]
-  tags                    = {
-    Name                    = "tf-nifi-encrypted-instance"
-  }
-  root_block_device {
-    encrypted               = "true"
-    kms_key_id              = aws_kms_key.tf-nifi-kmscmk-ec2.arn
-  }
-  user_data               = file("userdata/tf-nifi-userdata-encrypted-instance.sh")
-}
-
-# Create AMI from KMS CMK encrypted instance
-resource "aws_ami_from_instance" "tf-nifi-ami" {
-  name                    = "tf-nifi-rhel7"
-  description             = "KMS CMK encrypted copy of RHEL7 official AMI (${data.aws_ami.tf-nifi-latest-rhel-ami.id})"
-  source_instance_id      = aws_instance.tf-nifi-encrypted-instance.id
-  tags                    = {
-    Name                    = "tf-nifi-ami"
-  }
-}
-
 # Instance(s)
 resource "aws_instance" "tf-nifi-1" {
-  ami                     = aws_ami_from_instance.tf-nifi-ami.id
+  ami                     = aws_ami_copy.tf-nifi-latest-vendor-ami-with-cmk.id
   instance_type           = var.instance_type
   iam_instance_profile    = aws_iam_instance_profile.tf-nifi-instance-profile.name
   key_name                = aws_key_pair.tf-nifi-instance-key.key_name
@@ -76,7 +25,7 @@ resource "aws_instance" "tf-nifi-1" {
 }
 
 resource "aws_instance" "tf-nifi-2" {
-  ami                     = aws_ami_from_instance.tf-nifi-ami.id
+  ami                     = aws_ami_copy.tf-nifi-latest-vendor-ami-with-cmk.id
   instance_type           = var.instance_type
   iam_instance_profile    = aws_iam_instance_profile.tf-nifi-instance-profile.name
   key_name                = aws_key_pair.tf-nifi-instance-key.key_name
@@ -92,7 +41,7 @@ resource "aws_instance" "tf-nifi-2" {
 }
 
 resource "aws_instance" "tf-nifi-3" {
-  ami                     = aws_ami_from_instance.tf-nifi-ami.id
+  ami                     = aws_ami_copy.tf-nifi-latest-vendor-ami-with-cmk.id
   instance_type           = var.instance_type
   iam_instance_profile    = aws_iam_instance_profile.tf-nifi-instance-profile.name
   key_name                = aws_key_pair.tf-nifi-instance-key.key_name

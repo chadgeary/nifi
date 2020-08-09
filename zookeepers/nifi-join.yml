@@ -38,7 +38,7 @@
 
     - name: determine lock
       stat:
-        path: /mnt/tf-nifi-efs/cluster/lock-join
+        path: /mnt/nifi/cluster/lock-join
       register: cluster_lock
 
     - name: end if cluster lock
@@ -48,7 +48,7 @@
 
     - name: find cluster join requests
       find:
-        paths: /mnt/tf-nifi-efs/cluster/join
+        paths: /mnt/nifi/cluster/join
         patterns: '*'
       register: cluster_requests
 
@@ -59,7 +59,7 @@
 
     - name: set lock
       file:
-        path: /mnt/tf-nifi-efs/cluster/lock-join
+        path: /mnt/nifi/cluster/lock-join
         state: directory
         owner: root
         group: root
@@ -69,7 +69,7 @@
     - name: copy live conf files to nfs
       copy:
         src: "/opt/nifi/conf/{{ item }}"
-        dest: "/mnt/tf-nifi-efs/conf/{{ item }}"
+        dest: "/mnt/nifi/conf/{{ item }}"
         owner: root
         group: root
         mode: 0640
@@ -88,7 +88,7 @@
 
     - name: touch join invite(s)
       file:
-        path: "/mnt/tf-nifi-efs/cluster/invite/{{ item.path | basename }}"
+        path: "/mnt/nifi/cluster/invite/{{ item.path | basename }}"
         state: touch
         owner: root
         group: root
@@ -98,6 +98,6 @@
 
     - name: remove lock
       file:
-        path: /mnt/tf-nifi-efs/cluster/lock-join
+        path: /mnt/nifi/cluster/lock-join
         state: absent
       when: set_lock.changed
