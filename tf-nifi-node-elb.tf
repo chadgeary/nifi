@@ -4,12 +4,6 @@ resource "aws_elb" "tf-nifi-elb2" {
   subnets                 = [aws_subnet.tf-nifi-pubnet1.id, aws_subnet.tf-nifi-pubnet2.id, aws_subnet.tf-nifi-pubnet3.id]
   security_groups         = [aws_security_group.tf-nifi-pubsg1.id]
   listener {
-    instance_port           = 22
-    instance_protocol       = "TCP"
-    lb_port                 = 22
-    lb_protocol             = "TCP"
-  }
-  listener {
     instance_port           = 8443
     instance_protocol       = "TCP"
     lb_port                 = 443
