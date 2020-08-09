@@ -1,6 +1,6 @@
 # load balancer
 resource "aws_elb" "tf-nifi-elb1" {
-  name                    = "tf-nifi-elb"
+  name                    = "tf-nifi-zk-elb"
   subnets                 = [aws_subnet.tf-nifi-pubnet1.id, aws_subnet.tf-nifi-pubnet2.id, aws_subnet.tf-nifi-pubnet3.id]
   security_groups         = [aws_security_group.tf-nifi-pubsg1.id]
   listener {
