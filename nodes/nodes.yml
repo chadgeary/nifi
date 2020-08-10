@@ -229,6 +229,11 @@
         regexp: '^nifi\.security\.truststorePasswd=.*'
         line: "nifi.security.truststorePasswd={{ truststore_pass.stdout }}"
 
+    - name: determine flow already exists
+      stat:
+        path: /opt/nifi/conf/flow.xml.gz
+      register: flow_file
+
     - name: place request in cluster/join
       file:
         path: "/mnt/nifi/cluster/join/{{ ansible_nodename }}"
@@ -236,17 +241,20 @@
         owner: root
         group: root
         mode: 0640
+      when: flow_file.stat.exists == false
 
     - name: wait for invite in cluster/invite
       wait_for:
         path: "/mnt/nifi/cluster/invite/{{ ansible_nodename }}"
         state: present
         timeout: 360
+      when: flow_file.stat.exists == false
 
     - name: remove invite in cluster/invite
       file:
         path: "/mnt/nifi/cluster/invite/{{ ansible_nodename }}"
         state: absent
+      when: flow_file.stat.exists == false
 
     - name: copy cluster files to /opt/nifi/conf
       copy:
@@ -259,6 +267,7 @@
         - authorizations.xml
         - flow.xml.gz
         - users.xml
+      when: flow_file.stat.exists == false
 
     - name: copy scale-down script executed by autoscaling ssm doc
       copy:
