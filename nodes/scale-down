@@ -1,14 +1,13 @@
 #!/bin/bash
 # Gracefully exits node from cluster
-INSTANCEID=$(curl http://169.254.169.254/latest/meta-data/instance-id)
+export JAVA_HOME=/usr/lib/jvm/default-java
 HOOKRESULT='CONTINUE'
 REGION=$(curl -s 169.254.169.254/latest/meta-data/placement/availability-zone | sed 's/.$//')
 INSTANCEID=$(curl http://169.254.169.254/latest/meta-data/instance-id)
-export JAVA_HOME=/usr/lib/jvm/jre
 CLUSTERJSON=$(mktemp)
 
 # Ensure awscli installed
-/usr/bin/pip3 install awscli
+/usr/bin/pip install awscli
 
 # LIST
 /opt/nifi-toolkit/bin/cli.sh nifi get-nodes -p /mnt/nifi/admin-certificates/cli.properties -ot json > $CLUSTERJSON
@@ -16,7 +15,7 @@ CLUSTERJSON=$(mktemp)
 # NODEID from HOSTNAME
 NODEID=$(jq -r '.cluster[] | map(select(.address | contains("'$(hostname)'")).nodeId) | @tsv' $CLUSTERJSON)
 rm -f $CLUSTERJSON
-echo "$DATE NODEID $NODEID"
+echo "$(date) NODEID $NODEID"
 
 # DISCONNECT
 /opt/nifi-toolkit/bin/cli.sh nifi disconnect-node --nifiNodeId $NODEID -p /mnt/nifi/admin-certificates/cli.properties
@@ -27,7 +26,7 @@ do
   /opt/nifi-toolkit/bin/cli.sh nifi get-node --nifiNodeId $NODEID -p /mnt/nifi/admin-certificates/cli.properties | grep --quiet DISCONNECTED
   if [ $? -eq 0 ]
   then
-    echo "$DATE DISCONNECTED, OFFLOADING"
+    echo "$(date) DISCONNECTED, OFFLOADING"
     /opt/nifi-toolkit/bin/cli.sh nifi offload-node --nifiNodeId $NODEID -p /mnt/nifi/admin-certificates/cli.properties
     break
   else
@@ -41,7 +40,7 @@ do
   /opt/nifi-toolkit/bin/cli.sh nifi get-node --nifiNodeId $NODEID -p /mnt/nifi/admin-certificates/cli.properties | grep --quiet OFFLOADED
   if [ $? -eq 0 ]
   then
-    echo "$DATE OFFLOADED, placing DELETE note"
+  echo "$(date) OFFLOADED, placing DELETE note"
     touch /mnt/nifi/cluster/leave/$NODEID
     break
   else

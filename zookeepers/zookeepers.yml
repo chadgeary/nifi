@@ -44,32 +44,25 @@
         dest: /opt/efs-utils
         clone: yes
         update: no
-
-    - name: find previously created efs-utils
-      find:
-        paths: /opt/efs-utils/build
-        patterns: 'amazon-efs-utils*.deb'
-      register: efs_utils_found
-      ignore_errors: true
+      register: efs_git_clone
 
     - name: build efs-utils
       shell: |
         ./build-deb.sh
       args:
         chdir: /opt/efs-utils
-      when: efs_utils_found.matched == 0
+      when: efs_git_clone.changed
 
-    - name: find newly created efs-utils
+    - name: find efs-utils deb
       find:
         paths: /opt/efs-utils/build
         patterns: 'amazon-efs-utils*.deb'
-      register: efs_utils_build
+      register: efs_utils_deb
 
     - name: Install efs-utils
       apt:
         deb: "{{ item.path }}"
-      with_items: "{{ efs_utils_build.files }}"
-      when: efs_utils_found.matched != 0
+      with_items: "{{ efs_utils_deb.files }}"
 
     - name: set efs hostname checking false
       lineinfile:
@@ -593,7 +586,7 @@
       systemd:
         name: "nifi-leave.{{ item }}"
         daemon_reload: yes
-        state: started
+        state: restarted
         enabled: yes
       with_items:
         - service

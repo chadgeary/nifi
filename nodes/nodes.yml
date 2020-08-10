@@ -39,32 +39,25 @@
         dest: /opt/efs-utils
         clone: yes
         update: no
-
-    - name: find previously created efs-utils
-      find:
-        paths: /opt/efs-utils/build
-        patterns: 'amazon-efs-utils*.deb'
-      register: efs_utils_found
-      ignore_errors: true
+      register: efs_git_clone
 
     - name: build efs-utils
       shell: |
         ./build-deb.sh
       args:
         chdir: /opt/efs-utils
-      when: efs_utils_found.matched == 0
+      when: efs_git_clone.changed
 
-    - name: find newly created efs-utils
+    - name: find efs-utils deb
       find:
         paths: /opt/efs-utils/build
         patterns: 'amazon-efs-utils*.deb'
-      register: efs_utils_build
+      register: efs_utils_deb
 
     - name: Install efs-utils
       apt:
         deb: "{{ item.path }}"
-      with_items: "{{ efs_utils_build.files }}"
-      when: efs_utils_found.matched != 0
+      with_items: "{{ efs_utils_deb.files }}"
 
     - name: set efs hostname checking false
       lineinfile:
@@ -106,7 +99,6 @@
       wait_for:
         path: "/mnt/nifi/downloads/{{ item }}"
         state: present
-        delay: 5
         timeout: 720
       with_items:
         - nifi.tar.gz
@@ -182,7 +174,6 @@
       wait_for:
         path: /mnt/nifi/generated_password
         state: present
-        delay: 5
         timeout: 720
 
     - name: set generated_password var
@@ -194,7 +185,6 @@
       wait_for:
         host: "{{ node1_ip }}"
         port: 2170
-        delay: 5
         timeout: 360
 
     - name: nodes - check client tls.json
@@ -251,7 +241,6 @@
       wait_for:
         path: "/mnt/nifi/cluster/invite/{{ ansible_nodename }}"
         state: present
-        delay: 5
         timeout: 360
 
     - name: remove invite in cluster/invite

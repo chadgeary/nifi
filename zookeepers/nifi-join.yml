@@ -66,6 +66,13 @@
         mode: 0640
       register: set_lock
 
+    - name: create user(s) from filename(s)
+      shell: |
+        export JAVA_HOME=/usr/lib/jvm/default-java
+        /opt/nifi-toolkit/bin/cli.sh nifi create-user --userName "CN={{ item.path | basename }}, OU=NIFI" -p /mnt/nifi/admin-certificates/cli.properties
+      with_items: "{{ cluster_requests.files }}"
+      when: set_lock.changed
+
     - name: copy live conf files to nfs
       copy:
         src: "/opt/nifi/conf/{{ item }}"
