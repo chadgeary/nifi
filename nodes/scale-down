@@ -1,6 +1,8 @@
 #!/bin/bash
 # Gracefully exits node from cluster
 export JAVA_HOME=/usr/lib/jvm/default-java
+
+# various vars - the curl to 169.254.169.254 are AWS instance-specific API facts
 HOOKRESULT='CONTINUE'
 REGION=$(curl -s 169.254.169.254/latest/meta-data/placement/availability-zone | sed 's/.$//')
 INSTANCEID=$(curl http://169.254.169.254/latest/meta-data/instance-id)
@@ -9,10 +11,10 @@ CLUSTERJSON=$(mktemp)
 # Ensure awscli installed
 /usr/bin/pip install awscli
 
-# LIST
+# List nodes in json
 /opt/nifi-toolkit/bin/cli.sh nifi get-nodes -p /mnt/nifi/admin-certificates/cli.properties -ot json > $CLUSTERJSON
 
-# NODEID from HOSTNAME
+# NODEID from HOSTNAME using jq
 NODEID=$(jq -r '.cluster[] | map(select(.address | contains("'$(hostname)'")).nodeId) | @tsv' $CLUSTERJSON)
 rm -f $CLUSTERJSON
 echo "$(date) NODEID $NODEID"
@@ -48,8 +50,8 @@ do
   fi
 done
 
+# remove certificate file(s)
+rm -rf /mnt/nifi/nifi-certificates/$(hostname)
+
 # notify lifecycle hook
 /usr/local/bin/aws autoscaling complete-lifecycle-action --lifecycle-hook-name $LIFECYCLEHOOKNAME --auto-scaling-group-name $ASGNAME --lifecycle-action-result $HOOKRESULT --instance-id $INSTANCEID --region $REGION
-
-# remove temp file
-rm -f $CLUSTERJSON
