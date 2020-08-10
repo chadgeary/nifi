@@ -72,6 +72,7 @@
         /opt/nifi-toolkit/bin/cli.sh nifi create-user --userName "CN={{ item.path | basename }}, OU=NIFI" -p /mnt/nifi/admin-certificates/cli.properties
       with_items: "{{ cluster_requests.files }}"
       when: set_lock.changed
+      ignore_errors: true
 
     - name: copy live conf files to nfs
       copy:
