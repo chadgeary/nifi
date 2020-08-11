@@ -148,7 +148,7 @@ data "aws_availability_zones" "tf-nifi-azs" {
 data "aws_caller_identity" "tf-nifi-aws-account" {
 }
 
-# aws managed kms key (ebs and s3)
+# kms cmk manager - granted read access to KMS CMKs
 data "aws_iam_user" "tf-nifi-kmsmanager" {
   user_name               = var.kms_manager
 }

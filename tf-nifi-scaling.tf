@@ -63,7 +63,7 @@ resource "aws_cloudwatch_metric_alarm" "tf-nifi-cpu-metric-alarm-up" {
   comparison_operator     = "GreaterThanOrEqualToThreshold"
   statistic               = "Average"
   threshold               = "75"
-  evaluation_periods      = "3"
+  evaluation_periods      = "10"
   period                  = "60"
   dimensions              = {
     "AutoScalingGroupName" = aws_autoscaling_group.tf-nifi-autoscalegroup.name
@@ -90,7 +90,7 @@ resource "aws_cloudwatch_metric_alarm" "tf-nifi-cpu-metric-alarm-down" {
   comparison_operator     = "LessThanOrEqualToThreshold"
   statistic               = "Average"
   threshold               = "25"
-  evaluation_periods      = "3"
+  evaluation_periods      = "10"
   period                  = "60"
   dimensions              = {
     "AutoScalingGroupName" = aws_autoscaling_group.tf-nifi-autoscalegroup.name
