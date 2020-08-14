@@ -7,7 +7,7 @@ data "aws_iam_policy" "tf-nifi-instance-policy-ssm" {
 resource "aws_iam_policy" "tf-nifi-instance-policy" {
   name                    = "tf-nifi-instance-policy"
   path                    = "/"
-  description             = "Provides tf-nifi instances access to endpoint, s3 objects, SSM bucket, and EFS"
+  description             = "Provides tf-nifi instances access to endpoint, s3 objects/bucket"
   policy                  = <<EOF
 {
   "Version": "2012-10-17",
@@ -35,27 +35,6 @@ resource "aws_iam_policy" "tf-nifi-instance-policy" {
         "s3:PutObjectAcl"
       ],
       "Resource": ["${aws_s3_bucket.tf-nifi-bucket.arn}/nifi/*","${aws_s3_bucket.tf-nifi-bucket.arn}/ssm/*"]
-    },
-    {
-      "Sid": "EFSMountWrite",
-      "Effect": "Allow",
-      "Action": [
-        "elasticfilesystem:ClientWrite",
-        "elasticfilesystem:ClientMount",
-        "elasticfilesystem:ClientRootAccess"
-      ],
-      "Resource": ["${aws_efs_file_system.tf-nifi-efs.arn}"]
-    },
-    {
-      "Sid": "EFSCMK",
-      "Effect": "Allow",
-      "Action": [
-        "kms:Encrypt",
-        "kms:ReEncrypt*",
-        "kms:GenerateDataKey*",
-        "kms:DescribeKey"
-      ],
-      "Resource": ["${aws_kms_key.tf-nifi-kmscmk-efs.arn}"]
     },
     {
       "Sid": "S3CMK",

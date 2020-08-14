@@ -3,7 +3,7 @@ Description=toolkit-server
 After=network.target
 
 [Service]
-WorkingDirectory=/mnt/nifi/nifi-ca-certificates
+WorkingDirectory=/opt/nifi-certificates/nifi-ca
 ExecStart=/opt/nifi-toolkit/bin/tls-toolkit.sh server -a RSA -c tf-nifi-1 -d 3650 -D "CN={{ ansible_hostname }},OU=NIFI" -f /mnt/nifi/nifi-ca-certificates/tls.json -F /mnt/nifi/nifi-ca-certificates/tls.json -k 2048 -p 2170 -s SHA256WITHRSA -T jks -t {{ generated_password.stdout }}
 Type=simple
 Restart=on-failure

@@ -3,7 +3,7 @@ Description=nifi service to manage leave notifications to cluster from scale dow
 After=network.target
 
 [Service]
-ExecStart=/usr/local/bin/ansible-playbook /mnt/nifi/cluster/nifi-leave.yml
+ExecStart=/usr/local/bin/ansible-playbook /opt/nifi-cluster/nifi-leave.yml
 Type=simple
 Restart=on-failure   
 RestartSec=5
