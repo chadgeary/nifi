@@ -33,7 +33,6 @@
         - default-jre
         - jq
         - openssl
-        - nfs-common
         - git
         - binutils
         - python-pip
@@ -88,6 +87,15 @@
         - ansible_default_ipv4.address == node1_ip
         - zk_download.stat.exists == false
 
+    - name: check zookeeper uploaded to s3
+      aws_s3:
+        mode: list
+        bucket: "{{ s3_bucket }}"
+        prefix: "nifi/downloads/zookeeper.tar.gz"
+      register: zk_uploaded
+      when:
+        - ansible_default_ipv4.address == node1_ip
+
     - name: upload zookeeper to s3
       aws_s3:
         mode: put
@@ -96,21 +104,31 @@
         src: /opt/nifi-downloads/zookeeper.tar.gz
       when:
         - ansible_default_ipv4.address == node1_ip
+        - "{{ zk_uploaded.s3_keys | count }} == 0"
 
     - name: check nifi downloaded
       stat:
-        path: /opt/nifi/downloads/nifi.tar.gz
+        path: /opt/nifi-downloads/nifi.tar.gz
       register: nifi_downloaded
       when: ansible_default_ipv4.address == node1_ip
 
     - name: download nifi if not downloaded
       get_url:
         url: http://{{ mirror_host }}/pub/apache/nifi/{{ nifi_version }}/nifi-{{ nifi_version }}-bin.tar.gz
-        dest: /opt/nifi/downloads/nifi.tar.gz
+        dest: /opt/nifi-downloads/nifi.tar.gz
         mode: '0440'
       when:
         - ansible_default_ipv4.address == node1_ip
         - nifi_downloaded.stat.exists == false
+
+    - name: check nifi uploaded to s3
+      aws_s3:
+        mode: list
+        bucket: "{{ s3_bucket }}"
+        prefix: "nifi/downloads/nifi.tar.gz"
+      register: nifi_uploaded
+      when:
+        - ansible_default_ipv4.address == node1_ip
 
     - name: upload nifi to s3
       aws_s3:
@@ -120,21 +138,31 @@
         src: /opt/nifi-downloads/nifi.tar.gz
       when:
         - ansible_default_ipv4.address == node1_ip
+        - "{{ nifi_uploaded.s3_keys | count }} == 0"
 
     - name: check toolkit downloaded
       stat:
-        path: /opt/nifi/downloads/nifi-toolkit.tar.gz
+        path: /opt/nifi-downloads/nifi-toolkit.tar.gz
       register: toolkit_downloaded
       when: ansible_default_ipv4.address == node1_ip
 
     - name: download toolkit if not downloaded
       get_url:
         url: http://{{ mirror_host }}/pub/apache/nifi/{{ nifi_version }}/nifi-toolkit-{{ nifi_version }}-bin.tar.gz
-        dest: /opt/nifi/downloads/nifi-toolkit.tar.gz
+        dest: /opt/nifi-downloads/nifi-toolkit.tar.gz
         mode: '0440'
       when:
         - ansible_default_ipv4.address == node1_ip
         - toolkit_downloaded.stat.exists == false
+
+    - name: check toolkit uploaded to s3
+      aws_s3:
+        mode: list
+        bucket: "{{ s3_bucket }}"
+        prefix: "nifi/downloads/nifi-toolkit.tar.gz"
+      register: toolkit_uploaded
+      when:
+        - ansible_default_ipv4.address == node1_ip
 
     - name: upload toolkit to s3
       aws_s3:
@@ -144,6 +172,7 @@
         src: /opt/nifi-downloads/nifi-toolkit.tar.gz
       when:
         - ansible_default_ipv4.address == node1_ip
+        - "{{ toolkit_uploaded.s3_keys | count }} == 0"
 
     - name: other nodes - pull downloads from s3
       aws_s3:
@@ -168,7 +197,7 @@
 
     - name: unarchive zookeeper if not unarchived
       unarchive:
-        src: /mnt/nifi-downloads/zookeeper.tar.gz
+        src: /opt/nifi-downloads/zookeeper.tar.gz
         dest: /opt
         remote_src: yes
       when: zk_unarchived.stat.exists == false
@@ -189,7 +218,7 @@
 
     - name: unarchive nifi when not unarchived
       unarchive:
-        src: /mnt/nifi-downloads/nifi.tar.gz
+        src: /opt/nifi-downloads/nifi.tar.gz
         dest: /opt
         remote_src: yes
       when: nifi_unarchived.stat.exists == false
@@ -210,7 +239,7 @@
 
     - name: unarchive toolkit when not unarchived
       unarchive:
-        src: /mnt/nifi-downloads/nifi-toolkit.tar.gz
+        src: /opt/nifi-downloads/nifi-toolkit.tar.gz
         dest: /opt
         remote_src: yes
       when: toolkit_unarchived.stat.exists == false
@@ -381,10 +410,10 @@
 
     - name: node1 - place admin files on s3
       aws_s3:
+        mode: put
         bucket: "{{ s3_bucket }}"
         object: "/nifi/admin-certificates/{{ item }}"
         src: "/opt/nifi-certificates/admin/{{ item }}"
-        mode: put
       with_items:
         - tls.json
         - keystore.pkcs12
@@ -399,10 +428,10 @@
 
     - name: nodes - get admin files from s3
       aws_s3:
+        mode: get
         bucket: "{{ s3_bucket }}"
         object: "/nifi/admin-certificates/{{ item }}"
-        src: "/opt/nifi-certificates/admin/{{ item }}"
-        mode: get
+        dest: "/opt/nifi-certificates/admin/{{ item }}"
       with_items:
         - tls.json
         - keystore.pkcs12
@@ -507,10 +536,10 @@
 
     - name: node1 - place nifi conf files on s3
       aws_s3:
+        mode: put
         bucket: "{{ s3_bucket }}"
         object: "/nifi/conf/{{ item }}"
         src: "/opt/nifi/conf/{{ item }}"
-        mode: put
       with_items:
         - users.xml
         - authorizations.xml
@@ -519,10 +548,10 @@
 
     - name: nodes - get nifi conf files from s3
       aws_s3:
+        mode: get
         bucket: "{{ s3_bucket }}"
         object: "/nifi/conf/{{ item }}"
-        src: "/opt/nifi/conf/{{ item }}"
-        mode: get
+        dest: "/opt/nifi/conf/{{ item }}"
       with_items:
         - users.xml
         - authorizations.xml

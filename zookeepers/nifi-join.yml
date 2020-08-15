@@ -36,42 +36,59 @@
       when:
         - live_file_3.stat.exists == false
 
-    - name: determine lock
-      stat:
-        path: /mnt/nifi/cluster/lock-join
-      register: cluster_lock
-
-    - name: end if cluster lock
-      meta: end_host
-      when:
-        - cluster_lock.stat.exists == true
-
-    - name: find cluster join requests
-      find:
-        paths: /mnt/nifi/cluster/join
-        patterns: '*'
-      register: cluster_requests
-
-    - name: end if no join requests
-      meta: end_host
-      when:
-        - cluster_requests.matched == 0
-
-    - name: set lock
+    - name: touch a blank lock file
       file:
-        path: /mnt/nifi/cluster/lock-join
-        state: directory
+        state: touch
+        path: /opt/nifi-cluster/lock-join
         owner: root
         group: root
-        mode: 0640
-      register: set_lock
+        mode: '0640'
+
+    - name: determine lock exists
+      aws_s3:
+        mode: list
+        bucket: "{{ s3_bucket }}"
+        object: "/nifi/cluster/{{ item }}"
+      with_items:
+        - lock-join
+      ignore_errors: true
+      register: lock-join
+
+      retries: 60
+      delay: 10
+
+    - name: end if lock-join found
+      meta: end_host
+      when:
+        - "{{ lock-join | length }} != 0"
+
+    - name: get join requests
+      aws_s3:
+        mode: list
+        bucket: "{{ s3_bucket }}"
+        object: "/nifi/cluster/join/"
+      ignore_errors: true
+      register: cluster-join
+
+    - name: end if cluster-join list is zero
+      meta: end_host
+      when:
+        - "{{ cluster-join | length }} == 0"
+
+    - name: set lock
+      aws_s3:
+        mode: put
+        bucket: "{{ s3_bucket }}"
+        object: "/nifi/cluster/{{ item }}"
+      with_items:
+        - /opt/nifi-cluster/lock-join
 
     - name: create user(s) from filename(s)
       shell: |
         export JAVA_HOME=/usr/lib/jvm/default-java
-        /opt/nifi-toolkit/bin/cli.sh nifi create-user --userName "CN={{ item.path | basename }}, OU=NIFI" -p /mnt/nifi/admin-certificates/cli.properties
-      with_items: "{{ cluster_requests.files }}"
-      when: set_lock.changed
+        /opt/nifi-toolkit/bin/cli.sh nifi create-user --userName "CN={{ item.split('/')[3] }}, OU=NIFI" -p /mnt/nifi/admin-certificates/cli.properties
+      with_items:
+        - "{{ cluster_join.s3_keys | reject('eq','nifi/cluster/join/') | list }}"
       ignore_errors: true
 
     - name: copy live conf files to nfs

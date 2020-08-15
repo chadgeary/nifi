@@ -12,7 +12,7 @@ resource "aws_launch_configuration" "tf-nifi-launchconf" {
   lifecycle {
     create_before_destroy   = true
   }
-  depends_on              = [aws_nat_gateway.tf-nifi-ng2,aws_ssm_association.tf-nifi-zookeepers-ssm-assoc,aws_efs_mount_target.tf-nifi-efs-mounttarget-2]
+  depends_on              = [aws_nat_gateway.tf-nifi-ng2,aws_ssm_association.tf-nifi-zookeepers-ssm-assoc]
 }
 
 # autoscaling group
