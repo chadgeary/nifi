@@ -7,12 +7,13 @@ HOOKRESULT='CONTINUE'
 REGION=$(curl -s 169.254.169.254/latest/meta-data/placement/availability-zone | sed 's/.$//')
 INSTANCEID=$(curl http://169.254.169.254/latest/meta-data/instance-id)
 CLUSTERJSON=$(mktemp)
+S3BUCKET=$(cat /opt/nifi-conf/bucket)
 
 # Ensure awscli installed
 /usr/bin/pip install awscli
 
 # List nodes in json
-/opt/nifi-toolkit/bin/cli.sh nifi get-nodes -p /mnt/nifi/admin-certificates/cli.properties -ot json > $CLUSTERJSON
+/opt/nifi-toolkit/bin/cli.sh nifi get-nodes -p /opt/nifi-certificates/admin/cli.properties -ot json > $CLUSTERJSON
 
 # NODEID from HOSTNAME using jq
 NODEID=$(jq -r '.cluster[] | map(select(.address | contains("'$(hostname)'")).nodeId) | @tsv' $CLUSTERJSON)
@@ -20,16 +21,16 @@ rm -f $CLUSTERJSON
 echo "$(date) NODEID $NODEID"
 
 # DISCONNECT
-/opt/nifi-toolkit/bin/cli.sh nifi disconnect-node --nifiNodeId $NODEID -p /mnt/nifi/admin-certificates/cli.properties
+/opt/nifi-toolkit/bin/cli.sh nifi disconnect-node --nifiNodeId $NODEID -p /opt/nifi-certificates/admin/cli.properties
 
 # OFFLOAD after DISCONNECTED
 while true
 do
-  /opt/nifi-toolkit/bin/cli.sh nifi get-node --nifiNodeId $NODEID -p /mnt/nifi/admin-certificates/cli.properties | grep --quiet DISCONNECTED
+  /opt/nifi-toolkit/bin/cli.sh nifi get-node --nifiNodeId $NODEID -p /opt/nifi-certificates/admin/cli.properties | grep --quiet DISCONNECTED
   if [ $? -eq 0 ]
   then
     echo "$(date) DISCONNECTED, OFFLOADING"
-    /opt/nifi-toolkit/bin/cli.sh nifi offload-node --nifiNodeId $NODEID -p /mnt/nifi/admin-certificates/cli.properties
+    /opt/nifi-toolkit/bin/cli.sh nifi offload-node --nifiNodeId $NODEID -p /opt/nifi-certificates/admin/cli.properties
     break
   else
     sleep 2
@@ -39,19 +40,17 @@ done
 # place DELETE after OFFLOADED
 while true
 do
-  /opt/nifi-toolkit/bin/cli.sh nifi get-node --nifiNodeId $NODEID -p /mnt/nifi/admin-certificates/cli.properties | grep --quiet OFFLOADED
+  /opt/nifi-toolkit/bin/cli.sh nifi get-node --nifiNodeId $NODEID -p /opt/nifi-certificates/admin/cli.properties | grep --quiet OFFLOADED
   if [ $? -eq 0 ]
   then
   echo "$(date) OFFLOADED, placing DELETE note"
-    touch /mnt/nifi/cluster/leave/$NODEID
+    touch /opt/nifi-cluster/leave/$NODEID
+    aws s3 cp /opt/nifi-cluster/leave/$NODEID s3://$S3BUCKET/nifi/cluster/leave/$NODEID
     break
   else
     sleep 2
   fi
 done
-
-# remove certificate file(s)
-rm -rf /mnt/nifi/nifi-certificates/$(hostname)
 
 # notify lifecycle hook
 /usr/local/bin/aws autoscaling complete-lifecycle-action --lifecycle-hook-name $LIFECYCLEHOOKNAME --auto-scaling-group-name $ASGNAME --lifecycle-action-result $HOOKRESULT --instance-id $INSTANCEID --region $REGION

@@ -36,14 +36,6 @@
       when:
         - live_file_3.stat.exists == false
 
-    - name: touch a blank lock file
-      file:
-        state: touch
-        path: /opt/nifi-cluster/lock-join
-        owner: root
-        group: root
-        mode: '0640'
-
     - name: get bucket name
       shell: |
         cat /opt/nifi-conf/bucket
@@ -59,9 +51,6 @@
       ignore_errors: true
       register: lock-join
 
-      retries: 60
-      delay: 10
-
     - name: end if lock-join found
       meta: end_host
       when:
@@ -75,59 +64,83 @@
       ignore_errors: true
       register: cluster-join
 
-    - name: end if cluster-join list is zero
+    - name: end if no join keys other than virtual directory prefix
       meta: end_host
       when:
-        - "{{ cluster-join | length }} == 0"
+        - "{{ cluster-join | length }} <= 1"
+
+    - name: touch local join lock
+      file:
+        state: touch
+        path: /opt/nifi-cluster/lock-join
+        owner: root
+        group: root
+        mode: '0640'
 
     - name: set lock
       aws_s3:
         mode: put
         bucket: "{{ s3_bucket.stdout }}"
-        object: "/nifi/cluster/{{ item }}"
+        object: "/nifi/cluster/lock-join"
+        src: "{{ item }}"
       with_items:
         - /opt/nifi-cluster/lock-join
 
-    - name: create user(s) from filename(s)
+    - name: create user(s) from cluster request s3 keys
       shell: |
         export JAVA_HOME=/usr/lib/jvm/default-java
-        /opt/nifi-toolkit/bin/cli.sh nifi create-user --userName "CN={{ item.split('/')[3] }}, OU=NIFI" -p /mnt/nifi/admin-certificates/cli.properties
+        /opt/nifi-toolkit/bin/cli.sh nifi create-user --userName "CN={{ item.split('/')[3] }}, OU=NIFI" -p /opt/nifi-certificates/admin/cli.properties
       with_items:
         - "{{ cluster_join.s3_keys | reject('eq','nifi/cluster/join/') | list }}"
       ignore_errors: true
 
-    - name: copy live conf files to nfs
-      copy:
+    - name: copy live conf to s3
+      aws_s3:
+        mode: put
+        bucket: "{{ s3_bucket.stdout }}"
+        object: "/nifi/conf/{{ item }}"
         src: "/opt/nifi/conf/{{ item }}"
-        dest: "/mnt/nifi/conf/{{ item }}"
-        owner: root
-        group: root
-        mode: 0640
       with_items:
         - authorizations.xml
         - flow.xml.gz
         - users.xml
-      when: set_lock.changed
 
     - name: remove join request(s)
-      file:
-        path: "{{ item.path }}"
-        state: absent
-      with_items: "{{ cluster_requests.files }}"
-      when: set_lock.changed
+      aws_s3:
+        mode: delobj
+        bucket: "{{ s3_bucket.stdout }}"
+        object: "{{ item }}"
+      with_items:
+        - "{{ cluster_join.s3_keys }}"
 
-    - name: touch join invite(s)
+    - name: touch local invite(s)
       file:
-        path: "/mnt/nifi/cluster/invite/{{ item.path | basename }}"
+        path: "/opt/nifi-cluster/invite/{{ item.split('/')[3] }}"
         state: touch
         owner: root
         group: root
         mode: 0640
-      with_items: "{{ cluster_requests.files }}"
-      when: set_lock.changed
+      with_items:
+        - "{{ cluster_join.s3_keys | reject('eq','nifi/cluster/join/') | list }}"
+
+    - name: copy invites to s3
+      aws_s3:
+        mode: put
+        bucket: "{{ s3_bucket.stdout }}"
+        object: "/nifi/cluster/invite/{{ item.split('/')[3] }}"
+        src: "/opt/nifi-cluster/invite/{{ item.split('/')[3] }}"
+      with_items:
+        - "{{ cluster_join.s3_keys | reject('eq','nifi/cluster/join/') | list }}"
+
+    - name: remove local invites
+      file:
+        path: "/opt/nifi-cluster/invite/{{ item.split('/')[3] }}"
+        state: absent
+      with_items:
+        - "{{ cluster_join.s3_keys | reject('eq','nifi/cluster/join/') | list }}"
 
     - name: remove lock
-      file:
-        path: /mnt/nifi/cluster/lock-join
-        state: absent
-      when: set_lock.changed
+      aws_s3:
+        mode: delobj
+        bucket: "{{ s3_bucket.stdout }}"
+        object: "/nifi/cluster/lock-join"

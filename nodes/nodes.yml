@@ -33,76 +33,93 @@
         - binutils
         - python3-pip
 
-    - name: Clone efs-utils
-      git:
-        repo: https://github.com/aws/efs-utils
-        dest: /opt/efs-utils
-        clone: yes
-        update: no
-      register: efs_git_clone
+    - name: ansible required packages
+      pip:
+        executable: /usr/bin/pip
+        name: "{{ packages }}"
+      vars:
+        packages:
+        - boto
+        - boto3
+        - botocore
 
-    - name: build efs-utils
-      shell: |
-        ./build-deb.sh
-      args:
-        chdir: /opt/efs-utils
-      when: efs_git_clone.changed
-
-    - name: find efs-utils deb
-      find:
-        paths: /opt/efs-utils/build
-        patterns: 'amazon-efs-utils*.deb'
-      register: efs_utils_deb
-
-    - name: Install efs-utils
-      apt:
-        deb: "{{ item.path }}"
-      with_items: "{{ efs_utils_deb.files }}"
-
-    - name: set efs hostname checking false
-      lineinfile:
-        path: /etc/amazon/efs/efs-utils.conf
-        regexp: '^stunnel_check_cert_hostname = true'
-        line: 'stunnel_check_cert_hostname = false'
-
-    - name: check mount path exists
-      stat:
-        path: /mnt/nifi
-      register: efs_mount
-
-    - name: path nifi
+    - name: nifi management directories
       file:
-        path: /mnt/nifi
+        path: "{{ item }}"
         state: directory
         owner: root
         group: root
-        mode: '0750'
-      when: efs_mount.stat.exists == false
+        mode: 0750
+      with_items:
+        - /opt/nifi-certificates
+        - /opt/nifi-certificates/admin
+        - /opt/nifi-certificates/nifi-ca
+        - /opt/nifi-certificates/nifi-node
+        - /opt/nifi-certificates/nifi-node/{{ ansible_nodename }}
+        - /opt/nifi-conf
+        - /opt/nifi-downloads
+        - /opt/nifi-cluster
+        - /opt/nifi-cluster/join
+        - /opt/nifi-cluster/invite
+        - /opt/nifi-cluster/leave
 
-    - name: mount nifi
-      mount:
-        state: mounted
-        fstype: efs
-        path: /mnt/nifi
-        src: "{{ efs_source }}:/"
-        opts: tls,iam
-
-    - name: nodes - certificate directory
+    - name: remove any previous bucket file (for dynamic bucket changes)
       file:
-        path: /mnt/nifi/nifi-certificates/{{ ansible_nodename }}
+        path: /opt/nifi-conf/bucket
+        state: absent
+
+    - name: set bucket in conf
+      lineinfile:
+        line: "{{ s3_bucket }}"
+        path: /opt/nifi-conf/bucket
+        owner: root
+        group: root
+        mode: 0640
+        create: yes
+
+    - name: certificate directory
+      file:
+        path: /opt/nifi-certificates/{{ ansible_nodename }}
         state: directory
         owner: root
         group: root
         mode: 0750
 
-    - name: nodes - wait for downloads
-      wait_for:
-        path: "/mnt/nifi/downloads/{{ item }}"
-        state: present
-        timeout: 720
+    - name: check nifi downloaded
+      stat:
+        path: /opt/nifi-downloads/nifi.tar.gz
+      register: nifi_downloaded
+
+    - name: check toolkit downloaded
+      stat:
+        path: /opt/nifi-downloads/nifi-toolkit.tar.gz
+      register: toolkit_downloaded
+
+    - name: download nifi from s3 if not downloaded
+      aws_s3:
+        mode: get
+        bucket: "{{ s3_bucket }}"
+        object: "/nifi/downloads/{{ item }}"
+        dest: "/opt/nifi-downloads/{{ item }}"
       with_items:
         - nifi.tar.gz
+      when:
+        - nifi_downloaded.stat.exists == false
+      retries: 60
+      delay: 10
+
+    - name: download toolkit from s3 if not downloaded
+      aws_s3:
+        mode: get
+        bucket: "{{ s3_bucket }}"
+        object: "/nifi/downloads/{{ item }}"
+        dest: "/opt/nifi-downloads/{{ item }}"
+      with_items:
         - nifi-toolkit.tar.gz
+      when:
+        - toolkit_downloaded.stat.exists == false
+      retries: 60
+      delay: 10
 
     - name: check nifi unarchived
       stat:
@@ -111,7 +128,7 @@
 
     - name: unarchive nifi when not unarchived
       unarchive:
-        src: /mnt/nifi/downloads/nifi.tar.gz
+        src: /opt/nifi-downloads/nifi.tar.gz
         dest: /opt
         remote_src: yes
       when: nifi_unarchived.stat.exists == false
@@ -132,7 +149,7 @@
 
     - name: unarchive toolkit when not unarchived
       unarchive:
-        src: /mnt/nifi/downloads/nifi-toolkit.tar.gz
+        src: /opt/nifi-downloads/nifi-toolkit.tar.gz
         dest: /opt
         remote_src: yes
       when: toolkit_unarchived.stat.exists == false
@@ -170,15 +187,20 @@
         owner: root
         group: root
 
-    - name: wait for generated_password file
-      wait_for:
-        path: /mnt/nifi/generated_password
-        state: present
-        timeout: 720
+    - name: other nodes - pull generated password from s3
+      aws_s3:
+        mode: get
+        bucket: "{{ s3_bucket }}"
+        object: "/nifi/conf/{{ item }}"
+        dest: "/opt/nifi-conf/{{ item }}"
+      with_items:
+        - generated_password
+      retries: 60
+      delay: 10
 
     - name: set generated_password var
       shell: |
-        cat /mnt/nifi/generated_password
+        cat /opt/nifi-conf/generated_password
       register: generated_password
 
     - name: nodes - wait for toolkit server
@@ -187,28 +209,41 @@
         port: 2170
         timeout: 360
 
-    - name: nodes - check client tls.json
+    - name: get admin files from s3
+      aws_s3:
+        mode: get
+        bucket: "{{ s3_bucket }}"
+        object: "/nifi/admin-certificates/{{ item }}"
+        dest: "/opt/nifi-certificates/admin/{{ item }}"
+      with_items:
+        - tls.json
+        - keystore.pkcs12
+        - cli.properties
+      retries: 60
+      delay: 10
+
+    - name: check client tls.json
       stat:
-        path: /mnt/nifi/nifi-certificates/{{ ansible_nodename }}/tls.json
+        path: /opt/nifi-certificates/nifi-node/{{ ansible_nodename }}/tls.json
       register: node_tls
 
-    - name: nodes - toolkit client exec if no tls.json
+    - name: toolkit client exec if no tls.json
       shell: |
         export JAVA_HOME=/usr/lib/jvm/default-java
-        /opt/nifi-toolkit/bin/tls-toolkit.sh client -a RSA -c tf-nifi-1 -p 2170 -D "CN={{ ansible_nodename }},OU=NIFI" --subjectAlternativeNames {{ ansible_nodename }} -f /mnt/nifi/nifi-certificates/{{ ansible_nodename }}/tls.json -k 2048 -T jks -t {{ generated_password.stdout }}
+        /opt/nifi-toolkit/bin/tls-toolkit.sh client -a RSA -c tf-nifi-1 -p 2170 -D "CN={{ ansible_nodename }},OU=NIFI" --subjectAlternativeNames {{ ansible_nodename }} -f /opt/nifi-certificates/nifi-node/{{ ansible_nodename }}/tls.json -k 2048 -T jks -t {{ generated_password.stdout }}
       args:
-        chdir: /mnt/nifi/nifi-certificates/{{ ansible_nodename }}
+        chdir: /opt/nifi-certificates/nifi-node/{{ ansible_nodename }}
         executable: /bin/bash
       when: node_tls.stat.exists == false
 
     - name: register KEYSTORE_PASS
       shell: |
-        awk -F'"' '/keyStorePassword/ { print $4 }' /mnt/nifi/nifi-certificates/{{ ansible_nodename }}/tls.json
+        awk -F'"' '/keyStorePassword/ { print $4 }' /opt/nifi-certificates/nifi-node/{{ ansible_nodename }}/tls.json
       register: keystore_pass
 
     - name: register TRUSTSTORE_PASS
       shell: |
-        awk -F'"' '/trustStorePassword/ { print $4 }' /mnt/nifi/nifi-certificates/{{ ansible_nodename }}/tls.json
+        awk -F'"' '/trustStorePassword/ { print $4 }' /opt/nifi-certificates/nifi-node/{{ ansible_nodename }}/tls.json
       register: truststore_pass
 
     - name: set keystorePasswd in nifi.properties
@@ -229,45 +264,48 @@
         regexp: '^nifi\.security\.truststorePasswd=.*'
         line: "nifi.security.truststorePasswd={{ truststore_pass.stdout }}"
 
-    - name: determine flow already exists
-      stat:
-        path: /opt/nifi/conf/flow.xml.gz
-      register: flow_file
-
-    - name: place request in cluster/join
+    - name: touch local join
       file:
-        path: "/mnt/nifi/cluster/join/{{ ansible_nodename }}"
+        path: "/opt/nifi-cluster/join/{{ ansible_nodename }}"
         state: touch
         owner: root
         group: root
         mode: 0640
-      when: flow_file.stat.exists == false
 
-    - name: wait for invite in cluster/invite
-      wait_for:
-        path: "/mnt/nifi/cluster/invite/{{ ansible_nodename }}"
-        state: present
-        timeout: 360
-      when: flow_file.stat.exists == false
+    - name: copy join to s3
+      aws_s3:
+        mode: put
+        bucket: "{{ s3_bucket }}"
+        object: "/nifi/cluster/join/{{ ansible_nodename }}"
+        src: "/opt/nifi-cluster/join/{{ ansible_nodename }}"
 
-    - name: remove invite in cluster/invite
-      file:
-        path: "/mnt/nifi/cluster/invite/{{ ansible_nodename }}"
-        state: absent
-      when: flow_file.stat.exists == false
+    - name: get invite to s3
+      aws_s3:
+        mode: get
+        bucket: "{{ s3_bucket }}"
+        object: "/nifi/cluster/invite/{{ ansible_nodename }}"
+        dest: "/opt/nifi-cluster/invite/{{ ansible_nodename }}"
+      retries: 60
+      delay: 10     
 
-    - name: copy cluster files to /opt/nifi/conf
-      copy:
-        src: "/mnt/nifi/conf/{{ item }}"
+    - name: remove invite in s3
+      aws_s3:
+        mode: delobj
+        bucket: "{{ s3_bucket }}"
+        object: "/nifi/cluster/invite/{{ ansible_nodename }}"
+
+    - name: get nifi conf files from s3
+      aws_s3:
+        mode: get
+        bucket: "{{ s3_bucket }}"
+        object: "/nifi/conf/{{ item }}"
         dest: "/opt/nifi/conf/{{ item }}"
-        owner: root
-        group: root
-        mode: 0640
       with_items:
+        - users.xml
         - authorizations.xml
         - flow.xml.gz
-        - users.xml
-      when: flow_file.stat.exists == false
+      retries: 60
+      delay: 10
 
     - name: copy scale-down script executed by autoscaling ssm doc
       copy:
@@ -277,7 +315,7 @@
         group: root
         mode: 0550
 
-    - name: nodes - nifi systemd service start/enable
+    - name: nifi systemd service start/enable
       systemd:
         state: started
         enabled: yes
