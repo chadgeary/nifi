@@ -44,10 +44,15 @@
         group: root
         mode: '0640'
 
+    - name: get bucket name
+      shell: |
+        cat /opt/nifi-conf/bucket
+      register: s3_bucket
+
     - name: determine lock exists
       aws_s3:
         mode: list
-        bucket: "{{ s3_bucket }}"
+        bucket: "{{ s3_bucket.stdout }}"
         object: "/nifi/cluster/{{ item }}"
       with_items:
         - lock-join
@@ -65,7 +70,7 @@
     - name: get join requests
       aws_s3:
         mode: list
-        bucket: "{{ s3_bucket }}"
+        bucket: "{{ s3_bucket.stdout }}"
         object: "/nifi/cluster/join/"
       ignore_errors: true
       register: cluster-join
@@ -78,7 +83,7 @@
     - name: set lock
       aws_s3:
         mode: put
-        bucket: "{{ s3_bucket }}"
+        bucket: "{{ s3_bucket.stdout }}"
         object: "/nifi/cluster/{{ item }}"
       with_items:
         - /opt/nifi-cluster/lock-join

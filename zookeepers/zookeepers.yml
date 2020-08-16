@@ -64,6 +64,20 @@
         - /opt/nifi-downloads
         - /opt/nifi-cluster
 
+    - name: remove any previous bucket file (for dynamic bucket changes)
+      file:
+        path: /opt/nifi-conf/bucket
+        state: absent
+
+    - name: set bucket in conf
+      lineinfile:
+        line: "{{ s3_bucket }}"
+        path: /opt/nifi-conf/bucket
+        owner: root
+        group: root
+        mode: 0640
+        create: yes
+
     - name: nodes - certificate directory
       file:
         path: /opt/nifi-certificates/{{ ansible_nodename }}
@@ -75,8 +89,7 @@
     - name: check zookeeper downloaded
       stat:
         path: /opt/nifi-downloads/zookeeper.tar.gz
-      register: zk_download
-      when: ansible_default_ipv4.address == node1_ip
+      register: zk_downloaded
 
     - name: download zookeeper if not downloaded
       get_url:
@@ -85,7 +98,7 @@
         mode: '0644'
       when: 
         - ansible_default_ipv4.address == node1_ip
-        - zk_download.stat.exists == false
+        - zk_downloaded.stat.exists == false
 
     - name: check zookeeper uploaded to s3
       aws_s3:
@@ -110,7 +123,6 @@
       stat:
         path: /opt/nifi-downloads/nifi.tar.gz
       register: nifi_downloaded
-      when: ansible_default_ipv4.address == node1_ip
 
     - name: download nifi if not downloaded
       get_url:
@@ -144,7 +156,6 @@
       stat:
         path: /opt/nifi-downloads/nifi-toolkit.tar.gz
       register: toolkit_downloaded
-      when: ansible_default_ipv4.address == node1_ip
 
     - name: download toolkit if not downloaded
       get_url:
@@ -174,7 +185,7 @@
         - ansible_default_ipv4.address == node1_ip
         - "{{ toolkit_uploaded.s3_keys | count }} == 0"
 
-    - name: other nodes - pull downloads from s3
+    - name: non-node1 - download zk from s3 if not downloaded
       aws_s3:
         mode: get
         bucket: "{{ s3_bucket }}"
@@ -182,10 +193,37 @@
         dest: "/opt/nifi-downloads/{{ item }}"
       with_items:
         - zookeeper.tar.gz
+      when:
+        - ansible_default_ipv4.address != node1_ip
+        - zk_downloaded.stat.exists == false
+      retries: 60
+      delay: 10
+
+    - name: non-node1 - download nifi from s3 if not downloaded
+      aws_s3:
+        mode: get
+        bucket: "{{ s3_bucket }}"
+        object: "/nifi/downloads/{{ item }}"
+        dest: "/opt/nifi-downloads/{{ item }}"
+      with_items:
         - nifi.tar.gz
+      when:
+        - ansible_default_ipv4.address != node1_ip
+        - nifi_downloaded.stat.exists == false
+      retries: 60
+      delay: 10
+
+    - name: non-node1 - download toolkit from s3 if not downloaded
+      aws_s3:
+        mode: get
+        bucket: "{{ s3_bucket }}"
+        object: "/nifi/downloads/{{ item }}"
+        dest: "/opt/nifi-downloads/{{ item }}"
+      with_items:
         - nifi-toolkit.tar.gz
       when:
         - ansible_default_ipv4.address != node1_ip
+        - toolkit_downloaded.stat.exists == false
       retries: 60
       delay: 10
 
@@ -193,7 +231,6 @@
       stat:
         path: /opt/zookeeper-{{ zk_version }}/README
       register: zk_unarchived
-      when: ansible_default_ipv4.address == node1_ip
 
     - name: unarchive zookeeper if not unarchived
       unarchive:
