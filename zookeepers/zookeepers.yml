@@ -199,7 +199,7 @@
       when:
         - ansible_default_ipv4.address != node1_ip
         - zk_downloaded.stat.exists == false
-      retries: 60
+      retries: 90
       delay: 10
 
     - name: non-node1 - download nifi from s3 if not downloaded
@@ -213,7 +213,7 @@
       when:
         - ansible_default_ipv4.address != node1_ip
         - nifi_downloaded.stat.exists == false
-      retries: 60
+      retries: 90
       delay: 10
 
     - name: non-node1 - download toolkit from s3 if not downloaded
@@ -227,7 +227,7 @@
       when:
         - ansible_default_ipv4.address != node1_ip
         - toolkit_downloaded.stat.exists == false
-      retries: 60
+      retries: 90
       delay: 10
 
     - name: check zookeeper unarchived
@@ -325,6 +325,18 @@
         owner: root
         group: root
 
+    - name: get pre-existing generated password from s3
+      aws_s3:
+        mode: get
+        bucket: "{{ s3_bucket }}"
+        object: "/nifi/conf/{{ item }}"
+        dest: "/opt/nifi-conf/{{ item }}"
+      ignore_errors: True
+      with_items:
+        - generated_password
+      when:
+        - ansible_default_ipv4.address == node1_ip
+
     - name: check password generated
       stat:
         path: /opt/nifi-conf/generated_password
@@ -359,7 +371,7 @@
         - generated_password
       when:
         - ansible_default_ipv4.address != node1_ip
-      retries: 60
+      retries: 90
       delay: 10
 
     - name: set generated_password var
@@ -407,6 +419,20 @@
         name: toolkit-server
         daemon_reload: yes
       when: ansible_default_ipv4.address == node1_ip
+
+    - name: node1 - get pre-existing admin files from s3
+      aws_s3:
+        mode: get
+        bucket: "{{ s3_bucket }}"
+        object: "/nifi/admin-certificates/{{ item }}"
+        dest: "/opt/nifi-certificates/admin/{{ item }}"
+      ignore_errors: True
+      with_items:
+        - tls.json
+        - keystore.pkcs12
+        - cli.properties
+      when:
+        - ansible_default_ipv4.address == node1_ip
 
     - name: node1 - check admin tls.json
       stat:
@@ -458,6 +484,7 @@
         - tls.json
         - keystore.pkcs12
         - cli.properties
+        - truststore.jks
       when: ansible_default_ipv4.address == node1_ip
 
     - name: nodes - wait for toolkit server
@@ -476,8 +503,9 @@
         - tls.json
         - keystore.pkcs12
         - cli.properties
+        - truststore.jks
       when: ansible_default_ipv4.address != node1_ip
-      retries: 60
+      retries: 90
       delay: 10
 
     - name: nodes - check client tls.json
@@ -597,7 +625,7 @@
         - authorizations.xml
         - flow.xml.gz
       when: ansible_default_ipv4.address != node1_ip
-      retries: 60
+      retries: 90
       delay: 10
 
     - name: other nodes - nifi systemd service start/enable

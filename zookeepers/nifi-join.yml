@@ -43,31 +43,30 @@
 
     - name: determine lock exists
       aws_s3:
-        mode: list
+        mode: get
         bucket: "{{ s3_bucket.stdout }}"
-        object: "/nifi/cluster/{{ item }}"
-      with_items:
-        - lock-join
+        object: "nifi/cluster/lock-join"
+        dest: "/opt/nifi-cluster/lock-join"
       ignore_errors: true
-      register: lock-join
+      register: lock_join
 
     - name: end if lock-join found
       meta: end_host
       when:
-        - "{{ lock-join | length }} != 0"
+        - lock_join.failed == false
 
     - name: get join requests
       aws_s3:
         mode: list
         bucket: "{{ s3_bucket.stdout }}"
-        object: "/nifi/cluster/join/"
+        prefix: "nifi/cluster/join/"
       ignore_errors: true
-      register: cluster-join
+      register: cluster_join
 
     - name: end if no join keys other than virtual directory prefix
       meta: end_host
       when:
-        - "{{ cluster-join | length }} <= 1"
+        - cluster_join | length <= 1
 
     - name: touch local join lock
       file:
