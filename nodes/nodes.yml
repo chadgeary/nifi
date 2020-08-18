@@ -77,14 +77,6 @@
         mode: 0640
         create: yes
 
-    - name: certificate directory
-      file:
-        path: /opt/nifi-certificates/{{ ansible_nodename }}
-        state: directory
-        owner: root
-        group: root
-        mode: 0750
-
     - name: check nifi downloaded
       stat:
         path: /opt/nifi-downloads/nifi.tar.gz
@@ -105,7 +97,7 @@
         - nifi.tar.gz
       when:
         - nifi_downloaded.stat.exists == false
-      retries: 60
+      retries: 120
       delay: 10
 
     - name: download toolkit from s3 if not downloaded
@@ -118,7 +110,7 @@
         - nifi-toolkit.tar.gz
       when:
         - toolkit_downloaded.stat.exists == false
-      retries: 60
+      retries: 120
       delay: 10
 
     - name: check nifi unarchived
@@ -195,7 +187,7 @@
         dest: "/opt/nifi-conf/{{ item }}"
       with_items:
         - generated_password
-      retries: 60
+      retries: 120
       delay: 10
 
     - name: set generated_password var
@@ -219,7 +211,8 @@
         - tls.json
         - keystore.pkcs12
         - cli.properties
-      retries: 60
+        - truststore.jks
+      retries: 120
       delay: 10
 
     - name: check client tls.json
@@ -279,13 +272,17 @@
         object: "/nifi/cluster/join/{{ ansible_nodename }}"
         src: "/opt/nifi-cluster/join/{{ ansible_nodename }}"
 
+    - name: wait for zookeeper
+      pause:
+        minutes: 1
+
     - name: get invite to s3
       aws_s3:
         mode: get
         bucket: "{{ s3_bucket }}"
         object: "/nifi/cluster/invite/{{ ansible_nodename }}"
         dest: "/opt/nifi-cluster/invite/{{ ansible_nodename }}"
-      retries: 60
+      retries: 120
       delay: 10     
 
     - name: remove invite in s3
@@ -304,7 +301,7 @@
         - users.xml
         - authorizations.xml
         - flow.xml.gz
-      retries: 60
+      retries: 120
       delay: 10
 
     - name: copy scale-down script executed by autoscaling ssm doc

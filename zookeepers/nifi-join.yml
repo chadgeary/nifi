@@ -66,7 +66,7 @@
     - name: end if no join keys other than virtual directory prefix
       meta: end_host
       when:
-        - cluster_join | length <= 1
+        - cluster_join.s3_keys | length <= 1
 
     - name: touch local join lock
       file:

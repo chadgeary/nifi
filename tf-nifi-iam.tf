@@ -37,6 +37,15 @@ resource "aws_iam_policy" "tf-nifi-instance-policy" {
       "Resource": ["${aws_s3_bucket.tf-nifi-bucket.arn}/nifi/*","${aws_s3_bucket.tf-nifi-bucket.arn}/ssm/*"]
     },
     {
+      "Sid": "DelObjectsinClusterPrefix",
+      "Effect": "Allow",
+      "Action": [
+        "s3:DeleteObject",
+        "s3:DeleteObjectVersion"
+      ],
+      "Resource": ["${aws_s3_bucket.tf-nifi-bucket.arn}/nifi/cluster/*"]
+    },
+    {
       "Sid": "S3CMK",
       "Effect": "Allow",
       "Action": [

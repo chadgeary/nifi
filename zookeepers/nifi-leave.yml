@@ -6,6 +6,36 @@
   gather_facts: false
   tasks:
 
+    - name: stat live conf files 1 of 3
+      stat:
+        path: /opt/nifi/conf/authorizations.xml
+      register: live_file_1
+
+    - name: end if conf file not found 1 of 3
+      meta: end_host
+      when:
+        - live_file_1.stat.exists == false
+
+    - name: stat live conf files 2 of 3
+      stat:
+        path: /opt/nifi/conf/flow.xml.gz
+      register: live_file_2
+
+    - name: end if conf file not found 2 of 3
+      meta: end_host
+      when:
+        - live_file_2.stat.exists == false
+
+    - name: stat live conf files 3 of 3
+      stat:
+        path: /opt/nifi/conf/users.xml
+      register: live_file_3
+
+    - name: end if conf file not found 3 of 3
+      meta: end_host
+      when:
+        - live_file_3.stat.exists == false
+
     - name: get bucket name
       shell: |
         cat /opt/nifi-conf/bucket
@@ -13,31 +43,30 @@
 
     - name: determine lock exists
       aws_s3:
-        mode: list
+        mode: get
         bucket: "{{ s3_bucket.stdout }}"
-        object: "/nifi/cluster/{{ item }}"
-      with_items:
-        - lock-leave
+        object: "nifi/cluster/lock-leave"
+        dest: "/opt/nifi-cluster/lock-leave"
       ignore_errors: true
       register: lock_leave
 
     - name: end if lock-leave found
       meta: end_host
       when:
-        - lock_leave | length != 0
+        - lock_leave.failed == false
 
     - name: get leave requests
       aws_s3:
         mode: list
         bucket: "{{ s3_bucket.stdout }}"
-        object: "/nifi/cluster/leave/"
+        prefix: "nifi/cluster/leave/"
       ignore_errors: true
       register: cluster_leave
 
     - name: end if no leave keys other than virtual directory prefix
       meta: end_host
       when:
-        - cluster_leave | length <= 1
+        - cluster_leave.s3_keys | length <= 1
 
     - name: touch local leave lock
       file:
@@ -58,7 +87,7 @@
 
     - name: process leaves by deleting from cluster
       shell: |
-        /opt/nifi-toolkit/bin/cli.sh nifi delete-node --nifiNodeId {{ item.path | basename }} -p /mnt/nifi/admin-certificates/cli.properties
+        /opt/nifi-toolkit/bin/cli.sh nifi delete-node --nifiNodeId {{ item.split('/')[3] }} -p /opt/nifi-certificates/admin/cli.properties
       with_items: 
         - "{{ cluster_leave.s3_keys | reject('eq','nifi/cluster/leave/') | list }}"
       ignore_errors: True
