@@ -52,10 +52,6 @@
         mode: 0750
       with_items:
         - /opt/nifi-certificates
-        - /opt/nifi-certificates/admin
-        - /opt/nifi-certificates/nifi-ca
-        - /opt/nifi-certificates/nifi-node
-        - /opt/nifi-certificates/nifi-node/{{ ansible_nodename }}
         - /opt/nifi-conf
         - /opt/nifi-downloads
         - /opt/nifi-cluster
@@ -163,14 +159,6 @@
         group: root
         mode: 0640
 
-    - name: nifi properties
-      template:
-        src: nifi.properties
-        dest: /opt/nifi/conf/nifi.properties
-        owner: root
-        group: root
-        mode: 0640
-
     - name: nifi systemd service file
       copy:
         src: nifi.service
@@ -195,67 +183,91 @@
         cat /opt/nifi-conf/generated_password
       register: generated_password
 
-    - name: nodes - wait for toolkit server
-      wait_for:
-        host: "{{ node1_ip }}"
-        port: 2170
-        timeout: 360
+    - name: nifi properties
+      template:
+        src: nifi.properties
+        dest: /opt/nifi/conf/nifi.properties
+        owner: root
+        group: root
+        mode: 0640
 
-    - name: get admin files from s3
+    - name: check ca exists
+      stat:
+        path: /opt/nifi-certificates/nifi-cert.pem
+      register: ca_cert
+
+    - name: pull ca from s3
       aws_s3:
         mode: get
         bucket: "{{ s3_bucket }}"
-        object: "/nifi/admin-certificates/{{ item }}"
+        object: "nifi/certificates/{{ item }}"
+        dest: "/opt/nifi-certificates/{{ item }}"
+      with_items:
+        - nifi-cert.pem
+        - nifi-key.key
+      retries: 120
+      delay: 10
+      register: ca_from_s3
+      until: ca_from_s3 is not failed
+      when: 
+        - ca_cert.stat.exists == false
+
+    - name: check admin exists
+      stat:
+        path: /opt/nifi-certificates/admin/keystore.jks
+      register: admin_cert
+
+    - name: ensure admin dir for s3 objects
+      file:
+        path: /opt/nifi-certificates/admin
+        state: directory
+        owner: root
+        group: root
+        mode: 0750
+
+    - name: pull admin from s3
+      aws_s3:
+        mode: get
+        bucket: "{{ s3_bucket }}"
+        object: "nifi/certificates/admin/{{ item }}"
         dest: "/opt/nifi-certificates/admin/{{ item }}"
       with_items:
-        - tls.json
-        - keystore.pkcs12
-        - cli.properties
+        - keystore.jks
         - truststore.jks
       retries: 120
       delay: 10
+      register: admin_from_s3
+      until: admin_from_s3 is not failed
+      when: 
+        - admin_cert.stat.exists == false
 
-    - name: check client tls.json
+    - name: admin cli.properties template
+      template:
+        src: cli.properties
+        dest: /opt/nifi-certificates/admin/cli.properties
+        owner: root
+        group: root
+        mode: 0640
+
+    - name: check node keystore exists
       stat:
-        path: /opt/nifi-certificates/nifi-node/{{ ansible_nodename }}/tls.json
-      register: node_tls
+        path: /opt/nifi-certificates/{{ ansible_nodename }}/keystore.jks
+      register: node_cert
 
-    - name: toolkit client exec if no tls.json
+    - name: generate node keystore when not exists
       shell: |
         export JAVA_HOME=/usr/lib/jvm/default-java
-        /opt/nifi-toolkit/bin/tls-toolkit.sh client -a RSA -c tf-nifi-1 -p 2170 -D "CN={{ ansible_nodename }},OU=NIFI" --subjectAlternativeNames {{ ansible_nodename }} -f /opt/nifi-certificates/nifi-node/{{ ansible_nodename }}/tls.json -k 2048 -T jks -t {{ generated_password.stdout }}
+        /opt/nifi-toolkit/bin/tls-toolkit.sh standalone -n {{ ansible_nodename }} -d 3650 -k 2048 -s SHA256WITHRSA -T jks --subjectAlternativeNames {{ ansible_nodename }} -P {{ generated_password.stdout }} -S {{ generated_password.stdout }}
       args:
-        chdir: /opt/nifi-certificates/nifi-node/{{ ansible_nodename }}
+        chdir: /opt/nifi-certificates/
         executable: /bin/bash
-      when: node_tls.stat.exists == false
+      when: node_cert.stat.exists == false
 
-    - name: register KEYSTORE_PASS
+    - name: create user
       shell: |
-        awk -F'"' '/keyStorePassword/ { print $4 }' /opt/nifi-certificates/nifi-node/{{ ansible_nodename }}/tls.json
-      register: keystore_pass
-
-    - name: register TRUSTSTORE_PASS
-      shell: |
-        awk -F'"' '/trustStorePassword/ { print $4 }' /opt/nifi-certificates/nifi-node/{{ ansible_nodename }}/tls.json
-      register: truststore_pass
-
-    - name: set keystorePasswd in nifi.properties
-      lineinfile:
-        path: /opt/nifi/conf/nifi.properties
-        regexp: '^nifi\.security\.keystorePasswd=.*'
-        line: "nifi.security.keystorePasswd={{ keystore_pass.stdout }}"
-
-    - name: set keyPasswd in nifi.properties
-      lineinfile:
-        path: /opt/nifi/conf/nifi.properties
-        regexp: '^nifi\.security\.keyPasswd=.*'
-        line: "nifi.security.keyPasswd={{ keystore_pass.stdout }}"
-
-    - name: set truststorePasswd in nifi.properties
-      lineinfile:
-        path: /opt/nifi/conf/nifi.properties
-        regexp: '^nifi\.security\.truststorePasswd=.*'
-        line: "nifi.security.truststorePasswd={{ truststore_pass.stdout }}"
+        export JAVA_HOME=/usr/lib/jvm/default-java
+        /opt/nifi-toolkit/bin/cli.sh nifi create-user --userName "CN={{ ansible_nodename }}, OU=NIFI" -p /opt/nifi-certificates/admin/cli.properties
+      ignore_errors: true
 
     - name: touch local join
       file:
@@ -284,6 +296,8 @@
         dest: "/opt/nifi-cluster/invite/{{ ansible_nodename }}"
       retries: 120
       delay: 10     
+      register: invite_from_s3
+      until: invite_from_s3 is not failed
 
     - name: remove invite in s3
       aws_s3:
@@ -303,6 +317,8 @@
         - flow.xml.gz
       retries: 120
       delay: 10
+      register: conf_from_s3
+      until: conf_from_s3 is not failed
 
     - name: copy scale-down script executed by autoscaling ssm doc
       copy:

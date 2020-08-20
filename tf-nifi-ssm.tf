@@ -12,7 +12,7 @@ resource "aws_ssm_association" "tf-nifi-zookeepers-ssm-assoc" {
   }
   parameters              = {
     Check                   = "False"
-    ExtraVariables          = "SSM=True zk_version=${var.zk_version} nifi_version=${var.nifi_version} mirror_host=${var.mirror_host} node1_ip=${var.node1_ip} node2_ip=${var.node2_ip} node3_ip=${var.node3_ip} elb_dns=${aws_elb.tf-nifi-elb1.dns_name} s3_bucket=${aws_s3_bucket.tf-nifi-bucket.id}"
+    ExtraVariables          = "SSM=True zk_version=${var.zk_version} nifi_version=${var.nifi_version} mirror_host=${var.mirror_host} node1_ip=${var.node1_ip} node2_ip=${var.node2_ip} node3_ip=${var.node3_ip} elb_dns=${aws_elb.tf-nifi-elb1.dns_name} s3_bucket=${aws_s3_bucket.tf-nifi-bucket.id} kms_key_id=${aws_kms_key.tf-nifi-kmscmk-s3.key_id}"
     InstallDependencies     = "True"
     PlaybookFile            = "zookeepers.yml"
     SourceInfo              = "{\"path\":\"https://s3.${var.aws_region}.amazonaws.com/${aws_s3_bucket.tf-nifi-bucket.id}/nifi/zookeepers/\"}"
@@ -36,7 +36,7 @@ resource "aws_ssm_association" "tf-nifi-nodes-ssm-assoc" {
   }
   parameters              = {
     Check                   = "False"
-    ExtraVariables          = "SSM=True nifi_version=${var.nifi_version} mirror_host=${var.mirror_host} node1_ip=${var.node1_ip} node2_ip=${var.node2_ip} node3_ip=${var.node3_ip} elb_dns=${aws_elb.tf-nifi-elb1.dns_name} s3_bucket=${aws_s3_bucket.tf-nifi-bucket.id}"
+    ExtraVariables          = "SSM=True nifi_version=${var.nifi_version} mirror_host=${var.mirror_host} node1_ip=${var.node1_ip} node2_ip=${var.node2_ip} node3_ip=${var.node3_ip} elb_dns=${aws_elb.tf-nifi-elb1.dns_name} s3_bucket=${aws_s3_bucket.tf-nifi-bucket.id} kms_key_id=${aws_kms_key.tf-nifi-kmscmk-s3.key_id}"
     InstallDependencies     = "True"
     PlaybookFile            = "nodes.yml"
     SourceInfo              = "{\"path\":\"https://s3.${var.aws_region}.amazonaws.com/${aws_s3_bucket.tf-nifi-bucket.id}/nifi/nodes/\"}"

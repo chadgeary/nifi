@@ -41,6 +41,11 @@
         cat /opt/nifi-conf/bucket
       register: s3_bucket
 
+    - name: get kms key id
+      shell: |
+        cat /opt/nifi-conf/kms-key-id
+      register: kms_key_id
+
     - name: determine lock exists
       aws_s3:
         mode: get
@@ -82,6 +87,9 @@
         bucket: "{{ s3_bucket.stdout }}"
         object: "/nifi/cluster/lock-leave"
         src: "{{ item }}"
+        encrypt: yes
+        encryption_mode: "aws:kms"
+        encryption_kms_key_id: "{{ kms_key_id.stdout }}"
       with_items:
         - /opt/nifi-cluster/lock-leave
 

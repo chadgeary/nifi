@@ -9,4 +9,4 @@ export JAVA_HOME=/usr/lib/jvm/default-java
 TOOLKIT_PID=$!
 
 # sleep a moment, then kill the toolkit server instance
-sleep 5 && kill $TOOLKIT_PID
+sleep 10 && kill $TOOLKIT_PID

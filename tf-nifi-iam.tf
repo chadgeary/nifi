@@ -25,7 +25,7 @@ resource "aws_iam_policy" "tf-nifi-instance-policy" {
         "s3:GetObject",
         "s3:GetObjectVersion"
       ],
-      "Resource": ["${aws_s3_bucket.tf-nifi-bucket.arn}/nifi/*"]
+      "Resource": ["${aws_s3_bucket.tf-nifi-bucket.arn}/*"]
     },
     {
       "Sid": "PutObjectsinBucketPrefix",

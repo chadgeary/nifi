@@ -41,6 +41,11 @@
         cat /opt/nifi-conf/bucket
       register: s3_bucket
 
+    - name: get kms key id
+      shell: |
+        cat /opt/nifi-conf/kms-key-id
+      register: kms_key_id
+
     - name: determine lock exists
       aws_s3:
         mode: get
@@ -82,16 +87,11 @@
         bucket: "{{ s3_bucket.stdout }}"
         object: "/nifi/cluster/lock-join"
         src: "{{ item }}"
+        encrypt: yes
+        encryption_mode: "aws:kms"
+        encryption_kms_key_id: "{{ kms_key_id.stdout }}"
       with_items:
         - /opt/nifi-cluster/lock-join
-
-    - name: create user(s) from cluster request s3 keys
-      shell: |
-        export JAVA_HOME=/usr/lib/jvm/default-java
-        /opt/nifi-toolkit/bin/cli.sh nifi create-user --userName "CN={{ item.split('/')[3] }}, OU=NIFI" -p /opt/nifi-certificates/admin/cli.properties
-      with_items:
-        - "{{ cluster_join.s3_keys | reject('eq','nifi/cluster/join/') | list }}"
-      ignore_errors: true
 
     - name: copy live conf to s3
       aws_s3:
@@ -99,6 +99,9 @@
         bucket: "{{ s3_bucket.stdout }}"
         object: "/nifi/conf/{{ item }}"
         src: "/opt/nifi/conf/{{ item }}"
+        encrypt: yes
+        encryption_mode: "aws:kms"
+        encryption_kms_key_id: "{{ kms_key_id.stdout }}"
       with_items:
         - authorizations.xml
         - flow.xml.gz
@@ -128,6 +131,9 @@
         bucket: "{{ s3_bucket.stdout }}"
         object: "/nifi/cluster/invite/{{ item.split('/')[3] }}"
         src: "/opt/nifi-cluster/invite/{{ item.split('/')[3] }}"
+        encrypt: yes
+        encryption_mode: "aws:kms"
+        encryption_kms_key_id: "{{ kms_key_id.stdout }}"
       with_items:
         - "{{ cluster_join.s3_keys | reject('eq','nifi/cluster/join/') | list }}"
 
