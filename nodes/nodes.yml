@@ -159,14 +159,6 @@
         group: root
         mode: 0640
 
-    - name: nifi systemd service file
-      copy:
-        src: nifi.service
-        dest: /etc/systemd/system/nifi.service
-        mode: 0444
-        owner: root
-        group: root
-
     - name: other nodes - pull generated password from s3
       aws_s3:
         mode: get
@@ -327,6 +319,10 @@
         owner: root
         group: root
         mode: 0550
+
+    - name: set sysv process into systemd
+      shell: |
+        update-rc.d nifi defaults
 
     - name: nifi systemd service start/enable
       systemd:

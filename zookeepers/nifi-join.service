@@ -9,4 +9,4 @@ Restart=on-failure
 RestartSec=5
 
 [Install]
-WantedBy=multiuser.target
+WantedBy=multi-user.target

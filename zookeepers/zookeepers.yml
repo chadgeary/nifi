@@ -316,14 +316,6 @@
         group: root
         mode: 0640
 
-    - name: nifi systemd service file
-      copy:
-        src: nifi.service
-        dest: /etc/systemd/system/nifi.service
-        mode: 0444
-        owner: root
-        group: root
-
     - name: zookeeper systemd unit file
       copy:
         src: zookeeper.service
@@ -553,6 +545,10 @@
         enabled: yes
         name: zookeeper
         daemon_reload: yes
+
+    - name: set sysv process into systemd
+      shell: |
+        update-rc.d nifi defaults
 
     - name: node1 - nifi systemd service start/enable
       systemd:

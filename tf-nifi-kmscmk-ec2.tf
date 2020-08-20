@@ -80,13 +80,11 @@ resource "aws_kms_key" "tf-nifi-kmscmk-ec2" {
       "Principal": {
         "AWS": "${aws_iam_service_linked_role.tf-nifi-autoscale-slr.arn}"
       },
-      "Action": [
-        "kms:CreateGrant"
-      ],
+      "Action": "kms:CreateGrant",
       "Resource": "*",
       "Condition": {
         "Bool": {
-          "kms:GrantIsForAWSResource": true
+          "kms:GrantIsForAWSResource": "true"
         }
       }
     }
