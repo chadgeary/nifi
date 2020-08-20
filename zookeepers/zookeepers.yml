@@ -448,7 +448,7 @@
 
     - name: check admin exists
       stat:
-        path: /opt/nifi-certificates/admin/keystore.jks
+        path: /opt/nifi-certificates/admin/keystore.pkcs12
       register: admin_cert
 
     - name: generate admin when not exists
@@ -472,7 +472,7 @@
         encryption_mode: "aws:kms"
         encryption_kms_key_id: "{{ kms_key_id }}"
       with_items:
-        - keystore.jks
+        - keystore.pkcs12
         - truststore.jks
       when:
         - ansible_default_ipv4.address == node1_ip
@@ -492,7 +492,7 @@
         object: "nifi/certificates/admin/{{ item }}"
         dest: "/opt/nifi-certificates/admin/{{ item }}"
       with_items:
-        - keystore.jks
+        - keystore.pkcs12
         - truststore.jks
       retries: 120
       delay: 10

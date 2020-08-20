@@ -214,7 +214,7 @@
 
     - name: check admin exists
       stat:
-        path: /opt/nifi-certificates/admin/keystore.jks
+        path: /opt/nifi-certificates/admin/keystore.pkcs12
       register: admin_cert
 
     - name: ensure admin dir for s3 objects
@@ -232,7 +232,7 @@
         object: "nifi/certificates/admin/{{ item }}"
         dest: "/opt/nifi-certificates/admin/{{ item }}"
       with_items:
-        - keystore.jks
+        - keystore.pkcs12
         - truststore.jks
       retries: 120
       delay: 10
