@@ -68,10 +68,10 @@
       ignore_errors: true
       register: cluster_leave
 
-    - name: end if no leave keys other than virtual directory prefix
+    - name: end if no leave keys 
       meta: end_host
       when:
-        - cluster_leave.s3_keys | length <= 1
+        - cluster_leave.s3_keys | length = 0
 
     - name: touch local leave lock
       file:
