@@ -6,53 +6,110 @@
   gather_facts: false
   tasks:
 
-    - name: determine lock
+    - name: stat live conf files 1 of 3
       stat:
-        path: /mnt/nifi/cluster/lock-leave
-      register: cluster_lock
+        path: /opt/nifi/conf/authorizations.xml
+      register: live_file_1
 
-    - name: end if cluster lock
+    - name: end if conf file not found 1 of 3
       meta: end_host
       when:
-        - cluster_lock.stat.exists == true
+        - live_file_1.stat.exists == false
 
-    - name: find cluster leave
-      find:
-        paths: /mnt/nifi/cluster/leave
-        patterns: '*'
+    - name: stat live conf files 2 of 3
+      stat:
+        path: /opt/nifi/conf/flow.xml.gz
+      register: live_file_2
+
+    - name: end if conf file not found 2 of 3
+      meta: end_host
+      when:
+        - live_file_2.stat.exists == false
+
+    - name: stat live conf files 3 of 3
+      stat:
+        path: /opt/nifi/conf/users.xml
+      register: live_file_3
+
+    - name: end if conf file not found 3 of 3
+      meta: end_host
+      when:
+        - live_file_3.stat.exists == false
+
+    - name: get bucket name
+      shell: |
+        cat /opt/nifi-conf/bucket
+      register: s3_bucket
+
+    - name: get kms key id
+      shell: |
+        cat /opt/nifi-conf/kms-key-id
+      register: kms_key_id
+
+    - name: determine lock exists
+      aws_s3:
+        mode: get
+        bucket: "{{ s3_bucket.stdout }}"
+        object: "nifi/cluster/lock-leave"
+        dest: "/opt/nifi-cluster/lock-leave"
+      ignore_errors: true
+      register: lock_leave
+
+    - name: end if lock-leave found
+      meta: end_host
+      when:
+        - lock_leave.failed == false
+
+    - name: get leave requests
+      aws_s3:
+        mode: list
+        bucket: "{{ s3_bucket.stdout }}"
+        prefix: "nifi/cluster/leave/"
+      ignore_errors: true
       register: cluster_leave
 
-    - name: end if no files match
+    - name: end if no leave keys other than virtual directory prefix
       meta: end_host
       when:
-        - cluster_leave.matched == 0
+        - cluster_leave.s3_keys | length <= 1
 
-    - name: set lock
+    - name: touch local leave lock
       file:
-        path: /mnt/nifi/cluster/lock-leave
-        state: directory
+        state: touch
+        path: /opt/nifi-cluster/lock-leave
         owner: root
         group: root
-        mode: 0640
-      register: set_lock
+        mode: '0640'
+
+    - name: set lock
+      aws_s3:
+        mode: put
+        bucket: "{{ s3_bucket.stdout }}"
+        object: "/nifi/cluster/lock-leave"
+        src: "{{ item }}"
+        encrypt: yes
+        encryption_mode: "aws:kms"
+        encryption_kms_key_id: "{{ kms_key_id.stdout }}"
+      with_items:
+        - /opt/nifi-cluster/lock-leave
 
     - name: process leaves by deleting from cluster
       shell: |
-        /opt/nifi-toolkit/bin/cli.sh nifi delete-node --nifiNodeId {{ item.path | basename }} -p /mnt/nifi/admin-certificates/cli.properties
-      with_items: "{{ cluster_leave.files }}"
-      when: set_lock.changed
+        /opt/nifi-toolkit/bin/cli.sh nifi delete-node --nifiNodeId {{ item.split('/')[3] }} -p /opt/nifi-certificates/admin/cli.properties
+      with_items: 
+        - "{{ cluster_leave.s3_keys | reject('eq','nifi/cluster/leave/') | list }}"
       ignore_errors: True
 
-    - name: remove lock
-      file:
-        path: /mnt/nifi/cluster/lock-leave
-        state: absent
-      when: set_lock.changed
+    - name: remove leave request(s)
+      aws_s3:
+        mode: delobj
+        bucket: "{{ s3_bucket.stdout }}"
+        object: "{{ item }}"
+      with_items:
+        - "{{ cluster_leave.s3_keys }}"
 
-    - name: check node no longer in cluster and remove from leave queue
-      shell: |
-        /opt/nifi-toolkit/bin/cli.sh nifi get-nodes -p /mnt/nifi/admin-certificates/cli.properties | grep --quiet {{ item }}
-        if [ $? -eq 0 ]
-          then rm /mnt/nifi/cluster/leave/{{ item }}
-        fi
-      with_items: "{{ cluster_leave.files }}"
+    - name: remove lock
+      aws_s3:
+        mode: delobj
+        bucket: "{{ s3_bucket.stdout }}"
+        object: "/nifi/cluster/lock-leave"

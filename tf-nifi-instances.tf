@@ -21,7 +21,7 @@ resource "aws_instance" "tf-nifi-1" {
     Nifi                    = "zookeeper"
   }
   user_data               = file("userdata/tf-nifi-userdata-1.sh")
-  depends_on              = [aws_nat_gateway.tf-nifi-ng1,aws_ssm_association.tf-nifi-zookeepers-ssm-assoc,aws_efs_mount_target.tf-nifi-efs-mounttarget-1]
+  depends_on              = [aws_nat_gateway.tf-nifi-ng1,aws_ssm_association.tf-nifi-zookeepers-ssm-assoc]
 }
 
 resource "aws_instance" "tf-nifi-2" {
@@ -37,7 +37,7 @@ resource "aws_instance" "tf-nifi-2" {
     Nifi                    = "zookeeper"
   }
   user_data               = file("userdata/tf-nifi-userdata-2.sh")
-  depends_on              = [aws_nat_gateway.tf-nifi-ng2,aws_ssm_association.tf-nifi-zookeepers-ssm-assoc,aws_efs_mount_target.tf-nifi-efs-mounttarget-2]
+  depends_on              = [aws_nat_gateway.tf-nifi-ng2,aws_ssm_association.tf-nifi-zookeepers-ssm-assoc]
 }
 
 resource "aws_instance" "tf-nifi-3" {
@@ -53,5 +53,5 @@ resource "aws_instance" "tf-nifi-3" {
     Nifi                    = "zookeeper"
   }
   user_data               = file("userdata/tf-nifi-userdata-3.sh")
-  depends_on              = [aws_nat_gateway.tf-nifi-ng3,aws_ssm_association.tf-nifi-zookeepers-ssm-assoc,aws_efs_mount_target.tf-nifi-efs-mounttarget-3]
+  depends_on              = [aws_nat_gateway.tf-nifi-ng3,aws_ssm_association.tf-nifi-zookeepers-ssm-assoc]
 }

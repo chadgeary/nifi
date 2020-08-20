@@ -34,21 +34,6 @@ variable "prinet3_cidr" {
   type                     = string
 }
 
-variable "efs1_ip" {
-  type                     = string
-  description              = "An IP from prinet1_cidr for the first efs mount target"
-}
-
-variable "efs2_ip" {
-  type                     = string
-  description              = "An IP from prinet2_cidr for the second efs mount target"
-}
-
-variable "efs3_ip" {
-  type                     = string
-  description              = "An IP from prinet3_cidr for the third efs mount target"
-}
-
 variable "node1_ip" {
   type                     = string
   description              = "An ip from prinet1_cidr for the first nifi node, which runs zookeeper"

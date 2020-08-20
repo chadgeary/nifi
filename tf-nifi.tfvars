@@ -26,7 +26,7 @@ vendor_ami_name_string = "ubuntu/images/hvm-ssd/ubuntu-bionic-18.04-amd64-server
 
 # the mirror nifi / zookeeper / toolkit are downloaded from - and the versions
 mirror_host = "mirror.cogentco.com"
-nifi_version = "1.11.4"
+nifi_version = "1.12.0"
 zk_version = "3.6.1"
 
 # vpc specific vars, modify these values if there would be overlap with existing resources.
@@ -37,11 +37,8 @@ pubnet3_cidr = "10.10.10.32/28"
 prinet1_cidr = "10.10.10.64/26"
 prinet2_cidr = "10.10.10.128/26"
 prinet3_cidr = "10.10.10.192/26"
-efs1_ip = "10.10.10.70"
 node1_ip = "10.10.10.71"
-efs2_ip = "10.10.10.132"
 node2_ip = "10.10.10.133"
-efs3_ip = "10.10.10.196"
 node3_ip = "10.10.10.197"
 encrypted_ami_ip = "10.10.10.72"
 

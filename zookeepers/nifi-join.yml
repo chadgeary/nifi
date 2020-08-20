@@ -36,76 +36,116 @@
       when:
         - live_file_3.stat.exists == false
 
-    - name: determine lock
-      stat:
-        path: /mnt/nifi/cluster/lock-join
-      register: cluster_lock
+    - name: get bucket name
+      shell: |
+        cat /opt/nifi-conf/bucket
+      register: s3_bucket
 
-    - name: end if cluster lock
+    - name: get kms key id
+      shell: |
+        cat /opt/nifi-conf/kms-key-id
+      register: kms_key_id
+
+    - name: determine lock exists
+      aws_s3:
+        mode: get
+        bucket: "{{ s3_bucket.stdout }}"
+        object: "nifi/cluster/lock-join"
+        dest: "/opt/nifi-cluster/lock-join"
+      ignore_errors: true
+      register: lock_join
+
+    - name: end if lock-join found
       meta: end_host
       when:
-        - cluster_lock.stat.exists == true
+        - lock_join.failed == false
 
-    - name: find cluster join requests
-      find:
-        paths: /mnt/nifi/cluster/join
-        patterns: '*'
-      register: cluster_requests
+    - name: get join requests
+      aws_s3:
+        mode: list
+        bucket: "{{ s3_bucket.stdout }}"
+        prefix: "nifi/cluster/join/"
+      ignore_errors: true
+      register: cluster_join
 
-    - name: end if no join requests
+    - name: end if no join keys other than virtual directory prefix
       meta: end_host
       when:
-        - cluster_requests.matched == 0
+        - cluster_join.s3_keys | length <= 1
+
+    - name: touch local join lock
+      file:
+        state: touch
+        path: /opt/nifi-cluster/lock-join
+        owner: root
+        group: root
+        mode: '0640'
 
     - name: set lock
-      file:
-        path: /mnt/nifi/cluster/lock-join
-        state: directory
-        owner: root
-        group: root
-        mode: 0640
-      register: set_lock
+      aws_s3:
+        mode: put
+        bucket: "{{ s3_bucket.stdout }}"
+        object: "/nifi/cluster/lock-join"
+        src: "{{ item }}"
+        encrypt: yes
+        encryption_mode: "aws:kms"
+        encryption_kms_key_id: "{{ kms_key_id.stdout }}"
+      with_items:
+        - /opt/nifi-cluster/lock-join
 
-    - name: create user(s) from filename(s)
-      shell: |
-        export JAVA_HOME=/usr/lib/jvm/default-java
-        /opt/nifi-toolkit/bin/cli.sh nifi create-user --userName "CN={{ item.path | basename }}, OU=NIFI" -p /mnt/nifi/admin-certificates/cli.properties
-      with_items: "{{ cluster_requests.files }}"
-      when: set_lock.changed
-      ignore_errors: true
-
-    - name: copy live conf files to nfs
-      copy:
+    - name: copy live conf to s3
+      aws_s3:
+        mode: put
+        bucket: "{{ s3_bucket.stdout }}"
+        object: "/nifi/conf/{{ item }}"
         src: "/opt/nifi/conf/{{ item }}"
-        dest: "/mnt/nifi/conf/{{ item }}"
-        owner: root
-        group: root
-        mode: 0640
+        encrypt: yes
+        encryption_mode: "aws:kms"
+        encryption_kms_key_id: "{{ kms_key_id.stdout }}"
       with_items:
         - authorizations.xml
         - flow.xml.gz
         - users.xml
-      when: set_lock.changed
 
     - name: remove join request(s)
-      file:
-        path: "{{ item.path }}"
-        state: absent
-      with_items: "{{ cluster_requests.files }}"
-      when: set_lock.changed
+      aws_s3:
+        mode: delobj
+        bucket: "{{ s3_bucket.stdout }}"
+        object: "{{ item }}"
+      with_items:
+        - "{{ cluster_join.s3_keys }}"
 
-    - name: touch join invite(s)
+    - name: touch local invite(s)
       file:
-        path: "/mnt/nifi/cluster/invite/{{ item.path | basename }}"
+        path: "/opt/nifi-cluster/invite/{{ item.split('/')[3] }}"
         state: touch
         owner: root
         group: root
         mode: 0640
-      with_items: "{{ cluster_requests.files }}"
-      when: set_lock.changed
+      with_items:
+        - "{{ cluster_join.s3_keys | reject('eq','nifi/cluster/join/') | list }}"
+
+    - name: copy invites to s3
+      aws_s3:
+        mode: put
+        bucket: "{{ s3_bucket.stdout }}"
+        object: "/nifi/cluster/invite/{{ item.split('/')[3] }}"
+        src: "/opt/nifi-cluster/invite/{{ item.split('/')[3] }}"
+        encrypt: yes
+        encryption_mode: "aws:kms"
+        encryption_kms_key_id: "{{ kms_key_id.stdout }}"
+      with_items:
+        - "{{ cluster_join.s3_keys | reject('eq','nifi/cluster/join/') | list }}"
+
+    - name: remove local invites
+      file:
+        path: "/opt/nifi-cluster/invite/{{ item.split('/')[3] }}"
+        state: absent
+      with_items:
+        - "{{ cluster_join.s3_keys | reject('eq','nifi/cluster/join/') | list }}"
 
     - name: remove lock
-      file:
-        path: /mnt/nifi/cluster/lock-join
-        state: absent
-      when: set_lock.changed
+      aws_s3:
+        mode: delobj
+        bucket: "{{ s3_bucket.stdout }}"
+        object: "/nifi/cluster/lock-join"
