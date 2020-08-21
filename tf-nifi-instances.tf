@@ -27,7 +27,7 @@ resource "aws_instance" "tf-nifi-1" {
     encrypted               = "true"
     kms_key_id              = aws_kms_key.tf-nifi-kmscmk-ec2.arn
   }
-  depends_on              = [aws_nat_gateway.tf-nifi-ng1,aws_ssm_association.tf-nifi-zookeepers-ssm-assoc,aws_iam_policy.tf-nifi-instance-policy]
+  depends_on              = [aws_nat_gateway.tf-nifi-ng1, aws_iam_role_policy_attachment.tf-nifi-iam-attach-ssm, aws_iam_role_policy_attachment.tf-nifi-iam-attach-s3]
 }
 
 resource "aws_instance" "tf-nifi-2" {
@@ -49,7 +49,7 @@ resource "aws_instance" "tf-nifi-2" {
     encrypted               = "true"
     kms_key_id              = aws_kms_key.tf-nifi-kmscmk-ec2.arn
   }
-  depends_on              = [aws_nat_gateway.tf-nifi-ng2,aws_ssm_association.tf-nifi-zookeepers-ssm-assoc,aws_iam_policy.tf-nifi-instance-policy]
+  depends_on              = [aws_nat_gateway.tf-nifi-ng2, aws_iam_role_policy_attachment.tf-nifi-iam-attach-ssm, aws_iam_role_policy_attachment.tf-nifi-iam-attach-s3]
 }
 
 resource "aws_instance" "tf-nifi-3" {
@@ -71,5 +71,5 @@ resource "aws_instance" "tf-nifi-3" {
     encrypted               = "true"
     kms_key_id              = aws_kms_key.tf-nifi-kmscmk-ec2.arn
   }
-  depends_on              = [aws_nat_gateway.tf-nifi-ng3,aws_ssm_association.tf-nifi-zookeepers-ssm-assoc,aws_iam_policy.tf-nifi-instance-policy]
+  depends_on              = [aws_nat_gateway.tf-nifi-ng3, aws_iam_role_policy_attachment.tf-nifi-iam-attach-ssm, aws_iam_role_policy_attachment.tf-nifi-iam-attach-s3]
 }

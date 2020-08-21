@@ -3,9 +3,9 @@ data "aws_iam_policy" "tf-nifi-instance-policy-ssm" {
   arn                     = "arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore"
 }
 
-# Instance Policy
-resource "aws_iam_policy" "tf-nifi-instance-policy" {
-  name                    = "tf-nifi-instance-policy"
+# Instance Policy S3
+resource "aws_iam_policy" "tf-nifi-instance-policy-s3" {
+  name                    = "tf-nifi-instance-policy-s3"
   path                    = "/"
   description             = "Provides tf-nifi instances access to endpoint, s3 objects/bucket"
   policy                  = <<EOF
@@ -55,18 +55,21 @@ resource "aws_iam_policy" "tf-nifi-instance-policy" {
         "kms:DescribeKey"
       ],
       "Resource": ["${aws_kms_key.tf-nifi-kmscmk-s3.arn}"]
-    },
-    {
-      "Sid": "EC2CMK",
-      "Effect": "Allow",
-      "Action": [
-        "kms:Encrypt",
-        "kms:ReEncrypt*",
-        "kms:GenerateDataKey*",
-        "kms:DescribeKey"
-      ],
-      "Resource": ["${aws_kms_key.tf-nifi-kmscmk-ec2.arn}"]
-    },
+    }
+  ]
+}
+EOF
+}
+
+# Instance Policy Lifecycle
+resource "aws_iam_policy" "tf-nifi-instance-policy-lifecycle" {
+  name                    = "tf-nifi-instance-policy-lifecycle"
+  path                    = "/"
+  description             = "Provides tf-nifi instances complete autoscale lifecycle"
+  policy                  = <<EOF
+{
+  "Version": "2012-10-17",
+  "Statement": [
     {
       "Sid": "CompleteAutoScale",
       "Effect": "Allow",
@@ -107,9 +110,14 @@ resource "aws_iam_role_policy_attachment" "tf-nifi-iam-attach-ssm" {
   policy_arn              = data.aws_iam_policy.tf-nifi-instance-policy-ssm.arn
 }
 
-resource "aws_iam_role_policy_attachment" "tf-nifi-iam-attach-custom" {
+resource "aws_iam_role_policy_attachment" "tf-nifi-iam-attach-s3" {
   role                    = aws_iam_role.tf-nifi-instance-iam-role.name
-  policy_arn              = aws_iam_policy.tf-nifi-instance-policy.arn
+  policy_arn              = aws_iam_policy.tf-nifi-instance-policy-s3.arn
+}
+
+resource "aws_iam_role_policy_attachment" "tf-nifi-iam-attach-lifecycle" {
+  role                    = aws_iam_role.tf-nifi-instance-iam-role.name
+  policy_arn              = aws_iam_policy.tf-nifi-instance-policy-lifecycle.arn
 }
 
 # Instance Profile
