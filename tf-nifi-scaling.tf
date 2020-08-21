@@ -7,6 +7,8 @@ resource "aws_launch_configuration" "tf-nifi-launchconf" {
   iam_instance_profile    = aws_iam_instance_profile.tf-nifi-instance-profile.name
   security_groups         = [aws_security_group.tf-nifi-prisg1.id]
   root_block_device {
+    volume_size             = var.instance_vol_size
+    volume_type             = "standard"
     encrypted               = "true"
   }
   lifecycle {
@@ -44,7 +46,6 @@ resource "aws_autoscaling_group" "tf-nifi-autoscalegroup" {
       }
     ]
   )
-  depends_on              = [aws_instance.tf-nifi-1,aws_instance.tf-nifi-2,aws_instance.tf-nifi-3]
 }
 
 # scale up policy and metric alarm

@@ -69,6 +69,11 @@ variable "instance_key" {
   description              = "A public key for SSH access to instance(s)"
 }
 
+variable "instance_vol_size" {
+  type                     = number
+  description              = "The volume size of the instances' root block device"
+}
+
 variable "kms_manager" {
   type                     = string
   description              = "An IAM user for management of KMS key"

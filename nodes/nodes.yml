@@ -95,6 +95,8 @@
         - nifi_downloaded.stat.exists == false
       retries: 120
       delay: 10
+      register: nifi_from_s3
+      until: nifi_from_s3 is not failed
 
     - name: download toolkit from s3 if not downloaded
       aws_s3:
@@ -108,6 +110,8 @@
         - toolkit_downloaded.stat.exists == false
       retries: 120
       delay: 10
+      register: toolkit_from_s3
+      until: toolkit_from_s3 is not failed
 
     - name: check nifi unarchived
       stat:
@@ -159,7 +163,15 @@
         group: root
         mode: 0640
 
-    - name: other nodes - pull generated password from s3
+    - name: nifi systemd service file
+      copy:
+        src: nifi.service
+        dest: /etc/systemd/system/nifi.service
+        mode: 0444
+        owner: root
+        group: root
+
+    - name: pull generated password from s3
       aws_s3:
         mode: get
         bucket: "{{ s3_bucket }}"
@@ -169,6 +181,8 @@
         - generated_password
       retries: 120
       delay: 10
+      register: pw_from_s3
+      until: pw_from_s3
 
     - name: set generated_password var
       shell: |
@@ -319,10 +333,6 @@
         owner: root
         group: root
         mode: 0550
-
-    - name: set sysv process into systemd
-      shell: |
-        update-rc.d nifi defaults
 
     - name: nifi systemd service start/enable
       systemd:

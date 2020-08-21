@@ -17,6 +17,9 @@ instance_key = "ssh-rsa AAAAB3NzaD2yc2EAAAADAQABAAABAQCNsxnMWfrG3SoLr4uJMavf43Yk
 # size according to workloads, t3a.small is -just- enough
 instance_type = "r5a.large"
 
+# the root block size of the instances (in GiB)
+instance_vol_size = 15
+
 # the name tag of the ami to use
 ami_name_tag = "tf-nifi-encrypted-base-ami"
 
