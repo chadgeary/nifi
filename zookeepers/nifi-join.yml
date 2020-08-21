@@ -71,7 +71,7 @@
     - name: end if no join keys
       meta: end_host
       when:
-        - cluster_join.s3_keys | length = 0
+        - cluster_join.s3_keys | length == 0
 
     - name: touch local join lock
       file:

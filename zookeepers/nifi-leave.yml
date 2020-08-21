@@ -71,7 +71,7 @@
     - name: end if no leave keys 
       meta: end_host
       when:
-        - cluster_leave.s3_keys | length = 0
+        - cluster_leave.s3_keys | length == 0
 
     - name: touch local leave lock
       file:

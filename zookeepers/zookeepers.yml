@@ -640,7 +640,7 @@
         enabled: yes
       with_items:
         - service
-        - time
+        - timer
 
     - name: nifi-join systemd
       systemd:
