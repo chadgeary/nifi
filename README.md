@@ -28,6 +28,10 @@ Edit the vars file (.tfvars) to customize the deployment, especially:
 
 - a public SSH key for SSH access to instances.
 
+**instance_vol_size**
+
+- the volume/filesystem size of the zookeeper and node instances, in GiB.
+
 # Deploy
 ```
 # Initialize terraform
