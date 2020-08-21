@@ -334,9 +334,23 @@
         group: root
         mode: 0550
 
-    - name: nifi systemd service start/enable
+    - name: timers and service units
+      copy:
+        src: "{{ item }}"
+        dest: "/etc/systemd/system/{{ item }}"
+        owner: root
+        group: root
+        mode: 0640
+      with_items:
+        - nifi.service
+        - nifi.timer
+
+    - name: nifi systemd
       systemd:
+        name: "nifi.{{ item }}"
+        daemon_reload: yes
         state: started
         enabled: yes
-        name: nifi
-        daemon_reload: yes
+      with_items:
+        - service
+        - time

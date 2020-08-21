@@ -1,0 +1,9 @@
+[Unit]
+Description=Starts NiFi after boot.
+
+[Timer]
+OnBootSec=1min
+Unit=nifi.service
+
+[Install]
+WantedBy=multi-user.target

@@ -606,15 +606,6 @@
       register: nifi_conf_from_s3
       until: nifi_conf_from_s3 is not failed
 
-    - name: nodes - nifi systemd service start/enable
-      systemd:
-        state: started
-        enabled: yes
-        name: nifi
-        daemon_reload: yes
-      when:
-        - ansible_default_ipv4.address != node1_ip
-
     - name: nodes - nifi-join and leave play
       copy:
         src: "{{ item }}"
@@ -626,7 +617,7 @@
         - nifi-join.yml
         - nifi-leave.yml
 
-    - name: nodes - nifi-join and leave service and timer
+    - name: timers and service units
       copy:
         src: "{{ item }}"
         dest: "/etc/systemd/system/{{ item }}"
@@ -638,8 +629,20 @@
         - nifi-join.timer
         - nifi-leave.service
         - nifi-leave.timer
+        - nifi.service
+        - nifi.timer
 
-    - name: nodes - nifi-join systemd
+    - name: nifi systemd
+      systemd:
+        name: "nifi.{{ item }}"
+        daemon_reload: yes
+        state: started
+        enabled: yes
+      with_items:
+        - service
+        - time
+
+    - name: nifi-join systemd
       systemd:
         name: "nifi-join.{{ item }}"
         daemon_reload: yes
@@ -649,7 +652,7 @@
         - service
         - timer
 
-    - name: nodes - nifi-leave systemd
+    - name: nifi-leave systemd
       systemd:
         name: "nifi-leave.{{ item }}"
         daemon_reload: yes
