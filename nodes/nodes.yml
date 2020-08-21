@@ -353,4 +353,4 @@
         enabled: yes
       with_items:
         - service
-        - time
+        - timer
