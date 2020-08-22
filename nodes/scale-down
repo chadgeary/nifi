@@ -20,37 +20,158 @@ NODEID=$(jq -r '.cluster[] | map(select(.address | contains("'$(hostname)'")).no
 rm -f $CLUSTERJSON
 echo "$(date) NODEID $NODEID"
 
-# DISCONNECT
-/opt/nifi-toolkit/bin/cli.sh nifi disconnect-node --nifiNodeId $NODEID -p /opt/nifi-certificates/admin/cli.properties
+# For DISCONNECT/DISCONNECTED/OFFLOAD/OFFLOADED/DELETE/LCYCLE
+# the max attempts and target state
+MAX_ATTEMPTS=15
+SLEEP_INTERVAL=5
+TARGET_STATE="COMPLETE"
 
-# OFFLOAD after DISCONNECTED
-while true
+# SEND DISCONNECT
+DISCO_ATTEMPTS=0
+DISCO_STATE="INCOMPLETE"
+while [[ $DISCO_ATTEMPTS -le $MAX_ATTEMPTS && $DISCO_STATE != $TARGET_STATE ]]
 do
+  echo "$(date) DISCONNECT ATTEMPT $DISCO_ATTEMPTS"
+  /opt/nifi-toolkit/bin/cli.sh nifi disconnect-node --nifiNodeId $NODEID -p /opt/nifi-certificates/admin/cli.properties
+  if [ $? -eq 0 ]
+  then
+    DISCO_STATE=$TARGET_STATE
+  else
+    DISCO_ATTEMPTS=$(($DISCO_ATTEMPTS+1))
+    sleep $SLEEP_INTERVAL
+  fi
+done
+
+# EXIT IF DISCONNECT FAILED
+if [[ $DISCO_STATE = $TARGET_STATE ]]
+then
+  echo "$(date) DISCONNECT SENT AFTER $DISCO_ATTEMPTS, CHECKING DISCONNECTED."
+else
+  echo "$(date) DISCONNECT FAILED AFTER $DISCO_ATTEMPTS, EXITING."
+  exit 1
+fi
+
+# CHECK DISCONNECTED
+DISCOD_ATTEMPTS=0
+DISCOD_STATE="INCOMPLETE"
+while [[ $DISCOD_ATTEMPTS -le $MAX_ATTEMPTS && $DISCOD_STATE != $TARGET_STATE ]]
+do
+  echo "$(date) DISCONNECTED CHECK $DISCOD_ATTEMPTS"
   /opt/nifi-toolkit/bin/cli.sh nifi get-node --nifiNodeId $NODEID -p /opt/nifi-certificates/admin/cli.properties | grep --quiet DISCONNECTED
   if [ $? -eq 0 ]
   then
-    echo "$(date) DISCONNECTED, OFFLOADING"
-    /opt/nifi-toolkit/bin/cli.sh nifi offload-node --nifiNodeId $NODEID -p /opt/nifi-certificates/admin/cli.properties
-    break
+    DISCOD_STATE=$TARGET_STATE
   else
-    sleep 2
+    DISCOD_ATTEMPTS=$(($DISCOD_ATTEMPTS+1))
+    sleep $SLEEP_INTERVAL
   fi
 done
 
-# place DELETE after OFFLOADED
-while true
+# EXIT IF DISCONNECTED FAILED
+if [[ $DISCOD_STATE = $TARGET_STATE ]]
+then
+  echo "$(date) DISCONNECTED CONFIRMED AFTER $DISCOD_ATTEMPTS, SENDING OFFLOAD."
+else
+  echo "$(date) DISCONNECTED FAILED AFTER $DISCOD_ATTEMPTS, EXITING."
+  exit 1
+fi
+
+# SEND OFFLOAD
+OFFLOAD_ATTEMPTS=0
+OFFLOAD_STATE="INCOMPLETE"
+while [[ $OFFLOAD_ATTEMPTS -le $MAX_ATTEMPTS && $OFFLOAD_STATE != $TARGET_STATE ]]
 do
+  echo "$(date) OFFLOAD ATTEMPT $OFFLOAD_ATTEMPTS"
+  /opt/nifi-toolkit/bin/cli.sh nifi offload-node --nifiNodeId $NODEID -p /opt/nifi-certificates/admin/cli.properties
+  if [ $? -eq 0 ]
+  then
+    OFFLOAD_STATE=$TARGET_STATE
+  else
+    OFFLOAD_ATTEMPTS=$(($OFFLOAD_ATTEMPTS+1))
+    sleep $SLEEP_INTERVAL
+  fi
+done
+
+# EXIT IF OFFLOAD FAILED
+if [[ $OFFLOAD_STATE = $TARGET_STATE ]]
+then
+  echo "$(date) OFFLOAD AFTER $OFFLOAD_ATTEMPTS, CHECKING OFFLOADED."
+else
+  echo "$(date) OFFLOAD FAILED AFTER $OFFLOAD_ATTEMPTS, EXITING."
+  exit 1
+fi
+
+# CHECK OFFLOADED
+OFFLOADED_ATTEMPTS=0
+OFFLOADED_STATE="INCOMPLETE"
+while [[ $OFFLOADED_ATTEMPTS -le $MAX_ATTEMPTS && $OFFLOADED_STATE != $TARGET_STATE ]]
+do
+  echo "$(date) OFFLOADED CHECK $OFFLOADED_ATTEMPTS"
   /opt/nifi-toolkit/bin/cli.sh nifi get-node --nifiNodeId $NODEID -p /opt/nifi-certificates/admin/cli.properties | grep --quiet OFFLOADED
   if [ $? -eq 0 ]
   then
-  echo "$(date) OFFLOADED, placing DELETE note"
-    touch /opt/nifi-cluster/leave/$NODEID
-    aws s3 cp /opt/nifi-cluster/leave/$NODEID s3://$S3BUCKET/nifi/cluster/leave/$NODEID
-    break
+    OFFLOADED_STATE=$TARGET_STATE
   else
-    sleep 2
+    OFFLOADED_ATTEMPTS=$(($OFFLOADED_ATTEMPTS+1))
+    sleep $SLEEP_INTERVAL
   fi
 done
 
-# notify lifecycle hook
-/usr/local/bin/aws autoscaling complete-lifecycle-action --lifecycle-hook-name $LIFECYCLEHOOKNAME --auto-scaling-group-name $ASGNAME --lifecycle-action-result $HOOKRESULT --instance-id $INSTANCEID --region $REGION
+# EXIT IF OFFLOADED FAILED
+if [[ $OFFLOADED_STATE = $TARGET_STATE ]]
+then
+  echo "$(date) OFFLOADED CONFIRMED AFTER $OFFLOADED_ATTEMPTS, SENDING DELETE TO S3."
+else
+  echo "$(date) OFFLOADED FAILED AFTER $OFFLOADED_ATTEMPTS, EXITING."
+  exit 1
+fi
+
+# SEND DELETE TO S3
+DELETE_ATTEMPTS=0
+DELETE_STATE="INCOMPLETE"
+while [[ $DELETE_ATTEMPTS -le $MAX_ATTEMPTS && $DELETE_STATE != $TARGET_STATE ]]
+do
+  echo "$(date) DELETE-TO-S3 ATTTEMPT $DELETE_ATTEMPTS"
+  touch /opt/nifi-cluster/leave/$NODEID
+  aws s3 cp /opt/nifi-cluster/leave/$NODEID s3://$S3BUCKET/nifi/cluster/leave/$NODEID
+  if [ $? -eq 0 ]
+  then
+    DELETE_STATE=$TARGET_STATE
+  else
+    DELETE_ATTEMPTS=$(($DELETE_ATTEMPTS+1))
+    sleep $SLEEP_INTERVAL
+  fi
+done
+
+# EXIT IF DELETE FAILED
+if [[ $DELETE_STATE = $TARGET_STATE ]]
+then
+  echo "$(date) DELETE SENT AFTER $DELETE_ATTEMPTS, SENDING LIFECYCLE ACTION COMPLETE."
+else
+  echo "$(date) DELETE FAILED AFTER $DELETE_ATTEMPTS, EXITING."
+  exit 1
+fi
+
+# COMPLETE LIFECYCLE ACTION
+LCYCLE_ATTEMPTS=0
+LCYCLE_STATE="INCOMPLETE"
+while [[ $LCYCLE_ACCEMPTS -le $MAX_ATTEMPTS && $LCYCLE_STATE != $TARGET_STATE ]]
+do
+  /usr/local/bin/aws autoscaling complete-lifecycle-action --lifecycle-hook-name $LIFECYCLEHOOKNAME --auto-scaling-group-name $ASGNAME --lifecycle-action-result $HOOKRESULT --instance-id $INSTANCEID --region $REGION
+  if [ $? -eq 0 ]
+  then
+    LCYCLE_STATE=$TARGET_STATE
+  else
+    LCYCLE_ATTEMPTS=$(($LCYCLE_ATTEMPTS+1))
+    sleep $SLEEP_INTERVAL
+  fi
+done
+
+# EXIT IF LCYCLE FAILED
+if [[ $LCYCLE_STATE = $TARGET_STATE ]]
+then
+  echo "$(date) LIFECYCLE ACTION COMPLETE SENT AFTER $LCYCLE_ATTEMPTS, AWS TERMINATES INSTANCE."
+else
+  echo "$(date) LIFECYCLE ACTION COMPLETE FAILED AFTER $LCYCLE_ATTEMPTS, EXITING."
+  exit 1
+fi

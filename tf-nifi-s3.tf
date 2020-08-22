@@ -13,6 +13,7 @@ resource "aws_s3_bucket" "tf-nifi-bucket" {
       }
     }
   }
+  force_destroy           = true
 }
 
 # s3 block all public access to bucket

@@ -98,7 +98,11 @@
         /opt/nifi-toolkit/bin/cli.sh nifi delete-node --nifiNodeId {{ item.split('/')[3] }} -p /opt/nifi-certificates/admin/cli.properties
       with_items: 
         - "{{ cluster_leave.s3_keys | reject('eq','nifi/cluster/leave/') | list }}"
-      ignore_errors: True
+      retries: 120
+      delay: 10
+      register: process_delete
+      until: process_delete is not failed
+      ignore_errors: true
 
     - name: remove leave request(s)
       aws_s3:
