@@ -98,8 +98,8 @@
         /opt/nifi-toolkit/bin/cli.sh nifi delete-node --nifiNodeId {{ item.split('/')[3] }} -p /opt/nifi-certificates/admin/cli.properties
       with_items: 
         - "{{ cluster_leave.s3_keys | reject('eq','nifi/cluster/leave/') | list }}"
-      retries: 120
-      delay: 10
+      retries: 10
+      delay: 30
       register: process_delete
       until: process_delete is not failed
       ignore_errors: true
