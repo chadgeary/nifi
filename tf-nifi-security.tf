@@ -18,6 +18,16 @@ resource "aws_security_group" "tf-nifi-prisg1" {
 }
 
 # security group rules
+resource "aws_security_group_rule" "tf-nifi-pubsg1-prisg1-nifi-in" {
+  security_group_id       = aws_security_group.tf-nifi-pubsg1.id
+  type                    = "ingress"
+  description             = "IN FROM PRI - NIFI"
+  from_port               = "8443"
+  to_port                 = "8443"
+  protocol                = "tcp"
+  source_security_group_id = aws_security_group.tf-nifi-prisg1.id
+}
+
 resource "aws_security_group_rule" "tf-nifi-pubsg1-prisg1-https-in" {
   security_group_id       = aws_security_group.tf-nifi-pubsg1.id
   type                    = "ingress"
@@ -134,6 +144,16 @@ resource "aws_security_group_rule" "tf-nifi-prisg1-pub-https-out" {
   description             = "OUT TO SELF VIA PUB - HTTPS"
   from_port               = "443"
   to_port                 = "443"
+  protocol                = "tcp"
+  source_security_group_id = aws_security_group.tf-nifi-pubsg1.id
+}
+
+resource "aws_security_group_rule" "tf-nifi-prisg1-pub-nifi-out" {
+  security_group_id       = aws_security_group.tf-nifi-prisg1.id
+  type                    = "egress"
+  description             = "OUT TO SELF VIA PUB - NIFI"
+  from_port               = "8443"
+  to_port                 = "8443"
   protocol                = "tcp"
   source_security_group_id = aws_security_group.tf-nifi-pubsg1.id
 }

@@ -84,8 +84,6 @@ Every node terminated via Autoscale uses special actions to gracefully exit the 
   - node retrieves NodeId (node's ID within the NiFi cluster).
   - node disconnects from the NiFi cluster.
   - node offloads in-flight work from the cluster.
-  - node touches S3://`bucket`/nifi/cluster/leave/<node id>
-  - a Zookeeper monitoring S3 deletes the NodeId.
   - node completes the Autoscale Lifecycle Hook
   - AWS terminates the instance.
 

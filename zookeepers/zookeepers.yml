@@ -61,7 +61,6 @@
         - /opt/nifi-cluster
         - /opt/nifi-cluster/join
         - /opt/nifi-cluster/invite
-        - /opt/nifi-cluster/leave
 
     - name: remove any previous bucket or kms key id file (for dynamic changes)
       file:
@@ -606,7 +605,7 @@
       register: nifi_conf_from_s3
       until: nifi_conf_from_s3 is not failed
 
-    - name: nodes - nifi-join and leave play
+    - name: nodes - nifi-join play
       copy:
         src: "{{ item }}"
         dest: "/opt/nifi-cluster/{{ item }}"
@@ -615,7 +614,6 @@
         mode: 0640
       with_items:
         - nifi-join.yml
-        - nifi-leave.yml
 
     - name: timers and service units
       copy:
@@ -627,8 +625,6 @@
       with_items:
         - nifi-join.service
         - nifi-join.timer
-        - nifi-leave.service
-        - nifi-leave.timer
         - nifi.service
         - nifi.timer
 
@@ -647,16 +643,6 @@
         name: "nifi-join.{{ item }}"
         daemon_reload: yes
         state: started
-        enabled: yes
-      with_items:
-        - service
-        - timer
-
-    - name: nifi-leave systemd
-      systemd:
-        name: "nifi-leave.{{ item }}"
-        daemon_reload: yes
-        state: restarted
         enabled: yes
       with_items:
         - service

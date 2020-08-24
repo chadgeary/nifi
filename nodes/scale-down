@@ -22,7 +22,7 @@ echo "$(date) NODEID $NODEID"
 
 # For DISCONNECT/DISCONNECTED/OFFLOAD/OFFLOADED/DELETE/LCYCLE
 # the max attempts and target state
-MAX_ATTEMPTS=15
+MAX_ATTEMPTS=12
 SLEEP_INTERVAL=10
 TARGET_STATE="COMPLETE"
 
@@ -43,6 +43,7 @@ do
 done
 
 # EXIT IF DISCONNECT FAILED
+echo ""
 if [[ $DISCO_STATE = $TARGET_STATE ]]
 then
   echo "$(date) DISCONNECT SENT AFTER $DISCO_ATTEMPTS, CHECKING DISCONNECTED."
@@ -68,6 +69,7 @@ do
 done
 
 # EXIT IF DISCONNECTED FAILED
+echo ""
 if [[ $DISCOD_STATE = $TARGET_STATE ]]
 then
   echo "$(date) DISCONNECTED CONFIRMED AFTER $DISCOD_ATTEMPTS, SENDING OFFLOAD."
@@ -93,6 +95,7 @@ do
 done
 
 # EXIT IF OFFLOAD FAILED
+echo ""
 if [[ $OFFLOAD_STATE = $TARGET_STATE ]]
 then
   echo "$(date) OFFLOAD AFTER $OFFLOAD_ATTEMPTS, CHECKING OFFLOADED."
@@ -117,39 +120,41 @@ do
   fi
 done
 
-# EXIT IF OFFLOADED FAILED
+# RESTART AND DISCONNECT IF OFFLOADED FAILED
+echo ""
 if [[ $OFFLOADED_STATE = $TARGET_STATE ]]
 then
-  echo "$(date) OFFLOADED CONFIRMED AFTER $OFFLOADED_ATTEMPTS, SENDING DELETE TO S3."
+  echo "$(date) OFFLOADED CONFIRMED AFTER $OFFLOADED_ATTEMPTS, SENDING LIFECYCLE ACTION COMPLETE."
 else
-  echo "$(date) OFFLOADED FAILED AFTER $OFFLOADED_ATTEMPTS, EXITING."
-  exit 1
-fi
-
-# SEND DELETE TO S3
-DELETE_ATTEMPTS=1
-DELETE_STATE="INCOMPLETE"
-while [[ $DELETE_ATTEMPTS -le $MAX_ATTEMPTS && $DELETE_STATE != $TARGET_STATE ]]
-do
-  echo "$(date) DELETE-TO-S3 ATTTEMPT $DELETE_ATTEMPTS"
-  touch /opt/nifi-cluster/leave/$NODEID
-  aws s3 cp /opt/nifi-cluster/leave/$NODEID s3://$S3BUCKET/nifi/cluster/leave/$NODEID
-  if [ $? -eq 0 ]
-  then
-    DELETE_STATE=$TARGET_STATE
-  else
-    DELETE_ATTEMPTS=$(($DELETE_ATTEMPTS+1))
-    sleep $SLEEP_INTERVAL
-  fi
-done
-
-# EXIT IF DELETE FAILED
-if [[ $DELETE_STATE = $TARGET_STATE ]]
-then
-  echo "$(date) DELETE SENT AFTER $DELETE_ATTEMPTS, SENDING LIFECYCLE ACTION COMPLETE."
-else
-  echo "$(date) DELETE FAILED AFTER $DELETE_ATTEMPTS, EXITING."
-  exit 1
+  echo "$(date) OFFLOADED FAILED AFTER $OFFLOADED_ATTEMPTS, ABANDONING OFFLOAD AND DISCONNECTING."
+  DISCO_ATTEMPTS=1
+  DISCO_STATE="INCOMPLETE"
+  while [[ $DISCO_ATTEMPTS -le $MAX_ATTEMPTS && $DISCO_STATE != $TARGET_STATE ]]
+  do
+    echo "$(date) DISCONNECT ATTEMPT $DISCO_ATTEMPTS"
+    /opt/nifi-toolkit/bin/cli.sh nifi disconnect-node --nifiNodeId $NODEID -p /opt/nifi-certificates/admin/cli.properties
+    if [ $? -eq 0 ]
+    then
+      DISCO_STATE=$TARGET_STATE
+    else
+      DISCO_ATTEMPTS=$(($DISCO_ATTEMPTS+1))
+      sleep $SLEEP_INTERVAL
+    fi
+  done
+  DISCOD_ATTEMPTS=1
+  DISCOD_STATE="INCOMPLETE"
+  while [[ $DISCOD_ATTEMPTS -le $MAX_ATTEMPTS && $DISCOD_STATE != $TARGET_STATE ]]
+  do
+    echo "$(date) DISCONNECTED CHECK $DISCOD_ATTEMPTS"
+    /opt/nifi-toolkit/bin/cli.sh nifi get-node --nifiNodeId $NODEID -p /opt/nifi-certificates/admin/cli.properties | grep --quiet DISCONNECTED
+    if [ $? -eq 0 ]
+    then
+      DISCOD_STATE=$TARGET_STATE
+    else
+      DISCOD_ATTEMPTS=$(($DISCOD_ATTEMPTS+1))
+      sleep $SLEEP_INTERVAL
+    fi
+  done
 fi
 
 # COMPLETE LIFECYCLE ACTION
@@ -168,6 +173,7 @@ do
 done
 
 # EXIT IF LCYCLE FAILED
+echo ""
 if [[ $LCYCLE_STATE = $TARGET_STATE ]]
 then
   echo "$(date) LIFECYCLE ACTION COMPLETE SENT AFTER $LCYCLE_ATTEMPTS, AWS TERMINATES INSTANCE."
