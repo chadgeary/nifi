@@ -10,7 +10,7 @@ CLUSTERJSON=$(mktemp)
 S3BUCKET=$(cat /opt/nifi-conf/bucket)
 
 # Ensure awscli installed
-/usr/bin/pip install awscli
+/usr/bin/pip install --quiet awscli
 
 # List nodes in json
 /opt/nifi-toolkit/bin/cli.sh nifi get-nodes -p /opt/nifi-certificates/admin/cli.properties -ot json > $CLUSTERJSON

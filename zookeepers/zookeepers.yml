@@ -567,7 +567,7 @@
       wait_for:
         path: "/opt/nifi/conf/{{ item }}"
         state: present
-        timeout: 240
+        timeout: 360
       with_items:
         - users.xml
         - authorizations.xml
