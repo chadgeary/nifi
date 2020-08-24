@@ -13,7 +13,7 @@ const sendCommand = (instanceId, autoScalingGroup, lifecycleHook) => {
       'ASGNAME': [autoScalingGroup],
       'LIFECYCLEHOOKNAME': [lifecycleHook]
     },
-    TimeoutSeconds: 300
+    TimeoutSeconds: 600
   };
   return ssm.sendCommand(params).promise();
 }
@@ -28,15 +28,15 @@ exports.handler = async (event) => {
     }
     for (const record of records) {
       if (record.EventSource !== 'aws:sns') {
-        console.log('Record is not processed because record.EventSource is not aws:sns');
+        console.log('PROBLEM: EventSource is not aws:sns');
         continue;
       }
       const message = JSON.parse(record.Sns.Message);
       if (message.LifecycleTransition !== 'autoscaling:EC2_INSTANCE_TERMINATING') {
-        console.log('Record is not processed because message.LifecycleTransition is not autoscaling:EC2_INSTANCE_TERMINATING');
+        console.log('PROBLEM: LifecycleTransition is not autoscaling:EC2_INSTANCE_TERMINATING');
         continue;
       }
-      console.log("processing autoscaling event");
+      console.log("OK: Executing sendCommand");
       const autoScalingGroup = message.AutoScalingGroupName;
       const instanceId = message.EC2InstanceId;
       const lifecycleHook = message.LifecycleHookName;
