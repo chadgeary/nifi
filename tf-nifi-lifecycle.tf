@@ -98,7 +98,7 @@ resource "aws_ssm_document" "tf-nifi-ssmdoc-node-down" {
    "action": "aws:runShellScript",
    "name": "runShellScript",
    "inputs": {
-    "timeoutSeconds": "120",
+    "timeoutSeconds": "600",
     "runCommand": [
      "#!/bin/bash",
      "export LIFECYCLEHOOKNAME='{{ LIFECYCLEHOOKNAME }}'",

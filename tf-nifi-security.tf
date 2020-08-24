@@ -128,6 +128,16 @@ resource "aws_security_group_rule" "tf-nifi-prisg1-all-https-out" {
   cidr_blocks             = ["0.0.0.0/0"]
 }
 
+resource "aws_security_group_rule" "tf-nifi-prisg1-pub-https-out" {
+  security_group_id       = aws_security_group.tf-nifi-prisg1.id
+  type                    = "egress"
+  description             = "OUT TO SELF VIA PUB - HTTPS"
+  from_port               = "443"
+  to_port                 = "443"
+  protocol                = "tcp"
+  source_security_group_id = aws_security_group.tf-nifi-pubsg1.id
+}
+
 resource "aws_security_group_rule" "tf-nifi-prisg1-nififlow-in" {
   security_group_id       = aws_security_group.tf-nifi-prisg1.id
   type                    = "ingress"
