@@ -19,6 +19,9 @@ Secure installation of an Apache nifi cluster with zookeeper, called via terrafo
   - .service is a systemd unit to call the script (.yml)
   - .timer spawns the service every minute with a randomized 30 second delay
 
+- cli.properties
+  - Configuration file for NiFi CLI tool - used to talk with the NiFi cluster securely.
+
 # NiFi
 - authorizers.xml
   - The initial admin identity and zookeeper nodes defined for NiFi
