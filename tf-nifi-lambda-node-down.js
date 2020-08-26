@@ -13,7 +13,7 @@ const sendCommand = (instanceId, autoScalingGroup, lifecycleHook) => {
       'ASGNAME': [autoScalingGroup],
       'LIFECYCLEHOOKNAME': [lifecycleHook]
     },
-    TimeoutSeconds: 600
+    TimeoutSeconds: 900
   };
   return ssm.sendCommand(params).promise();
 }

@@ -98,9 +98,10 @@ resource "aws_ssm_document" "tf-nifi-ssmdoc-node-down" {
    "action": "aws:runShellScript",
    "name": "runShellScript",
    "inputs": {
-    "timeoutSeconds": "600",
+    "timeoutSeconds": "900",
     "runCommand": [
      "#!/bin/bash",
+     "su - nifi",
      "export LIFECYCLEHOOKNAME='{{ LIFECYCLEHOOKNAME }}'",
      "export ASGNAME='{{ ASGNAME }}'",
      "/usr/local/bin/scale-down"
