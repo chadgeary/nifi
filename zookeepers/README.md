@@ -2,17 +2,10 @@
 Secure installation of an Apache nifi cluster with zookeeper, called via terraform-built SSM/S3 resources. The instances running this playbook are long-lived.
 
 # Files (and their purpose)
-# Management
+# Initial Playbook/Installation
 - zookeepers.yml
   - Ansible playbook to bootstrap, download, install, and configure Zookeeper/NiFi on zookeeper instances.
-
-- nifi-join.service/.timer/.yml
-  - .yml is an Ansible playbook to check/invite new nodes
-  - .service is a systemd unit to call the script (.yml)
-  - .timer spawns the service every minute with a randomized 30 second delay
-
-- cli.properties
-  - Configuration file for NiFi CLI tool - used to talk with the NiFi cluster securely.
+  - Called via SSM when Zookeeper EC2 instances are built.
 
 # NiFi
 - authorizers.xml
@@ -31,3 +24,12 @@ Secure installation of an Apache nifi cluster with zookeeper, called via terrafo
 - zookeeper.service
   - .service is a systemd unit to start/stop/restart Zookeeper.
   - Starts on boot, does not require a timer.
+
+# Node Management
+- nifi-join.service/.timer/.yml
+  - .yml is an Ansible playbook to check/invite new nodes
+  - .service is a systemd unit to call the script (.yml)
+  - .timer spawns the service every minute with a randomized 30 second delay
+
+- cli.properties
+  - Configuration file for NiFi CLI tool - used to talk with the NiFi cluster securely.
