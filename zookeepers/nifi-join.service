@@ -3,10 +3,10 @@ Description=nifi service to manage join requests to cluster from new nodes
 After=network.target
 
 [Service]
+User=nifi
 ExecStart=/usr/local/bin/ansible-playbook /opt/nifi-cluster/nifi-join.yml
 Type=simple
-Restart=on-failure   
-RestartSec=5
+Restart=no
 
 [Install]
 WantedBy=multi-user.target

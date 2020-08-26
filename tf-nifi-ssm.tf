@@ -19,7 +19,7 @@ resource "aws_ssm_association" "tf-nifi-zookeepers-ssm-assoc" {
     SourceType              = "S3"
     Verbose                 = "-v"
   }
-  depends_on              = [aws_iam_role_policy_attachment.tf-nifi-iam-attach-ssm, aws_iam_role_policy_attachment.tf-nifi-iam-attach-s3,aws_s3_bucket_object.tf-nifi-zookeepers]
+  depends_on              = [aws_iam_role_policy_attachment.tf-nifi-iam-attach-ssm, aws_iam_role_policy_attachment.tf-nifi-iam-attach-s3,aws_s3_bucket_object.tf-nifi-zookeepers-files]
 }
 
 # nodes
@@ -44,5 +44,5 @@ resource "aws_ssm_association" "tf-nifi-nodes-ssm-assoc" {
     SourceType              = "S3"
     Verbose                 = "-v"
   }
-  depends_on              = [aws_iam_role_policy_attachment.tf-nifi-iam-attach-ssm, aws_iam_role_policy_attachment.tf-nifi-iam-attach-s3,aws_s3_bucket_object.tf-nifi-nodes]
+  depends_on              = [aws_iam_role_policy_attachment.tf-nifi-iam-attach-ssm, aws_iam_role_policy_attachment.tf-nifi-iam-attach-s3,aws_s3_bucket_object.tf-nifi-nodes-files]
 }

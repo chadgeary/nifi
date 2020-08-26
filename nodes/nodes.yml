@@ -43,12 +43,17 @@
         - boto3
         - botocore
 
+    - name: nifi user
+      user:
+        name: nifi
+        comment: Apache NiFi Service Account
+
     - name: nifi management directories
       file:
         path: "{{ item }}"
         state: directory
-        owner: root
-        group: root
+        owner: nifi
+        group: nifi
         mode: 0750
       with_items:
         - /opt/nifi-certificates
@@ -68,8 +73,8 @@
       lineinfile:
         line: "{{ s3_bucket }}"
         path: /opt/nifi-conf/bucket
-        owner: root
-        group: root
+        owner: nifi
+        group: nifi
         mode: 0640
         create: yes
 
@@ -91,6 +96,7 @@
         dest: "/opt/nifi-downloads/{{ item }}"
       with_items:
         - nifi.tar.gz
+      become_user: nifi
       when:
         - nifi_downloaded.stat.exists == false
       retries: 120
@@ -106,6 +112,7 @@
         dest: "/opt/nifi-downloads/{{ item }}"
       with_items:
         - nifi-toolkit.tar.gz
+      become_user: nifi
       when:
         - toolkit_downloaded.stat.exists == false
       retries: 120
@@ -123,7 +130,17 @@
         src: /opt/nifi-downloads/nifi.tar.gz
         dest: /opt
         remote_src: yes
+        owner: nifi
+        group: nifi
       when: nifi_unarchived.stat.exists == false
+
+    - name: recursive chown nifi
+      file:
+        path: /opt/nifi-{{ nifi_version }}
+        state: directory
+        recurse: yes
+        owner: nifi
+        group: nifi
 
     - name: link nifi version to /opt/nifi
       file:
@@ -131,8 +148,8 @@
         path: /opt/nifi
         state: link
         mode: 0755
-        owner: root
-        group: root
+        owner: nifi
+        group: nifi
 
     - name: check toolkit unarchived
       stat:
@@ -144,7 +161,17 @@
         src: /opt/nifi-downloads/nifi-toolkit.tar.gz
         dest: /opt
         remote_src: yes
+        owner: nifi
+        group: nifi
       when: toolkit_unarchived.stat.exists == false
+
+    - name: recursive chown toolkit
+      file:
+        path: /opt/nifi-toolkit-{{ nifi_version }}
+        state: directory
+        recurse: yes
+        owner: nifi
+        group: nifi
 
     - name: link toolkit version to /opt/nifi-toolkit
       file:
@@ -152,15 +179,15 @@
         path: /opt/nifi-toolkit
         state: link
         mode: 0755
-        owner: root
-        group: root
+        owner: nifi
+        group: nifi
 
     - name: authorizers.xml
       copy:
         src: authorizers.xml
         dest: /opt/nifi/conf/authorizers.xml
-        owner: root
-        group: root
+        owner: nifi
+        group: nifi
         mode: 0640
 
     - name: nifi systemd service file
@@ -168,8 +195,8 @@
         src: nifi.service
         dest: /etc/systemd/system/nifi.service
         mode: 0444
-        owner: root
-        group: root
+        owner: nifi
+        group: nifi
 
     - name: pull generated password from s3
       aws_s3:
@@ -179,6 +206,7 @@
         dest: "/opt/nifi-conf/{{ item }}"
       with_items:
         - generated_password
+      become_user: nifi
       retries: 120
       delay: 10
       register: pw_from_s3
@@ -187,14 +215,15 @@
     - name: set generated_password var
       shell: |
         cat /opt/nifi-conf/generated_password
+      become_user: nifi
       register: generated_password
 
     - name: nifi properties
       template:
         src: nifi.properties
         dest: /opt/nifi/conf/nifi.properties
-        owner: root
-        group: root
+        owner: nifi
+        group: nifi
         mode: 0640
 
     - name: check ca exists
@@ -211,12 +240,12 @@
       with_items:
         - nifi-cert.pem
         - nifi-key.key
+      become_user: nifi
+      when: ca_cert.stat.exists == false
       retries: 120
       delay: 10
       register: ca_from_s3
       until: ca_from_s3 is not failed
-      when: 
-        - ca_cert.stat.exists == false
 
     - name: check admin exists
       stat:
@@ -227,8 +256,8 @@
       file:
         path: /opt/nifi-certificates/admin
         state: directory
-        owner: root
-        group: root
+        owner: nifi
+        group: nifi
         mode: 0750
 
     - name: pull admin from s3
@@ -240,19 +269,19 @@
       with_items:
         - keystore.pkcs12
         - truststore.jks
+      when: admin_cert.stat.exists == false
+      become_user: nifi
       retries: 120
       delay: 10
       register: admin_from_s3
       until: admin_from_s3 is not failed
-      when: 
-        - admin_cert.stat.exists == false
 
     - name: admin cli.properties template
       template:
         src: cli.properties
         dest: /opt/nifi-certificates/admin/cli.properties
-        owner: root
-        group: root
+        owner: nifi
+        group: nifi
         mode: 0640
 
     - name: check node keystore exists
@@ -267,20 +296,22 @@
       args:
         chdir: /opt/nifi-certificates/
         executable: /bin/bash
+      become_user: nifi
       when: node_cert.stat.exists == false
 
     - name: create user
       shell: |
         export JAVA_HOME=/usr/lib/jvm/default-java
         /opt/nifi-toolkit/bin/cli.sh nifi create-user --userName "CN={{ ansible_nodename }}, OU=NIFI" -p /opt/nifi-certificates/admin/cli.properties
+      become_user: nifi
       ignore_errors: true
 
     - name: touch local join
       file:
         path: "/opt/nifi-cluster/join/{{ ansible_nodename }}"
         state: touch
-        owner: root
-        group: root
+        owner: nifi
+        group: nifi
         mode: 0640
 
     - name: copy join to s3
@@ -300,6 +331,7 @@
         bucket: "{{ s3_bucket }}"
         object: "/nifi/cluster/invite/{{ ansible_nodename }}"
         dest: "/opt/nifi-cluster/invite/{{ ansible_nodename }}"
+      become_user: nifi
       retries: 120
       delay: 10     
       register: invite_from_s3
@@ -321,6 +353,7 @@
         - users.xml
         - authorizations.xml
         - flow.xml.gz
+      become_user: nifi
       retries: 120
       delay: 10
       register: conf_from_s3
@@ -330,16 +363,16 @@
       copy:
         src: scale-down
         dest: /usr/local/bin/scale-down
-        owner: root
-        group: root
+        owner: nifi
+        group: nifi
         mode: 0550
 
     - name: timers and service units
       copy:
         src: "{{ item }}"
         dest: "/etc/systemd/system/{{ item }}"
-        owner: root
-        group: root
+        owner: nifi
+        group: nifi
         mode: 0640
       with_items:
         - nifi.service

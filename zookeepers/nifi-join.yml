@@ -1,8 +1,6 @@
 ---
 - name: nifi-join.yml
   hosts: localhost
-  become: True
-  become_user: root
   gather_facts: false
   tasks:
 
@@ -77,8 +75,8 @@
       file:
         state: touch
         path: /opt/nifi-cluster/lock-join
-        owner: root
-        group: root
+        owner: nifi
+        group: nifi
         mode: '0640'
 
     - name: set lock
@@ -119,8 +117,8 @@
       file:
         path: "/opt/nifi-cluster/invite/{{ item.split('/')[3] }}"
         state: touch
-        owner: root
-        group: root
+        owner: nifi
+        group: nifi
         mode: 0640
       with_items:
         - "{{ cluster_join.s3_keys | reject('eq','nifi/cluster/join/') | list }}"

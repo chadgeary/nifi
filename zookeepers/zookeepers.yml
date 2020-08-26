@@ -47,12 +47,17 @@
         - boto3
         - botocore
 
+    - name: nifi user
+      user:
+        name: nifi
+        comment: Apache NiFi Service Account
+
     - name: nifi management directories
       file:
         path: "{{ item }}"
         state: directory
-        owner: root
-        group: root
+        owner: nifi
+        group: nifi
         mode: 0750
       with_items:
         - /opt/nifi-certificates
@@ -74,8 +79,8 @@
       lineinfile:
         line: "{{ s3_bucket }}"
         path: /opt/nifi-conf/bucket
-        owner: root
-        group: root
+        owner: nifi
+        group: nifi
         mode: 0640
         create: yes
 
@@ -83,8 +88,8 @@
       lineinfile:
         line: "{{ kms_key_id }}"
         path: /opt/nifi-conf/kms-key-id
-        owner: root
-        group: root
+        owner: nifi
+        group: nifi
         mode: 0640
         create: yes
 
@@ -98,6 +103,7 @@
         url: http://{{ mirror_host }}/pub/apache/zookeeper/current/apache-zookeeper-{{ zk_version }}-bin.tar.gz
         dest: /opt/nifi-downloads/zookeeper.tar.gz
         mode: '0644'
+      become_user: nifi
       when: 
         - ansible_default_ipv4.address == node1_ip
         - zk_downloaded.stat.exists == false
@@ -134,6 +140,7 @@
         url: http://{{ mirror_host }}/pub/apache/nifi/{{ nifi_version }}/nifi-{{ nifi_version }}-bin.tar.gz
         dest: /opt/nifi-downloads/nifi.tar.gz
         mode: '0440'
+      become_user: nifi
       when:
         - ansible_default_ipv4.address == node1_ip
         - nifi_downloaded.stat.exists == false
@@ -170,6 +177,7 @@
         url: http://{{ mirror_host }}/pub/apache/nifi/{{ nifi_version }}/nifi-toolkit-{{ nifi_version }}-bin.tar.gz
         dest: /opt/nifi-downloads/nifi-toolkit.tar.gz
         mode: '0440'
+      become_user: nifi
       when:
         - ansible_default_ipv4.address == node1_ip
         - toolkit_downloaded.stat.exists == false
@@ -204,6 +212,7 @@
         dest: "/opt/nifi-downloads/{{ item }}"
       with_items:
         - zookeeper.tar.gz
+      become_user: nifi
       when:
         - ansible_default_ipv4.address != node1_ip
         - zk_downloaded.stat.exists == false
@@ -220,6 +229,7 @@
         dest: "/opt/nifi-downloads/{{ item }}"
       with_items:
         - nifi.tar.gz
+      become_user: nifi
       when:
         - ansible_default_ipv4.address != node1_ip
         - nifi_downloaded.stat.exists == false
@@ -236,6 +246,7 @@
         dest: "/opt/nifi-downloads/{{ item }}"
       with_items:
         - nifi-toolkit.tar.gz
+      become_user: nifi
       when:
         - ansible_default_ipv4.address != node1_ip
         - toolkit_downloaded.stat.exists == false
@@ -254,7 +265,17 @@
         src: /opt/nifi-downloads/zookeeper.tar.gz
         dest: /opt
         remote_src: yes
+        owner: nifi
+        group: nifi
       when: zk_unarchived.stat.exists == false
+
+    - name: recursive chown zookeeper
+      file:
+        path: /opt/zookeeper-{{ zk_version }}
+        state: directory
+        recurse: yes
+        owner: nifi
+        group: nifi
 
     - name: link zookeeper version to /opt/zookeeper
       file:
@@ -262,8 +283,8 @@
         path: /opt/zookeeper
         state: link
         mode: 0755
-        owner: root
-        group: root
+        owner: nifi
+        group: nifi
 
     - name: check nifi unarchived
       stat:
@@ -275,7 +296,17 @@
         src: /opt/nifi-downloads/nifi.tar.gz
         dest: /opt
         remote_src: yes
+        owner: nifi
+        group: nifi
       when: nifi_unarchived.stat.exists == false
+
+    - name: recursive chown nifi
+      file:
+        path: /opt/nifi-{{ nifi_version }}
+        state: directory
+        recurse: yes
+        owner: nifi
+        group: nifi
 
     - name: link nifi version to /opt/nifi
       file:
@@ -283,8 +314,8 @@
         path: /opt/nifi
         state: link
         mode: 0755
-        owner: root
-        group: root
+        owner: nifi
+        group: nifi
 
     - name: check toolkit unarchived
       stat:
@@ -296,7 +327,17 @@
         src: /opt/nifi-downloads/nifi-toolkit.tar.gz
         dest: /opt
         remote_src: yes
+        owner: nifi
+        group: nifi
       when: toolkit_unarchived.stat.exists == false
+
+    - name: recursive chown toolkit
+      file:
+        path: /opt/nifi-toolkit-{{ nifi_version }}
+        state: directory
+        recurse: yes
+        owner: nifi
+        group: nifi
 
     - name: link toolkit version to /opt/nifi-toolkit
       file:
@@ -304,22 +345,22 @@
         path: /opt/nifi-toolkit
         state: link
         mode: 0755
-        owner: root
-        group: root
+        owner: nifi
+        group: nifi
 
     - name: authorizers.xml
       copy:
         src: authorizers.xml
         dest: /opt/nifi/conf/authorizers.xml
-        owner: root
-        group: root
+        owner: nifi
+        group: nifi
         mode: 0640
 
     - name: zookeeper systemd unit file
       copy:
         src: zookeeper.service
         dest: /etc/systemd/system/zookeeper.service
-        mode: 0644
+        mode: 0444
         owner: root
         group: root
 
@@ -337,6 +378,7 @@
         bucket: "{{ s3_bucket }}"
         object: "/nifi/conf/{{ item }}"
         dest: "/opt/nifi-conf/{{ item }}"
+      become_user: nifi
       ignore_errors: True
       with_items:
         - generated_password
@@ -353,6 +395,7 @@
     - name: generate password if not generated
       shell: |
         head /dev/urandom | tr -dc A-Za-z0-9 | head -c 20 > /opt/nifi-conf/generated_password
+      become_user: nifi
       ignore_errors: True
       when:
         - ansible_default_ipv4.address == node1_ip
@@ -367,6 +410,7 @@
         encrypt: yes
         encryption_mode: "aws:kms"
         encryption_kms_key_id: "{{ kms_key_id }}"
+      become_user: nifi
       when:
         - ansible_default_ipv4.address == node1_ip
 
@@ -376,6 +420,7 @@
         bucket: "{{ s3_bucket }}"
         object: "/nifi/conf/{{ item }}"
         dest: "/opt/nifi-conf/{{ item }}"
+      become_user: nifi
       with_items:
         - generated_password
       when:
@@ -388,14 +433,15 @@
     - name: set generated_password var
       shell: |
         cat /opt/nifi-conf/generated_password
+      become_user: nifi
       register: generated_password
 
     - name: nifi properties
       template:
         src: nifi.properties
         dest: /opt/nifi/conf/nifi.properties
-        owner: root
-        group: root
+        owner: nifi
+        group: nifi
         mode: 0640
 
     - name: check ca exists
@@ -410,6 +456,7 @@
       args:
         chdir: /opt/nifi-certificates/
         executable: /bin/bash
+      become_user: nifi
       when:
         - ca_cert.stat.exists == false
         - ansible_default_ipv4.address == node1_ip
@@ -442,6 +489,7 @@
       delay: 10
       register: ca_from_s3
       until: ca_from_s3 is not failed
+      become_user: nifi
       when: 
         - ca_cert.stat.exists == false
 
@@ -457,6 +505,7 @@
       args:
         chdir: /opt/nifi-certificates/
         executable: /bin/bash
+      become_user: nifi
       when:
         - admin_cert.stat.exists == false
         - ansible_default_ipv4.address == node1_ip
@@ -480,8 +529,8 @@
       file:
         path: /opt/nifi-certificates/admin
         state: directory
-        owner: root
-        group: root
+        owner: nifi
+        group: nifi
         mode: 0750
 
     - name: pull admin from s3
@@ -497,6 +546,7 @@
       delay: 10
       register: admin_from_s3
       until: admin_from_s3 is not failed
+      become_user: nifi
       when: 
         - admin_cert.stat.exists == false
 
@@ -504,8 +554,8 @@
       template:
         src: cli.properties
         dest: /opt/nifi-certificates/admin/cli.properties
-        owner: root
-        group: root
+        owner: nifi
+        group: nifi
         mode: 0640
 
     - name: check node keystore exists
@@ -520,6 +570,7 @@
       args:
         chdir: /opt/nifi-certificates/
         executable: /bin/bash
+      become_user: nifi
       when: node_cert.stat.exists == false
 
     - name: zookeeper data directory
@@ -527,23 +578,23 @@
         path: /opt/zookeeper/data
         state: directory
         mode: 0755
-        owner: root
-        group: root
+        owner: nifi
+        group: nifi
 
     - name: zookeeper myid file
       template:
         src: myid
         dest: /opt/zookeeper/data/myid
-        owner: root
-        group: root
+        owner: nifi
+        group: nifi
         mode: 0444
 
     - name: zookeeper conf
       template:
         src: zoo.cfg
         dest: /opt/zookeeper/conf/zoo.cfg
-        owner: root
-        group: root
+        owner: nifi
+        group: nifi
         mode: 0640
 
     - name: zookeeper systemd service start/enable
@@ -599,6 +650,7 @@
         - users.xml
         - authorizations.xml
         - flow.xml.gz
+      become_user: nifi
       when: ansible_default_ipv4.address != node1_ip
       retries: 120
       delay: 10
@@ -609,8 +661,8 @@
       copy:
         src: "{{ item }}"
         dest: "/opt/nifi-cluster/{{ item }}"
-        owner: root
-        group: root
+        owner: nifi
+        group: nifi
         mode: 0640
       with_items:
         - nifi-join.yml
