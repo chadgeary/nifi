@@ -1,6 +1,15 @@
 # Reference
 Secure installation of an Apache nifi cluster with zookeeper, called via terraform-built SSM/S3 resources. The instances running this playbook are long-lived.
 
+# Ports
+- **2170** NiFi Web Interface (Forwarded from HTTPS TCP/443 @ ELB)
+- **2171** NiFi Cluster Node Communcation
+- **2172** NiFi Cluster Load Balance Communcation
+- **2173** Zookeeper Server for Clients
+- **2174** Zookeeper Peer Communication
+- **2175** Zookeeper Leader Election
+- **2176** Zookeeper Web Interface
+
 # Files (and their purpose)
 # Initial Playbook/Installation
 - zookeepers.yml

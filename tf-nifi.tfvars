@@ -20,8 +20,8 @@ instance_type = "r5a.large"
 # the root block size of the instances (in GiB)
 instance_vol_size = 15
 
-# the name tag of the ami to use
-ami_name_tag = "tf-nifi-encrypted-base-ami"
+# the name prefix for the AMI and instances (e.g. "tf-nifi" for "tf-nifi-encrypted-ami", "tf-nifi-zookeeper-1", ...)
+ec2_name_prefix = "tf-nifi"
 
 # the vendor supplying the AMI and the AMI name - default is official Ubuntu 1804 
 vendor_ami_account_number = "099720109477"

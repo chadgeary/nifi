@@ -17,47 +17,7 @@ resource "aws_security_group" "tf-nifi-prisg1" {
   }
 }
 
-# security group rules
-resource "aws_security_group_rule" "tf-nifi-pubsg1-prisg1-nifi-in" {
-  security_group_id       = aws_security_group.tf-nifi-pubsg1.id
-  type                    = "ingress"
-  description             = "IN FROM PRI - NIFI"
-  from_port               = "8443"
-  to_port                 = "8443"
-  protocol                = "tcp"
-  source_security_group_id = aws_security_group.tf-nifi-prisg1.id
-}
-
-resource "aws_security_group_rule" "tf-nifi-pubsg1-prisg1-https-in" {
-  security_group_id       = aws_security_group.tf-nifi-pubsg1.id
-  type                    = "ingress"
-  description             = "IN FROM PRI - HTTPS NIFI"
-  from_port               = "443"
-  to_port                 = "443"
-  protocol                = "tcp"
-  source_security_group_id = aws_security_group.tf-nifi-prisg1.id
-}
-
-resource "aws_security_group_rule" "tf-nifi-pubsg1-mgmt-https-in" {
-  security_group_id       = aws_security_group.tf-nifi-pubsg1.id
-  type                    = "ingress"
-  description             = "IN FROM MGMT - HTTPS NIFI"
-  from_port               = "443"
-  to_port                 = "443"
-  protocol                = "tcp"
-  cidr_blocks             = [var.mgmt_cidr]
-}
-
-resource "aws_security_group_rule" "tf-nifi-pubsg1-mgmt-https-out" {
-  security_group_id       = aws_security_group.tf-nifi-pubsg1.id
-  type                    = "egress"
-  description             = "OUT TO PRI - HTTPS NIFI"
-  from_port               = "8443"
-  to_port                 = "8443"
-  protocol                = "tcp"
-  source_security_group_id = aws_security_group.tf-nifi-prisg1.id
-}
-
+# public sg (elb) rules
 resource "aws_security_group_rule" "tf-nifi-pubsg1-mgmt-ssh-in" {
   security_group_id       = aws_security_group.tf-nifi-pubsg1.id
   type                    = "ingress"
@@ -78,26 +38,27 @@ resource "aws_security_group_rule" "tf-nifi-pubsg1-mgmt-ssh-out" {
   source_security_group_id = aws_security_group.tf-nifi-prisg1.id
 }
 
-resource "aws_security_group_rule" "tf-nifi-prisg1-pub-https-in" {
-  security_group_id       = aws_security_group.tf-nifi-prisg1.id
+resource "aws_security_group_rule" "tf-nifi-pubsg1-mgmt-https-in" {
+  security_group_id       = aws_security_group.tf-nifi-pubsg1.id
   type                    = "ingress"
-  description             = "IN FROM PUB - HTTPS NIFI"
-  from_port               = "8443"
-  to_port                 = "8443"
+  description             = "IN FROM MGMT - HTTPS NIFI"
+  from_port               = "443"
+  to_port                 = "443"
   protocol                = "tcp"
-  source_security_group_id = aws_security_group.tf-nifi-pubsg1.id
+  cidr_blocks             = [var.mgmt_cidr]
 }
 
-resource "aws_security_group_rule" "tf-nifi-prisg1-pri-https-in" {
-  security_group_id       = aws_security_group.tf-nifi-prisg1.id
-  type                    = "ingress"
-  description             = "IN FROM PRI - HTTPS NIFI"
-  from_port               = "8443"
-  to_port                 = "8443"
+resource "aws_security_group_rule" "tf-nifi-pubsg1-mgmt-https-out" {
+  security_group_id       = aws_security_group.tf-nifi-pubsg1.id
+  type                    = "egress"
+  description             = "OUT TO PRI - HTTPS NIFI"
+  from_port               = "2170"
+  to_port                 = "2170"
   protocol                = "tcp"
   source_security_group_id = aws_security_group.tf-nifi-prisg1.id
 }
 
+# private sg (instances) rules
 resource "aws_security_group_rule" "tf-nifi-prisg1-pub-ssh-in" {
   security_group_id       = aws_security_group.tf-nifi-prisg1.id
   type                    = "ingress"
@@ -108,17 +69,37 @@ resource "aws_security_group_rule" "tf-nifi-prisg1-pub-ssh-in" {
   source_security_group_id = aws_security_group.tf-nifi-pubsg1.id
 }
 
-resource "aws_security_group_rule" "tf-nifi-prisg1-pri-https-out" {
+resource "aws_security_group_rule" "tf-nifi-prisg1-pub-https-in" {
   security_group_id       = aws_security_group.tf-nifi-prisg1.id
-  type                    = "egress"
-  description             = "OUT TO PRI - HTTPS NIFI"
-  from_port               = "8443"
-  to_port                 = "8443"
+  type                    = "ingress"
+  description             = "IN FROM PUB - HTTPS NIFI"
+  from_port               = "2170"
+  to_port                 = "2170"
+  protocol                = "tcp"
+  source_security_group_id = aws_security_group.tf-nifi-pubsg1.id
+}
+
+resource "aws_security_group_rule" "tf-nifi-prisg1-self-in" {
+  security_group_id       = aws_security_group.tf-nifi-prisg1.id
+  type                    = "ingress"
+  description             = "IN FROM SELF - SELF PORTS"
+  from_port               = "2170"
+  to_port                 = "2176"
   protocol                = "tcp"
   source_security_group_id = aws_security_group.tf-nifi-prisg1.id
 }
 
-resource "aws_security_group_rule" "tf-nifi-prisg1-all-http-out" {
+resource "aws_security_group_rule" "tf-nifi-prisg1-self-out" {
+  security_group_id       = aws_security_group.tf-nifi-prisg1.id
+  type                    = "egress"
+  description             = "OUT TO SELF - SELF PORTS"
+  from_port               = "2170"
+  to_port                 = "2176"
+  protocol                = "tcp"
+  source_security_group_id = aws_security_group.tf-nifi-prisg1.id
+}
+
+resource "aws_security_group_rule" "tf-nifi-prisg1-allhttp-out" {
   security_group_id       = aws_security_group.tf-nifi-prisg1.id
   type                    = "egress"
   description             = "OUT TO WORLD - HTTP"
@@ -128,7 +109,7 @@ resource "aws_security_group_rule" "tf-nifi-prisg1-all-http-out" {
   cidr_blocks             = ["0.0.0.0/0"]
 }
 
-resource "aws_security_group_rule" "tf-nifi-prisg1-all-https-out" {
+resource "aws_security_group_rule" "tf-nifi-prisg1-allhttps-out" {
   security_group_id       = aws_security_group.tf-nifi-prisg1.id
   type                    = "egress"
   description             = "OUT TO WORLD - HTTPS"
@@ -136,44 +117,4 @@ resource "aws_security_group_rule" "tf-nifi-prisg1-all-https-out" {
   to_port                 = "443"
   protocol                = "tcp"
   cidr_blocks             = ["0.0.0.0/0"]
-}
-
-resource "aws_security_group_rule" "tf-nifi-prisg1-pub-https-out" {
-  security_group_id       = aws_security_group.tf-nifi-prisg1.id
-  type                    = "egress"
-  description             = "OUT TO SELF VIA PUB - HTTPS"
-  from_port               = "443"
-  to_port                 = "443"
-  protocol                = "tcp"
-  source_security_group_id = aws_security_group.tf-nifi-pubsg1.id
-}
-
-resource "aws_security_group_rule" "tf-nifi-prisg1-pub-nifi-out" {
-  security_group_id       = aws_security_group.tf-nifi-prisg1.id
-  type                    = "egress"
-  description             = "OUT TO SELF VIA PUB - NIFI"
-  from_port               = "8443"
-  to_port                 = "8443"
-  protocol                = "tcp"
-  source_security_group_id = aws_security_group.tf-nifi-pubsg1.id
-}
-
-resource "aws_security_group_rule" "tf-nifi-prisg1-nififlow-in" {
-  security_group_id       = aws_security_group.tf-nifi-prisg1.id
-  type                    = "ingress"
-  description             = "IN FROM PRI - NIFI FLOW PORTS"
-  from_port               = "2100"
-  to_port                 = "2299"
-  protocol                = "tcp"
-  source_security_group_id = aws_security_group.tf-nifi-prisg1.id
-}
-
-resource "aws_security_group_rule" "tf-nifi-prisg1-nififlow-out" {
-  security_group_id       = aws_security_group.tf-nifi-prisg1.id
-  type                    = "egress"
-  description             = "OUT TO PRI - NIFI FLOW PORTS"
-  from_port               = "2100"
-  to_port                 = "2299"
-  protocol                = "tcp"
-  source_security_group_id = aws_security_group.tf-nifi-prisg1.id
 }

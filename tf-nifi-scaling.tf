@@ -20,7 +20,7 @@ resource "aws_launch_configuration" "tf-nifi-launchconf" {
 resource "aws_autoscaling_group" "tf-nifi-autoscalegroup" {
   name_prefix             = "tf-nifi-autoscalegroup-"
   launch_configuration    = aws_launch_configuration.tf-nifi-launchconf.name
-  load_balancers          = [aws_elb.tf-nifi-elb2.name]
+  load_balancers          = [aws_elb.tf-nifi-elb.name]
   health_check_type       = "ELB"
   health_check_grace_period = 1800
   vpc_zone_identifier     = [aws_subnet.tf-nifi-prinet1.id, aws_subnet.tf-nifi-prinet2.id, aws_subnet.tf-nifi-prinet3.id]
@@ -35,11 +35,11 @@ resource "aws_autoscaling_group" "tf-nifi-autoscalegroup" {
     [
       {
         key                     = "Name"
-        value                   = "tf-nifi-node"
+        value                   = "${var.ec2_name_prefix}-nifi-node"
         propagate_at_launch     = true
       },
       {
-        key                     = "Nifi"
+        key                     = "NiFi"
         value                   = "node"
         propagate_at_launch     = true
       }

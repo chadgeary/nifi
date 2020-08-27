@@ -7,7 +7,7 @@
 
     - name: set zookeeper connection string
       set_fact:
-        zookeeper_nodes: 'tf-nifi-1:2181,tf-nifi-2:2181,tf-nifi-3:2181'
+        zookeeper_nodes: "{{ ec2_name_prefix }}-zookeeper-1:2173,{{ ec2_name_prefix }}-zookeeper-2:2173,{{ ec2_name_prefix }}-zookeeper-3:2173"
 
     - name: fetch node_id
       shell: |
@@ -20,9 +20,9 @@
         path: /etc/hosts
       with_items:
         - "# zookeepers"
-        - "{{ node1_ip }} tf-nifi-1"
-        - "{{ node2_ip }} tf-nifi-2"
-        - "{{ node3_ip }} tf-nifi-3"
+        - "{{ node1_ip }} {{ ec2_name_prefix }}-zookeeper-1"
+        - "{{ node2_ip }} {{ ec2_name_prefix }}-zookeeper-2"
+        - "{{ node3_ip }} {{ ec2_name_prefix }}-zookeeper-3"
 
     - name: nifi required packages
       package:
@@ -349,7 +349,7 @@
         group: nifi
 
     - name: authorizers.xml
-      copy:
+      template:
         src: authorizers.xml
         dest: /opt/nifi/conf/authorizers.xml
         owner: nifi
@@ -452,7 +452,7 @@
     - name: generate ca when not exists
       shell: |
         export JAVA_HOME=/usr/lib/jvm/default-java
-        /opt/nifi-toolkit/bin/tls-toolkit.sh standalone -c tf-nifi-1 -d 3650 -k 2048 -s SHA256WITHRSA -T jks --subjectAlternativeNames tf-nifi-1
+        /opt/nifi-toolkit/bin/tls-toolkit.sh standalone -c tf-nifi-1 -d 3650 -k 2048 -s SHA256WITHRSA -T jks --subjectAlternativeNames {{ ec2_name_prefix }}-zookeeper-1
       args:
         chdir: /opt/nifi-certificates/
         executable: /bin/bash
@@ -501,7 +501,7 @@
     - name: generate admin when not exists
       shell: |
         export JAVA_HOME=/usr/lib/jvm/default-java
-        /opt/nifi-toolkit/bin/tls-toolkit.sh standalone -a RSA -c tf-nifi-1 -n admin -d 3650 -k 2048 -s SHA256WITHRSA -T pkcs12 --subjectAlternativeNames admin -P {{ generated_password.stdout }} -S {{ generated_password.stdout }}
+        /opt/nifi-toolkit/bin/tls-toolkit.sh standalone -a RSA -c {{ ec2_name_prefix }}-zookeeper-1 -n admin -d 3650 -k 2048 -s SHA256WITHRSA -T pkcs12 --subjectAlternativeNames admin -P {{ generated_password.stdout }} -S {{ generated_password.stdout }}
       args:
         chdir: /opt/nifi-certificates/
         executable: /bin/bash

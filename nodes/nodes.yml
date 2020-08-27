@@ -7,7 +7,7 @@
 
     - name: set zookeeper connection string
       set_fact:
-        zookeeper_nodes: 'tf-nifi-1:2181,tf-nifi-2:2181,tf-nifi-3:2181'
+        zookeeper_nodes: "{{ ec2_name_prefix }}-zookeeper-1:2173,{{ ec2_name_prefix }}-zookeeper-2:2173,{{ ec2_name_prefix }}-zookeeper-3:2173"
 
     - name: set zookeeper ips in /etc/hosts
       lineinfile:
@@ -15,9 +15,9 @@
         path: /etc/hosts
       with_items:
         - "# zookeepers"
-        - "{{ node1_ip }} tf-nifi-1"
-        - "{{ node2_ip }} tf-nifi-2"
-        - "{{ node3_ip }} tf-nifi-3"
+        - "{{ node1_ip }} {{ ec2_name_prefix }}-zookeeper-1"
+        - "{{ node2_ip }} {{ ec2_name_prefix }}-zookeeper-2"
+        - "{{ node3_ip }} {{ ec2_name_prefix }}-zookeeper-3"
 
     - name: nifi required packages
       package:
@@ -183,7 +183,7 @@
         group: nifi
 
     - name: authorizers.xml
-      copy:
+      template:
         src: authorizers.xml
         dest: /opt/nifi/conf/authorizers.xml
         owner: nifi

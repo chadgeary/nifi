@@ -109,9 +109,9 @@ variable "maximum_node_count" {
   description              = "The maximum number of non-zookeeper NiFi nodes in the Autoscaling Group"
 }
 
-variable "ami_name_tag" {
+variable "ec2_name_prefix" {
   type                     = string
-  description              = "The KMS CMK-encrypted AMI's name and name tag"
+  description              = "A friendly name prefix for the AMI and EC2 instances, e.g. 'tf-nifi' or 'dev'"
 }
 
 variable "vendor_ami_account_number" {
