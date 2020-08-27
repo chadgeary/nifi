@@ -51,7 +51,7 @@ WebUI access is permitted to the mgmt_cidr defined in tf-nifi.tfvars. Authentica
   - An EC2 instance (via ssh to ELB hostname) under /opt/nifi-certificates/admin/
 - Import keystore.pkcs12 as certificate into Web Browser
   - Use generated_password (also in S3/EC2) when prompted for password
-- Browse to the zookeeper elb dns name, e.g.: `https://tf-nifi-zk-elb-123456.us-east-2.elb.amazonaws.com/nifi`
+- Browse to the elb dns name, e.g.: `https://tf-nifi-elb-123456.us-east-2.elb.amazonaws.com/nifi`
 
 # Ansible / SSM Notes
 There are two Ansible playbooks deployed via terraform to AWS SSM, zookeepers/zookeepers.yml and nodes/nodes.yml.
@@ -89,3 +89,4 @@ Every node terminated via Autoscale uses special actions to gracefully exit the 
 
 # AMI Notes
 - AMI is [Ubuntu 1804](https://cloud-images.ubuntu.com/locator/ec2/), change the vendor_ami_name_string var as needed (especially the date).
+- AMI is assumed to have SSM installed, if not - install via user_data.
