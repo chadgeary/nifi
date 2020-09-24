@@ -42,3 +42,8 @@ resource "aws_elb_attachment" "zookeeper-3-elb-attach" {
   elb                     = aws_elb.tf-nifi-elb.id
   instance                = aws_instance.tf-nifi-zookeeper-3.id
 }
+
+# show the elb hostname in output
+output "tf-nifi-elb-dnsname-output" {
+  value                   = aws_elb.tf-nifi-elb.dns_name
+}
