@@ -84,11 +84,6 @@ variable "bucket_name" {
   description              = "A unique bucket name to store playbooks and output of SSM"
 }
 
-variable "mirror_host" {
-  type                     = string
-  description              = "Mirror host for NiFi and Zookeeper installation files, e.g. mirror.cogentco.com"
-}
-
 variable "nifi_version" {
   type                     = string
   description              = "The version of Apache NiFi, e.g. 1.11.4"

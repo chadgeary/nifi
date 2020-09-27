@@ -9,7 +9,7 @@ kms_manager = "some_iam_user"
 mgmt_cidr = "127.0.0.0/30"
 
 # a unique bucket name to store various input/output
-bucket_name = "some-bucket-abc123"
+bucket_name = "a-unique-bucket-name-123"
 
 # public ssh key
 instance_key = "ssh-rsa AAAAB3NzaD2yc2EAAAADAQABAAABAQCNsxnMWfrG3SoLr4uJMavf43YkM5wCbdO7X5uBvRU8oh1W+A/Nd/jie2tc3UpwDZwS3w6MAfnu8B1gE9lzcgTu1FFf0us5zIWYR/mSoOFKlTiaI7Uaqkc+YzmVw/fy1iFxDDeaZfoc0vuQvPr+LsxUL5UY4ko4tynCSp7zgVpot/OppqdHl5J+DYhNubm8ess6cugTustUZoDmJdo2ANQENeBUNkBPXUnMO1iulfNb6GnwWJ0Z5TRRLGSu2gya2wMLeo1rBJ5cbZZgVLMVHiKgwBy/svUQreR8R+fpVW+Q4rx6sPAltLaOUONn0SF2BvvJUueqxpAIaA2rU4MS420P"
@@ -27,8 +27,7 @@ ec2_name_prefix = "tf-nifi"
 vendor_ami_account_number = "099720109477"
 vendor_ami_name_string = "ubuntu/images/hvm-ssd/ubuntu-bionic-18.04-amd64-server-20200729*"
 
-# the mirror nifi / zookeeper / toolkit are downloaded from - and the versions
-mirror_host = "mirror.cogentco.com"
+# nifi/nifi-toolkit and zookeeper versions downloaded from https://archive.apache.org/dist/
 nifi_version = "1.12.0"
 zk_version = "3.6.1"
 

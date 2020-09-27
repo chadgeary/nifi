@@ -100,7 +100,7 @@
 
     - name: download zookeeper if not downloaded
       get_url:
-        url: http://{{ mirror_host }}/pub/apache/zookeeper/current/apache-zookeeper-{{ zk_version }}-bin.tar.gz
+        url: https://archive.apache.org/dist/zookeeper/zookeeper-{{ zk_version }}/apache-zookeeper-{{ zk_version }}-bin.tar.gz
         dest: /opt/nifi-downloads/zookeeper.tar.gz
         mode: '0644'
       become_user: nifi
@@ -137,7 +137,7 @@
 
     - name: download nifi if not downloaded
       get_url:
-        url: http://{{ mirror_host }}/pub/apache/nifi/{{ nifi_version }}/nifi-{{ nifi_version }}-bin.tar.gz
+        url: https://archive.apache.org/dist/nifi/{{ nifi_version }}/nifi-{{ nifi_version }}-bin.tar.gz
         dest: /opt/nifi-downloads/nifi.tar.gz
         mode: '0440'
       become_user: nifi
@@ -174,7 +174,7 @@
 
     - name: download toolkit if not downloaded
       get_url:
-        url: http://{{ mirror_host }}/pub/apache/nifi/{{ nifi_version }}/nifi-toolkit-{{ nifi_version }}-bin.tar.gz
+        url: https://archive.apache.org/dist/nifi/{{ nifi_version }}/nifi-toolkit-{{ nifi_version }}-bin.tar.gz
         dest: /opt/nifi-downloads/nifi-toolkit.tar.gz
         mode: '0440'
       become_user: nifi
