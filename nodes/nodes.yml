@@ -208,7 +208,7 @@
         - generated_password
       become_user: nifi
       retries: 120
-      delay: 10
+      delay: 15
       register: pw_from_s3
       until: pw_from_s3
 

@@ -426,9 +426,9 @@
       when:
         - ansible_default_ipv4.address != node1_ip
       retries: 120
-      delay: 10
-      register: result4
-      until: result4 is not failed
+      delay: 15
+      register: get_pass_from_s3
+      until: get_pass_from_s3 is not failed
 
     - name: set generated_password var
       shell: |
