@@ -19,6 +19,7 @@ resource "aws_instance" "tf-nifi-zookeeper-1" {
   tags                    = {
     Name                    = "${var.ec2_name_prefix}-zookeeper-1"
     NiFi                    = "zookeeper"
+    NiFiBootstrap           = "true"
   }
   user_data               = <<EOF
 #!/bin/bash

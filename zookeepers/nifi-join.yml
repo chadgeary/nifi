@@ -44,20 +44,6 @@
         cat /opt/nifi-conf/kms-key-id
       register: kms_key_id
 
-    - name: determine lock exists
-      aws_s3:
-        mode: get
-        bucket: "{{ s3_bucket.stdout }}"
-        object: "nifi/cluster/lock-join"
-        dest: "/opt/nifi-cluster/lock-join"
-      ignore_errors: true
-      register: lock_join
-
-    - name: end if lock-join found
-      meta: end_host
-      when:
-        - lock_join.failed == false
-
     - name: get join requests
       aws_s3:
         mode: list
@@ -70,26 +56,6 @@
       meta: end_host
       when:
         - cluster_join.s3_keys | length == 0
-
-    - name: touch local join lock
-      file:
-        state: touch
-        path: /opt/nifi-cluster/lock-join
-        owner: nifi
-        group: nifi
-        mode: '0640'
-
-    - name: set lock
-      aws_s3:
-        mode: put
-        bucket: "{{ s3_bucket.stdout }}"
-        object: "/nifi/cluster/lock-join"
-        src: "{{ item }}"
-        encrypt: yes
-        encryption_mode: "aws:kms"
-        encryption_kms_key_id: "{{ kms_key_id.stdout }}"
-      with_items:
-        - /opt/nifi-cluster/lock-join
 
     - name: copy live conf to s3
       aws_s3:
@@ -141,9 +107,3 @@
         state: absent
       with_items:
         - "{{ cluster_join.s3_keys | reject('eq','nifi/cluster/join/') | list }}"
-
-    - name: remove lock
-      aws_s3:
-        mode: delobj
-        bucket: "{{ s3_bucket.stdout }}"
-        object: "/nifi/cluster/lock-join"

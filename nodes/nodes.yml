@@ -321,7 +321,7 @@
         object: "/nifi/cluster/join/{{ ansible_nodename }}"
         src: "/opt/nifi-cluster/join/{{ ansible_nodename }}"
 
-    - name: wait for zookeeper
+    - name: wait for a zookeeper
       pause:
         minutes: 1
 
