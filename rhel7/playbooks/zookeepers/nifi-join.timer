@@ -1,0 +1,11 @@
+[Unit]
+Description=Manage requests for joining cluster from new nodes.
+
+[Timer]
+OnBootSec=1min
+OnCalendar=*:0/1
+RandomizedDelaySec=30
+Unit=nifi-join.service
+
+[Install]
+WantedBy=multi-user.target

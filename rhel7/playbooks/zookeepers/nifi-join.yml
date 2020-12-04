@@ -1,0 +1,109 @@
+---
+- name: nifi-join.yml
+  hosts: localhost
+  gather_facts: false
+  tasks:
+
+    - name: stat live conf files 1 of 3
+      stat:
+        path: /opt/nifi/conf/authorizations.xml
+      register: live_file_1
+
+    - name: end if conf file not found 1 of 3
+      meta: end_host
+      when:
+        - live_file_1.stat.exists == false
+
+    - name: stat live conf files 2 of 3
+      stat:
+        path: /opt/nifi/conf/flow.xml.gz
+      register: live_file_2
+
+    - name: end if conf file not found 2 of 3
+      meta: end_host
+      when:
+        - live_file_2.stat.exists == false
+
+    - name: stat live conf files 3 of 3
+      stat:
+        path: /opt/nifi/conf/users.xml
+      register: live_file_3
+
+    - name: end if conf file not found 3 of 3
+      meta: end_host
+      when:
+        - live_file_3.stat.exists == false
+
+    - name: get bucket name
+      shell: |
+        cat /opt/nifi-conf/bucket
+      register: s3_bucket
+
+    - name: get kms key id
+      shell: |
+        cat /opt/nifi-conf/kms-key-id
+      register: kms_key_id
+
+    - name: get join requests
+      aws_s3:
+        mode: list
+        bucket: "{{ s3_bucket.stdout }}"
+        prefix: "nifi/cluster/join/"
+      ignore_errors: true
+      register: cluster_join
+
+    - name: end if no join keys
+      meta: end_host
+      when:
+        - cluster_join.s3_keys | length == 0
+
+    - name: copy live conf to s3
+      aws_s3:
+        mode: put
+        bucket: "{{ s3_bucket.stdout }}"
+        object: "/nifi/conf/{{ item }}"
+        src: "/opt/nifi/conf/{{ item }}"
+        encrypt: yes
+        encryption_mode: "aws:kms"
+        encryption_kms_key_id: "{{ kms_key_id.stdout }}"
+      with_items:
+        - authorizations.xml
+        - flow.xml.gz
+        - users.xml
+
+    - name: remove join request(s)
+      aws_s3:
+        mode: delobj
+        bucket: "{{ s3_bucket.stdout }}"
+        object: "{{ item }}"
+      with_items:
+        - "{{ cluster_join.s3_keys }}"
+
+    - name: touch local invite(s)
+      file:
+        path: "/opt/nifi-cluster/invite/{{ item.split('/')[3] }}"
+        state: touch
+        owner: nifi
+        group: nifi
+        mode: 0640
+      with_items:
+        - "{{ cluster_join.s3_keys | reject('eq','nifi/cluster/join/') | list }}"
+
+    - name: copy invites to s3
+      aws_s3:
+        mode: put
+        bucket: "{{ s3_bucket.stdout }}"
+        object: "/nifi/cluster/invite/{{ item.split('/')[3] }}"
+        src: "/opt/nifi-cluster/invite/{{ item.split('/')[3] }}"
+        encrypt: yes
+        encryption_mode: "aws:kms"
+        encryption_kms_key_id: "{{ kms_key_id.stdout }}"
+      with_items:
+        - "{{ cluster_join.s3_keys | reject('eq','nifi/cluster/join/') | list }}"
+
+    - name: remove local invites
+      file:
+        path: "/opt/nifi-cluster/invite/{{ item.split('/')[3] }}"
+        state: absent
+      with_items:
+        - "{{ cluster_join.s3_keys | reject('eq','nifi/cluster/join/') | list }}"

@@ -1,0 +1,697 @@
+---
+- name: zookeepers.yml
+  hosts: localhost
+  become: True
+  become_user: root
+  tasks:
+
+    - name: set zookeeper connection string
+      set_fact:
+        zookeeper_nodes: "{{ name_prefix }}-zk-1-{{ name_suffix }}:2173,{{ name_prefix }}-zk-2-{{ name_suffix }}:2173,{{ name_prefix }}-zk-3-{{ name_suffix }}:2173"
+
+    - name: fetch node_id
+      shell: |
+        cat /opt/node_id
+      register: node_id
+
+    - name: set zookeeper ips in /etc/hosts
+      lineinfile:
+        line: "{{ item }}"
+        path: /etc/hosts
+      with_items:
+        - "# zookeepers"
+        - "{{ zk1_ip }} {{ name_prefix }}-zk-1-{{ name_suffix }}"
+        - "{{ zk2_ip }} {{ name_prefix }}-zk-2-{{ name_suffix }}"
+        - "{{ zk3_ip }} {{ name_prefix }}-zk-3-{{ name_suffix }}"
+
+    - name: nifi required packages
+      package:
+        name: "{{ packages }}"
+        state: latest
+      vars:
+        packages:
+        - java-11-openjdk
+        - jq
+        - python-pip
+      retries: 60
+      delay: 3
+      register: install_packages
+      until: install_packages is not failed
+
+    - name: ansible required packages
+      pip:
+        executable: /usr/bin/pip
+        name: "{{ packages }}"
+      vars:
+        packages:
+        - boto
+        - boto3
+        - botocore
+
+    - name: nifi user
+      user:
+        name: nifi
+        comment: Apache NiFi Service Account
+
+    - name: nifi management directories
+      file:
+        path: "{{ item }}"
+        state: directory
+        owner: nifi
+        group: nifi
+        mode: 0750
+      with_items:
+        - /opt/nifi-certificates
+        - /opt/nifi-conf
+        - /opt/nifi-downloads
+        - /opt/nifi-cluster
+        - /opt/nifi-cluster/join
+        - /opt/nifi-cluster/invite
+
+    - name: remove any previous bucket or kms key id file (for dynamic changes)
+      file:
+        path: /opt/nifi-conf/{{ item }}
+        state: absent
+      with_items:
+        - bucket
+        - kms-key-id
+
+    - name: set bucket in conf
+      lineinfile:
+        line: "{{ s3_bucket }}"
+        path: /opt/nifi-conf/bucket
+        owner: nifi
+        group: nifi
+        mode: 0640
+        create: yes
+
+    - name: set kms key id in conf
+      lineinfile:
+        line: "{{ kms_key_id }}"
+        path: /opt/nifi-conf/kms-key-id
+        owner: nifi
+        group: nifi
+        mode: 0640
+        create: yes
+
+    - name: check zookeeper downloaded
+      stat:
+        path: /opt/nifi-downloads/zookeeper.tar.gz
+      register: zk_downloaded
+
+    - name: download zookeeper if not downloaded
+      get_url:
+        url: https://archive.apache.org/dist/zookeeper/zookeeper-{{ zk_version }}/apache-zookeeper-{{ zk_version }}-bin.tar.gz
+        dest: /opt/nifi-downloads/zookeeper.tar.gz
+        mode: '0644'
+      become_user: nifi
+      when:
+        - ansible_default_ipv4.address == zk1_ip
+        - zk_downloaded.stat.exists == false
+
+    - name: check zookeeper uploaded to s3
+      aws_s3:
+        mode: list
+        bucket: "{{ s3_bucket }}"
+        prefix: "nifi/downloads/zookeeper.tar.gz"
+      register: zk_uploaded
+      when:
+        - ansible_default_ipv4.address == zk1_ip
+
+    - name: upload zookeeper to s3
+      aws_s3:
+        mode: put
+        bucket: "{{ s3_bucket }}"
+        object: /nifi/downloads/zookeeper.tar.gz
+        src: /opt/nifi-downloads/zookeeper.tar.gz
+        encrypt: yes
+        encryption_mode: "aws:kms"
+        encryption_kms_key_id: "{{ kms_key_id }}"
+      when:
+        - ansible_default_ipv4.address == zk1_ip
+        - zk_uploaded.s3_keys | count == 0
+
+    - name: check nifi downloaded
+      stat:
+        path: /opt/nifi-downloads/nifi.tar.gz
+      register: nifi_downloaded
+
+    - name: download nifi if not downloaded
+      get_url:
+        url: https://archive.apache.org/dist/nifi/{{ nifi_version }}/nifi-{{ nifi_version }}-bin.tar.gz
+        dest: /opt/nifi-downloads/nifi.tar.gz
+        mode: '0440'
+      become_user: nifi
+      when:
+        - ansible_default_ipv4.address == zk1_ip
+        - nifi_downloaded.stat.exists == false
+
+    - name: check nifi uploaded to s3
+      aws_s3:
+        mode: list
+        bucket: "{{ s3_bucket }}"
+        prefix: "nifi/downloads/nifi.tar.gz"
+      register: nifi_uploaded
+      when:
+        - ansible_default_ipv4.address == zk1_ip
+
+    - name: upload nifi to s3
+      aws_s3:
+        mode: put
+        bucket: "{{ s3_bucket }}"
+        object: /nifi/downloads/nifi.tar.gz
+        src: /opt/nifi-downloads/nifi.tar.gz
+        encrypt: yes
+        encryption_mode: "aws:kms"
+        encryption_kms_key_id: "{{ kms_key_id }}"
+      when:
+        - ansible_default_ipv4.address == zk1_ip
+        - nifi_uploaded.s3_keys | count == 0
+
+    - name: check toolkit downloaded
+      stat:
+        path: /opt/nifi-downloads/nifi-toolkit.tar.gz
+      register: toolkit_downloaded
+
+    - name: download toolkit if not downloaded
+      get_url:
+        url: https://archive.apache.org/dist/nifi/{{ nifi_version }}/nifi-toolkit-{{ nifi_version }}-bin.tar.gz
+        dest: /opt/nifi-downloads/nifi-toolkit.tar.gz
+        mode: '0440'
+      become_user: nifi
+      when:
+        - ansible_default_ipv4.address == zk1_ip
+        - toolkit_downloaded.stat.exists == false
+
+    - name: check toolkit uploaded to s3
+      aws_s3:
+        mode: list
+        bucket: "{{ s3_bucket }}"
+        prefix: "nifi/downloads/nifi-toolkit.tar.gz"
+      register: toolkit_uploaded
+      when:
+        - ansible_default_ipv4.address == zk1_ip
+
+    - name: upload toolkit to s3
+      aws_s3:
+        mode: put
+        bucket: "{{ s3_bucket }}"
+        object: /nifi/downloads/nifi-toolkit.tar.gz
+        src: /opt/nifi-downloads/nifi-toolkit.tar.gz
+        encrypt: yes
+        encryption_mode: "aws:kms"
+        encryption_kms_key_id: "{{ kms_key_id }}"
+      when:
+        - ansible_default_ipv4.address == zk1_ip
+        - toolkit_uploaded.s3_keys | count == 0
+
+    - name: download zk from s3 if not downloaded
+      aws_s3:
+        mode: get
+        bucket: "{{ s3_bucket }}"
+        object: "/nifi/downloads/{{ item }}"
+        dest: "/opt/nifi-downloads/{{ item }}"
+      with_items:
+        - zookeeper.tar.gz
+      become_user: nifi
+      when:
+        - zk_downloaded.stat.exists == false
+      retries: 120
+      delay: 10
+      register: zk_from_s3
+      until: zk_from_s3 is not failed
+
+    - name: download nifi from s3 if not downloaded
+      aws_s3:
+        mode: get
+        bucket: "{{ s3_bucket }}"
+        object: "/nifi/downloads/{{ item }}"
+        dest: "/opt/nifi-downloads/{{ item }}"
+      with_items:
+        - nifi.tar.gz
+      become_user: nifi
+      when:
+        - nifi_downloaded.stat.exists == false
+      retries: 120
+      delay: 10
+      register: nifi_from_s3
+      until: nifi_from_s3 is not failed
+
+    - name: download toolkit from s3 if not downloaded
+      aws_s3:
+        mode: get
+        bucket: "{{ s3_bucket }}"
+        object: "/nifi/downloads/{{ item }}"
+        dest: "/opt/nifi-downloads/{{ item }}"
+      with_items:
+        - nifi-toolkit.tar.gz
+      become_user: nifi
+      when:
+        - toolkit_downloaded.stat.exists == false
+      retries: 120
+      delay: 10
+      register: toolkit_from_s3
+      until: toolkit_from_s3 is not failed
+
+    - name: check zookeeper unarchived
+      stat:
+        path: /opt/zookeeper-{{ zk_version }}/README
+      register: zk_unarchived
+
+    - name: unarchive zookeeper if not unarchived
+      unarchive:
+        src: /opt/nifi-downloads/zookeeper.tar.gz
+        dest: /opt
+        remote_src: yes
+        owner: nifi
+        group: nifi
+      when: zk_unarchived.stat.exists == false
+
+    - name: recursive chown zookeeper
+      file:
+        path: /opt/zookeeper-{{ zk_version }}
+        state: directory
+        recurse: yes
+        owner: nifi
+        group: nifi
+
+    - name: link zookeeper version to /opt/zookeeper
+      file:
+        src: /opt/apache-zookeeper-{{ zk_version }}-bin
+        path: /opt/zookeeper
+        state: link
+        mode: 0755
+        owner: nifi
+        group: nifi
+
+    - name: check nifi unarchived
+      stat:
+        path: /opt/nifi-{{ nifi_version }}/README
+      register: nifi_unarchived
+
+    - name: unarchive nifi when not unarchived
+      unarchive:
+        src: /opt/nifi-downloads/nifi.tar.gz
+        dest: /opt
+        remote_src: yes
+        owner: nifi
+        group: nifi
+      when: nifi_unarchived.stat.exists == false
+
+    - name: recursive chown nifi
+      file:
+        path: /opt/nifi-{{ nifi_version }}
+        state: directory
+        recurse: yes
+        owner: nifi
+        group: nifi
+
+    - name: link nifi version to /opt/nifi
+      file:
+        src: /opt/nifi-{{ nifi_version }}
+        path: /opt/nifi
+        state: link
+        mode: 0755
+        owner: nifi
+        group: nifi
+
+    - name: check toolkit unarchived
+      stat:
+        path: /opt/nifi-toolkit-{{ nifi_version }}/README
+      register: toolkit_unarchived
+
+    - name: unarchive toolkit when not unarchived
+      unarchive:
+        src: /opt/nifi-downloads/nifi-toolkit.tar.gz
+        dest: /opt
+        remote_src: yes
+        owner: nifi
+        group: nifi
+      when: toolkit_unarchived.stat.exists == false
+
+    - name: recursive chown toolkit
+      file:
+        path: /opt/nifi-toolkit-{{ nifi_version }}
+        state: directory
+        recurse: yes
+        owner: nifi
+        group: nifi
+
+    - name: link toolkit version to /opt/nifi-toolkit
+      file:
+        src: /opt/nifi-toolkit-{{ nifi_version }}
+        path: /opt/nifi-toolkit
+        state: link
+        mode: 0755
+        owner: nifi
+        group: nifi
+
+    - name: authorizers.xml
+      template:
+        src: authorizers.xml
+        dest: /opt/nifi/conf/authorizers.xml
+        owner: nifi
+        group: nifi
+        mode: 0640
+
+    - name: zookeeper systemd unit file
+      copy:
+        src: zookeeper.service
+        dest: /etc/systemd/system/zookeeper.service
+        mode: 0444
+        owner: root
+        group: root
+
+    - name: nifi systemd service file
+      copy:
+        src: nifi.service
+        dest: /etc/systemd/system/nifi.service
+        mode: 0444
+        owner: root
+        group: root
+
+    - name: get pre-existing generated password from s3
+      aws_s3:
+        mode: get
+        bucket: "{{ s3_bucket }}"
+        object: "/nifi/conf/{{ item }}"
+        dest: "/opt/nifi-conf/{{ item }}"
+      become_user: nifi
+      ignore_errors: True
+      with_items:
+        - generated_password
+      when:
+        - ansible_default_ipv4.address == zk1_ip
+
+    - name: check password generated
+      stat:
+        path: /opt/nifi-conf/generated_password
+      register: password_generated
+      when:
+        - ansible_default_ipv4.address == zk1_ip
+
+    - name: generate password if not generated
+      shell: |
+        head /dev/urandom | tr -dc A-Za-z0-9 | head -c 20 > /opt/nifi-conf/generated_password
+      become_user: nifi
+      ignore_errors: True
+      when:
+        - ansible_default_ipv4.address == zk1_ip
+        - password_generated.stat.exists == false
+
+    - name: upload password to s3
+      aws_s3:
+        mode: put
+        bucket: "{{ s3_bucket }}"
+        object: /nifi/conf/generated_password
+        src: /opt/nifi-conf/generated_password
+        encrypt: yes
+        encryption_mode: "aws:kms"
+        encryption_kms_key_id: "{{ kms_key_id }}"
+      become_user: nifi
+      when:
+        - ansible_default_ipv4.address == zk1_ip
+
+    - name: get generated password from s3
+      aws_s3:
+        mode: get
+        bucket: "{{ s3_bucket }}"
+        object: "/nifi/conf/{{ item }}"
+        dest: "/opt/nifi-conf/{{ item }}"
+      become_user: nifi
+      with_items:
+        - generated_password
+      retries: 120
+      delay: 15
+      register: genpass_from_s3
+      until: genpass_from_s3 is not failed
+
+    - name: set generated_password var
+      shell: |
+        cat /opt/nifi-conf/generated_password
+      become_user: nifi
+      register: generated_password
+
+    - name: nifi properties
+      template:
+        src: nifi.properties
+        dest: /opt/nifi/conf/nifi.properties
+        owner: nifi
+        group: nifi
+        mode: 0640
+
+    - name: check ca exists
+      stat:
+        path: /opt/nifi-certificates/nifi-cert.pem
+      register: ca_cert
+
+    - name: generate ca when not exists
+      shell: |
+        export JAVA_HOME=/usr/lib/jvm/default-java
+        /opt/nifi-toolkit/bin/tls-toolkit.sh standalone -c tf-nifi-1 -d 3650 -k 2048 -s SHA256WITHRSA -T jks --subjectAlternativeNames {{ name_prefix }}-zk-1-{{ name_suffix }}
+      args:
+        chdir: /opt/nifi-certificates/
+        executable: /bin/bash
+      become_user: nifi
+      when:
+        - ca_cert.stat.exists == false
+        - ansible_default_ipv4.address == zk1_ip
+
+    - name: upload ca to s3
+      aws_s3:
+        mode: put
+        bucket: "{{ s3_bucket }}"
+        object: "nifi/certificates/{{ item }}"
+        src: "/opt/nifi-certificates/{{ item }}"
+        encrypt: yes
+        encryption_mode: "aws:kms"
+        encryption_kms_key_id: "{{ kms_key_id }}"
+      with_items:
+        - nifi-cert.pem
+        - nifi-key.key
+      when:
+        - ansible_default_ipv4.address == zk1_ip
+
+    - name: get ca from s3
+      aws_s3:
+        mode: get
+        bucket: "{{ s3_bucket }}"
+        object: "nifi/certificates/{{ item }}"
+        dest: "/opt/nifi-certificates/{{ item }}"
+      with_items:
+        - nifi-cert.pem
+        - nifi-key.key
+      retries: 120
+      delay: 10
+      register: ca_from_s3
+      until: ca_from_s3 is not failed
+      become_user: nifi
+      when: 
+        - ca_cert.stat.exists == false
+
+    - name: check admin exists
+      stat:
+        path: /opt/nifi-certificates/admin/keystore.pkcs12
+      register: admin_cert
+
+    - name: generate admin when not exists
+      shell: |
+        export JAVA_HOME=/usr/lib/jvm/default-java
+        /opt/nifi-toolkit/bin/tls-toolkit.sh standalone -a RSA -c {{ name_prefix }}-zk-1-{{ name_suffix }} -n admin -d 3650 -k 2048 -s SHA256WITHRSA -T pkcs12 --subjectAlternativeNames admin -P {{ generated_password.stdout }} -S {{ generated_password.stdout }}
+      args:
+        chdir: /opt/nifi-certificates/
+        executable: /bin/bash
+      become_user: nifi
+      when:
+        - admin_cert.stat.exists == false
+        - ansible_default_ipv4.address == zk1_ip
+
+    - name: upload admin to s3
+      aws_s3:
+        mode: put
+        bucket: "{{ s3_bucket }}"
+        object: "nifi/certificates/admin/{{ item }}"
+        src: "/opt/nifi-certificates/admin/{{ item }}"
+        encrypt: yes
+        encryption_mode: "aws:kms"
+        encryption_kms_key_id: "{{ kms_key_id }}"
+      with_items:
+        - keystore.pkcs12
+        - truststore.jks
+      when:
+        - ansible_default_ipv4.address == zk1_ip
+
+    - name: ensure admin dir for s3 objects
+      file:
+        path: /opt/nifi-certificates/admin
+        state: directory
+        owner: nifi
+        group: nifi
+        mode: 0750
+
+    - name: pull admin from s3
+      aws_s3:
+        mode: get
+        bucket: "{{ s3_bucket }}"
+        object: "nifi/certificates/admin/{{ item }}"
+        dest: "/opt/nifi-certificates/admin/{{ item }}"
+      with_items:
+        - keystore.pkcs12
+        - truststore.jks
+      retries: 120
+      delay: 10
+      register: admin_from_s3
+      until: admin_from_s3 is not failed
+      become_user: nifi
+      when: 
+        - admin_cert.stat.exists == false
+
+    - name: admin cli.properties template
+      template:
+        src: cli.properties
+        dest: /opt/nifi-certificates/admin/cli.properties
+        owner: nifi
+        group: nifi
+        mode: 0640
+
+    - name: check node keystore exists
+      stat:
+        path: /opt/nifi-certificates/{{ ansible_nodename }}/keystore.jks
+      register: node_cert
+
+    - name: generate node keystore when not exists
+      shell: |
+        export JAVA_HOME=/usr/lib/jvm/default-java
+        /opt/nifi-toolkit/bin/tls-toolkit.sh standalone -n {{ ansible_nodename }} -d 3650 -k 2048 -s SHA256WITHRSA -T jks --subjectAlternativeNames {{ ansible_nodename }} -P {{ generated_password.stdout }} -S {{ generated_password.stdout }}
+      args:
+        chdir: /opt/nifi-certificates/
+        executable: /bin/bash
+      become_user: nifi
+      when: node_cert.stat.exists == false
+
+    - name: zookeeper data directory
+      file:
+        path: /opt/zookeeper/data
+        state: directory
+        mode: 0755
+        owner: nifi
+        group: nifi
+
+    - name: zookeeper myid file
+      template:
+        src: myid
+        dest: /opt/zookeeper/data/myid
+        owner: nifi
+        group: nifi
+        mode: 0444
+
+    - name: zookeeper conf
+      template:
+        src: zoo.cfg
+        dest: /opt/zookeeper/conf/zoo.cfg
+        owner: nifi
+        group: nifi
+        mode: 0640
+
+    - name: zookeeper systemd service start/enable
+      systemd:
+        state: started
+        enabled: yes
+        name: zookeeper
+        daemon_reload: yes
+
+    - name: nifi systemd service start/enable
+      systemd:
+        state: started
+        enabled: yes
+        name: nifi
+        daemon_reload: yes
+      when:
+        - ansible_default_ipv4.address == zk1_ip
+
+    - name: wait for users.xml, authorizations.xml, and flow.xml.gz
+      wait_for:
+        path: "/opt/nifi/conf/{{ item }}"
+        state: present
+        timeout: 360
+      with_items:
+        - users.xml
+        - authorizations.xml
+        - flow.xml.gz
+      when:
+        - ansible_default_ipv4.address == zk1_ip
+
+    - name: place nifi conf files on s3
+      aws_s3:
+        mode: put
+        bucket: "{{ s3_bucket }}"
+        object: "/nifi/conf/{{ item }}"
+        src: "/opt/nifi/conf/{{ item }}"
+        encrypt: yes
+        encryption_mode: "aws:kms"
+        encryption_kms_key_id: "{{ kms_key_id }}"
+      with_items:
+        - users.xml
+        - authorizations.xml
+        - flow.xml.gz
+      when:
+        - ansible_default_ipv4.address == zk1_ip
+
+    - name: get nifi conf files from s3
+      aws_s3:
+        mode: get
+        bucket: "{{ s3_bucket }}"
+        object: "/nifi/conf/{{ item }}"
+        dest: "/opt/nifi/conf/{{ item }}"
+      with_items:
+        - users.xml
+        - authorizations.xml
+        - flow.xml.gz
+      become_user: nifi
+      retries: 120
+      delay: 10
+      register: nifi_conf_from_s3
+      until: nifi_conf_from_s3 is not failed
+
+    - name: nifi-join play
+      copy:
+        src: "{{ item }}"
+        dest: "/opt/nifi-cluster/{{ item }}"
+        owner: nifi
+        group: nifi
+        mode: 0640
+      with_items:
+        - nifi-join.yml
+
+    - name: timers and service units
+      copy:
+        src: "{{ item }}"
+        dest: "/etc/systemd/system/{{ item }}"
+        owner: root
+        group: root
+        mode: 0640
+      with_items:
+        - nifi-join.service
+        - nifi-join.timer
+        - nifi.service
+        - nifi.timer
+
+    - name: nifi systemd
+      systemd:
+        name: "nifi.{{ item }}"
+        daemon_reload: yes
+        state: started
+        enabled: yes
+      with_items:
+        - service
+        - timer
+
+    - name: nifi-join systemd
+      systemd:
+        name: "nifi-join.{{ item }}"
+        daemon_reload: yes
+        state: started
+        enabled: yes
+      with_items:
+        - service
+        - timer

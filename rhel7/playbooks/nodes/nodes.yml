@@ -1,0 +1,389 @@
+---
+- name: nodes.yml
+  hosts: localhost
+  become: True
+  become_user: root
+  tasks:
+
+    - name: set zookeeper connection string
+      set_fact:
+        zookeeper_nodes: "{{ name_prefix }}-zk-1-{{ name_suffix }}:2173,{{ name_prefix }}-zk-2-{{ name_suffix }}:2173,{{ name_prefix }}-zk-3-{{ name_suffix }}:2173"
+
+    - name: set zookeeper ips in /etc/hosts
+      lineinfile:
+        line: "{{ item }}"
+        path: /etc/hosts
+      with_items:
+        - "# zookeepers"
+        - "{{ zk1_ip }} {{ name_prefix }}-zk-1-{{ name_suffix }}"
+        - "{{ zk2_ip }} {{ name_prefix }}-zk-2-{{ name_suffix }}"
+        - "{{ zk3_ip }} {{ name_prefix }}-zk-3-{{ name_suffix }}"
+
+    - name: nifi required packages
+      package:
+        name: "{{ packages }}"
+        state: latest
+      vars:
+        packages:
+        - default-jre
+        - jq
+        - openssl
+        - nfs-common
+        - git
+        - binutils
+        - python3-pip
+
+    - name: ansible required packages
+      pip:
+        executable: /usr/bin/pip
+        name: "{{ packages }}"
+      vars:
+        packages:
+        - boto
+        - boto3
+        - botocore
+
+    - name: nifi user
+      user:
+        name: nifi
+        comment: Apache NiFi Service Account
+
+    - name: nifi management directories
+      file:
+        path: "{{ item }}"
+        state: directory
+        owner: nifi
+        group: nifi
+        mode: 0750
+      with_items:
+        - /opt/nifi-certificates
+        - /opt/nifi-conf
+        - /opt/nifi-downloads
+        - /opt/nifi-cluster
+        - /opt/nifi-cluster/join
+        - /opt/nifi-cluster/invite
+        - /opt/nifi-cluster/leave
+
+    - name: remove any previous bucket file (for dynamic bucket changes)
+      file:
+        path: /opt/nifi-conf/bucket
+        state: absent
+
+    - name: set bucket in conf
+      lineinfile:
+        line: "{{ s3_bucket }}"
+        path: /opt/nifi-conf/bucket
+        owner: nifi
+        group: nifi
+        mode: 0640
+        create: yes
+
+    - name: check nifi downloaded
+      stat:
+        path: /opt/nifi-downloads/nifi.tar.gz
+      register: nifi_downloaded
+
+    - name: check toolkit downloaded
+      stat:
+        path: /opt/nifi-downloads/nifi-toolkit.tar.gz
+      register: toolkit_downloaded
+
+    - name: download nifi from s3 if not downloaded
+      aws_s3:
+        mode: get
+        bucket: "{{ s3_bucket }}"
+        object: "/nifi/downloads/{{ item }}"
+        dest: "/opt/nifi-downloads/{{ item }}"
+      with_items:
+        - nifi.tar.gz
+      become_user: nifi
+      when:
+        - nifi_downloaded.stat.exists == false
+      retries: 120
+      delay: 10
+      register: nifi_from_s3
+      until: nifi_from_s3 is not failed
+
+    - name: download toolkit from s3 if not downloaded
+      aws_s3:
+        mode: get
+        bucket: "{{ s3_bucket }}"
+        object: "/nifi/downloads/{{ item }}"
+        dest: "/opt/nifi-downloads/{{ item }}"
+      with_items:
+        - nifi-toolkit.tar.gz
+      become_user: nifi
+      when:
+        - toolkit_downloaded.stat.exists == false
+      retries: 120
+      delay: 10
+      register: toolkit_from_s3
+      until: toolkit_from_s3 is not failed
+
+    - name: check nifi unarchived
+      stat:
+        path: /opt/nifi-{{ nifi_version }}/README
+      register: nifi_unarchived
+
+    - name: unarchive nifi when not unarchived
+      unarchive:
+        src: /opt/nifi-downloads/nifi.tar.gz
+        dest: /opt
+        remote_src: yes
+        owner: nifi
+        group: nifi
+      when: nifi_unarchived.stat.exists == false
+
+    - name: recursive chown nifi
+      file:
+        path: /opt/nifi-{{ nifi_version }}
+        state: directory
+        recurse: yes
+        owner: nifi
+        group: nifi
+
+    - name: link nifi version to /opt/nifi
+      file:
+        src: /opt/nifi-{{ nifi_version }}
+        path: /opt/nifi
+        state: link
+        mode: 0755
+        owner: nifi
+        group: nifi
+
+    - name: check toolkit unarchived
+      stat:
+        path: /opt/nifi-toolkit-{{ nifi_version }}/README
+      register: toolkit_unarchived
+
+    - name: unarchive toolkit when not unarchived
+      unarchive:
+        src: /opt/nifi-downloads/nifi-toolkit.tar.gz
+        dest: /opt
+        remote_src: yes
+        owner: nifi
+        group: nifi
+      when: toolkit_unarchived.stat.exists == false
+
+    - name: recursive chown toolkit
+      file:
+        path: /opt/nifi-toolkit-{{ nifi_version }}
+        state: directory
+        recurse: yes
+        owner: nifi
+        group: nifi
+
+    - name: link toolkit version to /opt/nifi-toolkit
+      file:
+        src: /opt/nifi-toolkit-{{ nifi_version }}
+        path: /opt/nifi-toolkit
+        state: link
+        mode: 0755
+        owner: nifi
+        group: nifi
+
+    - name: authorizers.xml
+      template:
+        src: authorizers.xml
+        dest: /opt/nifi/conf/authorizers.xml
+        owner: nifi
+        group: nifi
+        mode: 0640
+
+    - name: nifi systemd service file
+      copy:
+        src: nifi.service
+        dest: /etc/systemd/system/nifi.service
+        mode: 0444
+        owner: nifi
+        group: nifi
+
+    - name: pull generated password from s3
+      aws_s3:
+        mode: get
+        bucket: "{{ s3_bucket }}"
+        object: "/nifi/conf/{{ item }}"
+        dest: "/opt/nifi-conf/{{ item }}"
+      with_items:
+        - generated_password
+      become_user: nifi
+      retries: 120
+      delay: 15
+      register: pw_from_s3
+      until: pw_from_s3
+
+    - name: set generated_password var
+      shell: |
+        cat /opt/nifi-conf/generated_password
+      become_user: nifi
+      register: generated_password
+
+    - name: nifi properties
+      template:
+        src: nifi.properties
+        dest: /opt/nifi/conf/nifi.properties
+        owner: nifi
+        group: nifi
+        mode: 0640
+
+    - name: check ca exists
+      stat:
+        path: /opt/nifi-certificates/nifi-cert.pem
+      register: ca_cert
+
+    - name: pull ca from s3
+      aws_s3:
+        mode: get
+        bucket: "{{ s3_bucket }}"
+        object: "nifi/certificates/{{ item }}"
+        dest: "/opt/nifi-certificates/{{ item }}"
+      with_items:
+        - nifi-cert.pem
+        - nifi-key.key
+      become_user: nifi
+      when: ca_cert.stat.exists == false
+      retries: 120
+      delay: 10
+      register: ca_from_s3
+      until: ca_from_s3 is not failed
+
+    - name: check admin exists
+      stat:
+        path: /opt/nifi-certificates/admin/keystore.pkcs12
+      register: admin_cert
+
+    - name: ensure admin dir for s3 objects
+      file:
+        path: /opt/nifi-certificates/admin
+        state: directory
+        owner: nifi
+        group: nifi
+        mode: 0750
+
+    - name: pull admin from s3
+      aws_s3:
+        mode: get
+        bucket: "{{ s3_bucket }}"
+        object: "nifi/certificates/admin/{{ item }}"
+        dest: "/opt/nifi-certificates/admin/{{ item }}"
+      with_items:
+        - keystore.pkcs12
+        - truststore.jks
+      when: admin_cert.stat.exists == false
+      become_user: nifi
+      retries: 120
+      delay: 10
+      register: admin_from_s3
+      until: admin_from_s3 is not failed
+
+    - name: admin cli.properties template
+      template:
+        src: cli.properties
+        dest: /opt/nifi-certificates/admin/cli.properties
+        owner: nifi
+        group: nifi
+        mode: 0640
+
+    - name: check node keystore exists
+      stat:
+        path: /opt/nifi-certificates/{{ ansible_nodename }}/keystore.jks
+      register: node_cert
+
+    - name: generate node keystore when not exists
+      shell: |
+        export JAVA_HOME=/usr/lib/jvm/default-java
+        /opt/nifi-toolkit/bin/tls-toolkit.sh standalone -n {{ ansible_nodename }} -d 3650 -k 2048 -s SHA256WITHRSA -T jks --subjectAlternativeNames {{ ansible_nodename }} -P {{ generated_password.stdout }} -S {{ generated_password.stdout }}
+      args:
+        chdir: /opt/nifi-certificates/
+        executable: /bin/bash
+      become_user: nifi
+      when: node_cert.stat.exists == false
+
+    - name: create user
+      shell: |
+        export JAVA_HOME=/usr/lib/jvm/default-java
+        /opt/nifi-toolkit/bin/cli.sh nifi create-user --userName "CN={{ ansible_nodename }}, OU=NIFI" -p /opt/nifi-certificates/admin/cli.properties
+      become_user: nifi
+      ignore_errors: true
+
+    - name: touch local join
+      file:
+        path: "/opt/nifi-cluster/join/{{ ansible_nodename }}"
+        state: touch
+        owner: nifi
+        group: nifi
+        mode: 0640
+
+    - name: copy join to s3
+      aws_s3:
+        mode: put
+        bucket: "{{ s3_bucket }}"
+        object: "/nifi/cluster/join/{{ ansible_nodename }}"
+        src: "/opt/nifi-cluster/join/{{ ansible_nodename }}"
+
+    - name: wait for a zookeeper
+      pause:
+        minutes: 1
+
+    - name: get invite to s3
+      aws_s3:
+        mode: get
+        bucket: "{{ s3_bucket }}"
+        object: "/nifi/cluster/invite/{{ ansible_nodename }}"
+        dest: "/opt/nifi-cluster/invite/{{ ansible_nodename }}"
+      become_user: nifi
+      retries: 120
+      delay: 10     
+      register: invite_from_s3
+      until: invite_from_s3 is not failed
+
+    - name: remove invite in s3
+      aws_s3:
+        mode: delobj
+        bucket: "{{ s3_bucket }}"
+        object: "/nifi/cluster/invite/{{ ansible_nodename }}"
+
+    - name: get nifi conf files from s3
+      aws_s3:
+        mode: get
+        bucket: "{{ s3_bucket }}"
+        object: "/nifi/conf/{{ item }}"
+        dest: "/opt/nifi/conf/{{ item }}"
+      with_items:
+        - users.xml
+        - authorizations.xml
+        - flow.xml.gz
+      become_user: nifi
+      retries: 120
+      delay: 10
+      register: conf_from_s3
+      until: conf_from_s3 is not failed
+
+    - name: copy scale-down script executed by autoscaling ssm doc
+      copy:
+        src: scale-down
+        dest: /usr/local/bin/scale-down
+        owner: nifi
+        group: nifi
+        mode: 0550
+
+    - name: timers and service units
+      copy:
+        src: "{{ item }}"
+        dest: "/etc/systemd/system/{{ item }}"
+        owner: nifi
+        group: nifi
+        mode: 0640
+      with_items:
+        - nifi.service
+        - nifi.timer
+
+    - name: nifi systemd
+      systemd:
+        name: "nifi.{{ item }}"
+        daemon_reload: yes
+        state: started
+        enabled: yes
+      with_items:
+        - service
+        - timer

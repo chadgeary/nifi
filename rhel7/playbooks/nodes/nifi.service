@@ -1,0 +1,14 @@
+[Unit]
+Description=nifi
+After=network.target
+
+[Service]
+User=nifi
+ExecStart=/opt/nifi/bin/nifi.sh start
+ExecStop=/opt/nifi/bin/nifi.sh stop
+Type=forking
+Restart=on-failure   
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
