@@ -201,13 +201,9 @@ resource "aws_route_table_association" "rt-assoc-prinet3" {
 }
 
 # s3 endpoint for private instance(s)
-data "aws_vpc_endpoint_service" "tf-nifi-s3-endpoint-service" {
-  service                 = "s3"
-}
-
 resource "aws_vpc_endpoint" "tf-nifi-s3-endpoint" {
   vpc_id                  = aws_vpc.tf-nifi-vpc.id
-  service_name            = data.aws_vpc_endpoint_service.tf-nifi-s3-endpoint-service.service_name
+  service_name            = "com.amazonaws.${var.aws_region}.s3"
   vpc_endpoint_type       = "Gateway"
   route_table_ids         = [aws_route_table.tf-nifi-prirt1.id,aws_route_table.tf-nifi-prirt2.id,aws_route_table.tf-nifi-prirt3.id]
   tags                    = {

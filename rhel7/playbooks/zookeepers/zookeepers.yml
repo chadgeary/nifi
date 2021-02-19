@@ -440,6 +440,12 @@
         group: nifi
         mode: 0640
 
+    - name: connect string in state-management
+      lineinfile:
+        path: /opt/nifi/conf/state-management.xml
+        regexp: '        <property name="Connect String">.*</property>'
+        line: '        <property name="Connect String">{{ zk1_ip }}:2173,{{ zk2_ip }}:2173,{{ zk3_ip }}:2173</property>'
+
     - name: check ca exists
       stat:
         path: /opt/nifi-certificates/nifi-cert.pem
@@ -447,7 +453,7 @@
 
     - name: generate ca when not exists
       shell: |
-        export JAVA_HOME=/usr/lib/jvm/default-java
+        export JAVA_HOME=/etc/alternatives/jre
         /opt/nifi-toolkit/bin/tls-toolkit.sh standalone -c tf-nifi-1 -d 3650 -k 2048 -s SHA256WITHRSA -T jks --subjectAlternativeNames {{ name_prefix }}-zk-1-{{ name_suffix }}
       args:
         chdir: /opt/nifi-certificates/
@@ -496,7 +502,7 @@
 
     - name: generate admin when not exists
       shell: |
-        export JAVA_HOME=/usr/lib/jvm/default-java
+        export JAVA_HOME=/etc/alternatives/jre
         /opt/nifi-toolkit/bin/tls-toolkit.sh standalone -a RSA -c {{ name_prefix }}-zk-1-{{ name_suffix }} -n admin -d 3650 -k 2048 -s SHA256WITHRSA -T pkcs12 --subjectAlternativeNames admin -P {{ generated_password.stdout }} -S {{ generated_password.stdout }}
       args:
         chdir: /opt/nifi-certificates/
@@ -561,7 +567,7 @@
 
     - name: generate node keystore when not exists
       shell: |
-        export JAVA_HOME=/usr/lib/jvm/default-java
+        export JAVA_HOME=/etc/alternatives/jre
         /opt/nifi-toolkit/bin/tls-toolkit.sh standalone -n {{ ansible_nodename }} -d 3650 -k 2048 -s SHA256WITHRSA -T jks --subjectAlternativeNames {{ ansible_nodename }} -P {{ generated_password.stdout }} -S {{ generated_password.stdout }}
       args:
         chdir: /opt/nifi-certificates/

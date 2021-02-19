@@ -97,7 +97,7 @@ resource "aws_ssm_association" "tf-nifi-zookeepers-ssm-assoc" {
   parameters              = {
     ExtraVariables          = "SSM=True zk_version=${var.zk_version} nifi_version=${var.nifi_version} zk1_ip=${var.zk1_ip} zk2_ip=${var.zk2_ip} zk3_ip=${var.zk3_ip} elb_dns=${aws_elb.tf-nifi-elb.dns_name} s3_bucket=${aws_s3_bucket.tf-nifi-bucket.id} kms_key_id=${aws_kms_key.tf-nifi-kmscmk-s3.key_id} name_prefix=${var.name_prefix} name_suffix=${random_string.tf-nifi-random.result}"
     PlaybookFile            = "zookeepers.yml"
-    SourceInfo              = "{\"path\":\"https://s3.${var.aws_region}.amazonaws.com/${aws_s3_bucket.tf-nifi-bucket.id}/playbooks/zookeepers/\"}"
+    SourceInfo              = "{\"path\":\"https://s3.${var.aws_region}.amazonaws.com/${aws_s3_bucket.tf-nifi-bucket.id}/nifi/zookeepers/\"}"
     SourceType              = "S3"
     Verbose                 = "-v"
   }
@@ -119,7 +119,7 @@ resource "aws_ssm_association" "tf-nifi-nodes-ssm-assoc" {
   parameters              = {
     ExtraVariables          = "SSM=True nifi_version=${var.nifi_version} zk1_ip=${var.zk1_ip} zk2_ip=${var.zk2_ip} zk3_ip=${var.zk3_ip} elb_dns=${aws_elb.tf-nifi-elb.dns_name} s3_bucket=${aws_s3_bucket.tf-nifi-bucket.id} kms_key_id=${aws_kms_key.tf-nifi-kmscmk-s3.key_id} name_prefix=${var.name_prefix} name_suffix=${random_string.tf-nifi-random.result}"
     PlaybookFile            = "nodes.yml"
-    SourceInfo              = "{\"path\":\"https://s3.${var.aws_region}.amazonaws.com/${aws_s3_bucket.tf-nifi-bucket.id}/playbooks/nodes/\"}"
+    SourceInfo              = "{\"path\":\"https://s3.${var.aws_region}.amazonaws.com/${aws_s3_bucket.tf-nifi-bucket.id}/nifi/nodes/\"}"
     SourceType              = "S3"
     Verbose                 = "-v"
   }
