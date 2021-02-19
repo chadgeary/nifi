@@ -1,5 +1,6 @@
 tf-nifi-lambda-node-down.zip
 terraform.*
 *.terraform
-*.terraform*.tfstate*.lock*.
+rhel7/*.terraform*.tfstate*.lock*.
+ubuntu1804/*.terraform*.tfstate*.lock*.
 pvars.*
