@@ -619,7 +619,7 @@
       wait_for:
         path: "/opt/nifi/conf/{{ item }}"
         state: present
-        timeout: 360
+        timeout: 480
       with_items:
         - users.xml
         - authorizations.xml
@@ -627,7 +627,7 @@
       when:
         - ansible_default_ipv4.address == zk1_ip
 
-    - name: place nifi conf files on s3
+    - name: put users.xml, authorizations.xml, and flow.xml.gz on s3
       aws_s3:
         mode: put
         bucket: "{{ s3_bucket }}"

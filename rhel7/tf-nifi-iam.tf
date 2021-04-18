@@ -16,7 +16,9 @@ resource "aws_iam_policy" "tf-nifi-instance-policy-s3" {
       "Sid": "ListObjectsinBucket",
       "Effect": "Allow",
       "Action": [
-        "s3:ListBucket"
+        "s3:ListBucket",
+        "s3:ListBucketMultipartUploads",
+        "s3:ListMultipartUploadParts"
       ],
       "Resource": ["${aws_s3_bucket.tf-nifi-bucket.arn}"]
     },

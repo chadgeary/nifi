@@ -1,6 +1,6 @@
 #!/bin/bash
 # Gracefully exits node from cluster
-export JAVA_HOME=/usr/lib/jvm/default-java
+export JAVA_HOME=/etc/alternatives/jre
 
 # various vars - the curl to 169.254.169.254 are AWS instance-specific API facts
 HOOKRESULT='CONTINUE'
@@ -120,7 +120,7 @@ do
   fi
 done
 
-# RESTART AND DISCONNECT IF OFFLOADED FAILED
+# DISCONNECT IF OFFLOADED FAILED
 echo ""
 if [[ $OFFLOADED_STATE = $TARGET_STATE ]]
 then
@@ -156,6 +156,10 @@ else
     fi
   done
 fi
+
+# DELETE ONE SHOT
+sleep $SLEEP_INTERVAL
+/opt/nifi-toolkit/bin/cli.sh nifi delete-node --nifiNodeId $NODEID -p /opt/nifi-certificates/admin/cli.properties
 
 # COMPLETE LIFECYCLE ACTION
 LCYCLE_ATTEMPTS=1
