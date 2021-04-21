@@ -1,6 +1,6 @@
 #!/bin/bash
 # Gracefully exits node from cluster
-export JAVA_HOME=/etc/alternatives/jre
+export JAVA_HOME=/usr/lib/jvm/default-java
 
 # various vars - the curl to 169.254.169.254 are AWS instance-specific API facts
 HOOKRESULT='CONTINUE'

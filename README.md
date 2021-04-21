@@ -1,5 +1,5 @@
 # Reference
-NiFi secure+autoscaling cluster built automatically in AWS via Terraform+Ansible. Ubuntu1804 or RHEL7 base.
+NiFi secure+autoscaling cluster built automatically in AWS via Terraform+Ansible. RHEL7 or Ubuntu (20.04 or 18.04) base.
 
 # Requirements
 - An AWS account
@@ -98,7 +98,7 @@ cd ~/nifi/rhel7/
 # Navigate to rhel or ubuntu project directory - change \chad\ to your WSL username
 %HOMEPATH%\ubuntu-1804\rootfs\home\chad\nifi\rhel7
 
-# Edit the aws.tfvars file using notepad and save
+# Edit the nifi.tfvars file using notepad and save
 ```
 
 Deploy
@@ -108,26 +108,15 @@ cd ~/nifi/rhel7/
 
 # Initialize terraform and apply the terraform state
 terraform init
-terraform apply -var-file="aws.tfvars"
+terraform apply -var-file="nifi.tfvars"
 
 # If permissions errors appear, fix with the below command and re-run the terraform apply.
-sudo chown $USER aws.tfvars && chmod 600 aws.tfvars
+sudo chown $USER nifi.tfvars && chmod 600 nifi.tfvars
 
 # Note the outputs from terraform after the apply completes
 
-# Wait for the virtual machine to become ready (Ansible will setup the services for us)
+# Wait for the virtual machine to become ready (Ansible will setup the services for us). NiFi can take 30+ minutes to initialize.
 ```
-
-Want to watch Ansible setup the virtual machine? SSH to the cloud instance - see the terraform output.
-```
-# Connect to the virtual machine via ssh - user is ubuntu for ubuntu1804 and ec2-user for rhel7
-ssh ec2-user@<some ip address terraform told us about>
-
-# Check the Ansible output (from AWS SSM)
-export ASSOC_ID=$(sudo bash -c 'ls -t /var/lib/amazon/ssm/*/document/orchestration/' | awk 'NR==1 { print $1 }') && sudo bash -c 'cat /var/lib/amazon/ssm/i-*/document/orchestration/'"$ASSOC_ID"'/awsrunShellScript/runShellScript/stdout'
-```
-
-Alternatively, check [AWS State Manager](https://console.aws.amazon.com/systems-manager/state-manager) though you'll need to be logged into AWS as the user created in the previous AWS steps. 
 
 # Variables
 ```
@@ -139,8 +128,10 @@ Alternatively, check [AWS State Manager](https://console.aws.amazon.com/systems-
 # an IP range granted webUI, EC2 SSH access.
 
 # kms_manager
-# The AWS username (not root) granted access to read the Wireguard VPN configuration files in S3.
+# The AWS username (not root) granted access to read configuration files in S3.
 ```
 
 # Post-Deployment
-- Wait for Ansible Playbook, watch [AWS State Manager](https://console.aws.amazon.com/systems-manager/state-manager)
+* Check the [State Manager](https://console.aws.amazon.com/systems-manager/state-manager) for `Status: Complete`
+* Check the [Load Balancer](https://us-east-2.console.aws.amazon.com/ec2/v2/home?LoadBalancers#LoadBalancers:sort=loadBalancerName) for `Status: InService`
+

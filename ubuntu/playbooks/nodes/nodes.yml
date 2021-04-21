@@ -25,10 +25,9 @@
         state: latest
       vars:
         packages:
-        - java-11-openjdk
+        - default-jre
         - jq
-        - python-pip
-        - unzip
+        - python3-pip
       retries: 60
       delay: 3
       register: install_packages
@@ -36,33 +35,14 @@
 
     - name: ansible required packages
       pip:
-        executable: /usr/bin/pip
+        executable: /usr/bin/pip3
         name: "{{ packages }}"
       vars:
         packages:
+        - awscli
         - boto
         - boto3
         - botocore
-
-    - name: awscli via aws instructions
-      get_url:
-        url: https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip
-        dest: /opt/awscli-exe-linux-x86_64.zip
-        owner: root
-        group: root
-        mode: 0640
-
-    - name: unarchive awscli
-      unarchive:
-        src: /opt/awscli-exe-linux-x86_64.zip
-        dest: /opt/
-        creates: /opt/aws
-
-    - name: execute awscli installer
-      shell: |
-        /opt/aws/install
-      args:
-        creates: /usr/local/bin/aws
 
     - name: nifi user
       user:
@@ -269,7 +249,7 @@
         - nifi-key.key
       become_user: nifi
       when: ca_cert.stat.exists == false
-      retries: 900
+      retries: 900 
       delay: 2
       register: ca_from_s3
       until: ca_from_s3 is not failed
@@ -318,7 +298,7 @@
 
     - name: generate node keystore when not exists
       shell: |
-        export JAVA_HOME=/etc/alternatives/jre
+        export JAVA_HOME=/usr/lib/jvm/default-java
         /opt/nifi-toolkit/bin/tls-toolkit.sh standalone -n {{ ansible_nodename }} -d 3650 -k 2048 -s SHA256WITHRSA -T jks --subjectAlternativeNames {{ ansible_nodename }} -P {{ generated_password.stdout }} -S {{ generated_password.stdout }}
       args:
         chdir: /opt/nifi-certificates/
@@ -328,7 +308,7 @@
 
     - name: create user
       shell: |
-        export JAVA_HOME=/etc/alternatives/jre
+        export JAVA_HOME=/usr/lib/jvm/default-java
         /opt/nifi-toolkit/bin/cli.sh nifi create-user --userName "CN={{ ansible_nodename }}, OU=NIFI" -p /opt/nifi-certificates/admin/cli.properties
       become_user: nifi
       ignore_errors: true
