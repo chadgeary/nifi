@@ -22,7 +22,7 @@ name_prefix = "nifi"
 
 # the vendor supplying the AMI and the AMI name - default is official Ubuntu 20.04, 18.04 should also be compatible.
 vendor_ami_account_number = "099720109477"
-vendor_ami_name_string = "ubuntu/images/hvm-ssd/ubuntu-bionic-18.04-amd64-server-20200729*"
+vendor_ami_name_string = "ubuntu/images/hvm-ssd/ubuntu-focal-20.04-amd64-server-20210415"
 
 # nifi/nifi-toolkit and zookeeper versions downloaded from https://archive.apache.org/dist/
 nifi_version = "1.13.2"
