@@ -43,4 +43,9 @@ zk3_ip = "10.10.10.197"
 # the initial size (min) and max count of non-zookeeper nifi nodes.
 # scale is based on CPU load (see tf-nifi-scaling.tf)
 minimum_node_count = 0
-maximum_node_count = 3
+maximum_node_count = 0
+
+# urls for the various nifi applications
+zk_url = "https://apache.osuosl.org/zookeeper/zookeeper-3.7.0/apache-zookeeper-3.7.0-bin.tar.gz" 
+nifi_url = "https://apache.osuosl.org/nifi/1.13.2/nifi-1.13.2-bin.tar.gz"
+toolkit_url = "https://apache.osuosl.org/nifi/1.13.2/nifi-toolkit-1.13.2-bin.tar.gz"
