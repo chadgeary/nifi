@@ -9,11 +9,11 @@ output "tf-nifi-output" {
 https://s3.console.aws.amazon.com/s3/object/${aws_s3_bucket.tf-nifi-bucket.id}?region=${var.aws_region}&prefix=nifi/certificates/admin/keystore.pkcs12
 https://s3.console.aws.amazon.com/s3/object/${aws_s3_bucket.tf-nifi-bucket.id}?region=${var.aws_region}&prefix=nifi/conf/generated_password
 
-# WebUI (ELB)
-https://${aws_elb.tf-nifi-elb.dns_name}/nifi
+# WebUI NLB
+https://${aws_lb.tf-nifi-mgmt-nlb.dns_name}:${var.web_port}/nifi
 
-# SSH (ELB)
-ssh ec2-user@${aws_elb.tf-nifi-elb.dns_name}
+# Service NLB
+${aws_lb.tf-nifi-service-nlb.dns_name}
 
 OUTPUT
 }

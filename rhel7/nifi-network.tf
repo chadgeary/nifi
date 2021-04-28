@@ -8,6 +8,17 @@ resource "aws_vpc" "tf-nifi-vpc" {
   }
 }
 
+# route53 domain
+resource "aws_vpc_dhcp_options" "tf-nifi-dhcp-opts" {
+  domain_name             = "${var.name_prefix}${random_string.tf-nifi-random.result}.internal"
+  domain_name_servers     = ["AmazonProvidedDNS"]
+}
+
+resource "aws_vpc_dhcp_options_association" "tf-nifi-dhcp-assoc" {
+  vpc_id                  = aws_vpc.tf-nifi-vpc.id
+  dhcp_options_id         = aws_vpc_dhcp_options.tf-nifi-dhcp-opts.id
+}
+
 # internet gateway for public subnets
 resource "aws_internet_gateway" "tf-nifi-gw" {
   vpc_id                  = aws_vpc.tf-nifi-vpc.id

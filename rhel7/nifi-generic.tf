@@ -34,29 +34,19 @@ variable "prinet3_cidr" {
   type                     = string
 }
 
-variable "zk1_ip" {
-  type                     = string
-  description              = "An ip from prinet1_cidr for the first nifi node, which runs zookeeper"
-}
-
-variable "zk2_ip" {
-  type                     = string
-  description              = "An ip from prinet2_cidr for the second nifi node, which runs zookeeper"
-}
-
-variable "zk3_ip" {
-  type                     = string
-  description              = "An ip from prinet3_cidr for the third nifi node, which runs zookeeper"
-}
-
 variable "encrypted_ami_ip" {
   type                     = string
   description              = "An ip from prinet1_cidr for the instance used to create an encrypted AMI with a custom KMS CMK"
 }
 
-variable "mgmt_cidr" {
-  type                     = string
-  description              = "Subnet CIDR allowed to access NiFi instance(s) via ELB, e.g. 172.16.10.0/30"
+variable "mgmt_cidrs" {
+  type                     = list
+  description              = "Subnet CIDRs allowed to access NiFi instance(s) via mgmt NLB, e.g. 172.16.10.0/30"
+}
+
+variable "client_cidrs" {
+  type                     = list
+  description              = "Subnet CIDRs allowed to access NiFi instance(s) via service NLB, e.g. 172.16.10.0/30"
 }
 
 variable "instance_type" {
@@ -150,4 +140,24 @@ variable "nifi_url" {
 
 variable "toolkit_url" {
   type                   = string
+}
+
+variable "tcp_service_ports" {
+  type                   = list
+  default                = []
+}
+
+variable "udp_service_ports" {
+  type                   = list
+  default                = []
+}
+
+variable "tcpudp_service_ports" {
+  type                   = list
+  default                = []
+}
+
+variable "web_port" {
+  type                   = number
+  default                = 2170
 }

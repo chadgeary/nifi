@@ -40,7 +40,7 @@ resource "aws_iam_policy" "tf-nifi-lambda-policy-3" {
       "Action": [
         "autoscaling:CompleteLifecycleAction"
       ],
-      "Resource": ["${aws_autoscaling_group.tf-nifi-autoscalegroup.arn}"]
+      "Resource": ["${aws_autoscaling_group.tf-nifi-autoscalegroup.arn}","${aws_autoscaling_group.tf-nifi-zk1-autoscalegroup.arn}","${aws_autoscaling_group.tf-nifi-zk2-autoscalegroup.arn}","${aws_autoscaling_group.tf-nifi-zk3-autoscalegroup.arn}"]
     }
   ]
 }

@@ -5,7 +5,7 @@ resource "aws_launch_configuration" "tf-nifi-launchconf" {
   instance_type           = var.instance_type
   key_name                = aws_key_pair.tf-nifi-instance-key.key_name
   iam_instance_profile    = aws_iam_instance_profile.tf-nifi-instance-profile.name
-  security_groups         = [aws_security_group.tf-nifi-prisg1.id]
+  security_groups         = [aws_security_group.tf-nifi-prisg.id]
   root_block_device {
     volume_size             = var.instance_vol_size
     volume_type             = "standard"
@@ -27,9 +27,7 @@ EOF
 resource "aws_autoscaling_group" "tf-nifi-autoscalegroup" {
   name_prefix             = "${var.name_prefix}-asg-${random_string.tf-nifi-random.result}-"
   launch_configuration    = aws_launch_configuration.tf-nifi-launchconf.name
-  load_balancers          = [aws_elb.tf-nifi-elb.name]
-  health_check_type       = "ELB"
-  health_check_grace_period = 2700
+  target_group_arns       = concat(aws_lb_target_group.tf-nifi-service-target-tcp[*].arn,aws_lb_target_group.tf-nifi-service-target-udp[*].arn,aws_lb_target_group.tf-nifi-service-target-tcpudp[*].arn)
   vpc_zone_identifier     = [aws_subnet.tf-nifi-prinet1.id, aws_subnet.tf-nifi-prinet2.id, aws_subnet.tf-nifi-prinet3.id]
   service_linked_role_arn = aws_iam_service_linked_role.tf-nifi-autoscale-slr.arn
   termination_policies    = ["ClosestToNextInstanceHour"]

@@ -87,6 +87,16 @@ pip3 install --user --upgrade awscli
 
 # Validate configuration
 ~/.local/bin/aws sts get-caller-identity 
+
+# For troubleshooting EC2 instances, use the SSM Session Manager plugin
+curl "https://s3.amazonaws.com/session-manager-downloads/plugin/latest/ubuntu_64bit/session-manager-plugin.deb" -o ~/session-manager-plugin.deb
+sudo dpkg -i ~/session-manager-plugin.deb
+
+# and set the SSH helper configuration for SSM Session Manager
+tee -a ~/.ssh/config << EOM
+host i-* mi-*
+    ProxyCommand sh -c "aws ssm start-session --target %h --document-name AWS-StartSSHSession --parameters 'portNumber=%p'"
+EOM
 ```
 
 Customize the deployment - See variables section below
