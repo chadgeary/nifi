@@ -67,7 +67,7 @@ resource "aws_security_group_rule" "tf-nifi-prisg-tcp-service-in" {
   from_port               = var.tcp_service_ports[count.index]
   to_port                 = var.tcp_service_ports[count.index]
   protocol                = "tcp"
-  cidr_blocks             = concat(var.mgmt_cidrs, var.client_cidrs, [var.pubnet1_cidr, var.pubnet2_cidr, var.pubnet3_cidr, var.prinet1_cidr, var.prinet2_cidr, var.prinet3_cidr])
+  cidr_blocks             = concat(var.client_cidrs, [var.pubnet1_cidr, var.pubnet2_cidr, var.pubnet3_cidr, var.prinet1_cidr, var.prinet2_cidr, var.prinet3_cidr])
 }
 
 resource "aws_security_group_rule" "tf-nifi-prisg-udp-service-in" {
@@ -78,7 +78,7 @@ resource "aws_security_group_rule" "tf-nifi-prisg-udp-service-in" {
   from_port               = var.udp_service_ports[count.index]
   to_port                 = var.udp_service_ports[count.index]
   protocol                = "udp"
-  cidr_blocks             = concat(var.mgmt_cidrs, var.client_cidrs, [var.pubnet1_cidr, var.pubnet2_cidr, var.pubnet3_cidr, var.prinet1_cidr, var.prinet2_cidr, var.prinet3_cidr])
+  cidr_blocks             = concat(var.client_cidrs, [var.pubnet1_cidr, var.pubnet2_cidr, var.pubnet3_cidr, var.prinet1_cidr, var.prinet2_cidr, var.prinet3_cidr])
 }
 
 resource "aws_security_group_rule" "tf-nifi-prisg-tcpudp-service-in" {
@@ -89,7 +89,7 @@ resource "aws_security_group_rule" "tf-nifi-prisg-tcpudp-service-in" {
   from_port               = var.tcpudp_service_ports[count.index]
   to_port                 = var.tcpudp_service_ports[count.index]
   protocol                = "all"
-  cidr_blocks             = concat(var.mgmt_cidrs, var.client_cidrs, [var.pubnet1_cidr, var.pubnet2_cidr, var.pubnet3_cidr, var.prinet1_cidr, var.prinet2_cidr, var.prinet3_cidr])
+  cidr_blocks             = concat(var.client_cidrs, [var.pubnet1_cidr, var.pubnet2_cidr, var.pubnet3_cidr, var.prinet1_cidr, var.prinet2_cidr, var.prinet3_cidr])
 }
 
 # self

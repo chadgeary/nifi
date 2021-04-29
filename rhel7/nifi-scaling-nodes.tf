@@ -45,7 +45,7 @@ resource "aws_autoscaling_group" "tf-nifi-autoscalegroup" {
       },
       {
         key                     = "NiFi"
-        value                   = "node"
+        value                   = "${var.name_prefix}-node-${random_string.tf-nifi-random.result}"
         propagate_at_launch     = true
       }
     ]

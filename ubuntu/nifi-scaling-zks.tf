@@ -1,7 +1,7 @@
 # zk1 launchconf and asg
 resource "aws_launch_configuration" "tf-nifi-zk1-launchconf" {
   name_prefix             = "${var.name_prefix}-zk1lconf-${random_string.tf-nifi-random.result}-"
-  image_id                = aws_ami_from_instance.tf-nifi-encrypted-ami.id
+  image_id                = aws_ami_copy.tf-nifi-encrypted-ami.id
   instance_type           = var.instance_type
   key_name                = aws_key_pair.tf-nifi-instance-key.key_name
   iam_instance_profile    = aws_iam_instance_profile.tf-nifi-instance-profile.name
@@ -20,10 +20,6 @@ resource "aws_launch_configuration" "tf-nifi-zk1-launchconf" {
 hostnamectl set-hostname ${var.name_prefix}-zk1-${random_string.tf-nifi-random.result}
 # set nodeid
 echo 1 > /opt/node_id
-# install ssm
-yum install -y https://s3.${var.aws_region}.amazonaws.com/amazon-ssm-${var.aws_region}/latest/linux_amd64/amazon-ssm-agent.rpm
-# start/enable ssm
-sytemctl start amazon-ssm-agent && systemctl enable amazon-ssm-agent
 EOF
 }
 
@@ -59,7 +55,7 @@ resource "aws_autoscaling_group" "tf-nifi-zk1-autoscalegroup" {
 # zk2 launchconf and asg
 resource "aws_launch_configuration" "tf-nifi-zk2-launchconf" {
   name_prefix             = "${var.name_prefix}-zk2lconf-${random_string.tf-nifi-random.result}-"
-  image_id                = aws_ami_from_instance.tf-nifi-encrypted-ami.id
+  image_id                = aws_ami_copy.tf-nifi-encrypted-ami.id
   instance_type           = var.instance_type
   key_name                = aws_key_pair.tf-nifi-instance-key.key_name
   iam_instance_profile    = aws_iam_instance_profile.tf-nifi-instance-profile.name
@@ -78,10 +74,6 @@ resource "aws_launch_configuration" "tf-nifi-zk2-launchconf" {
 hostnamectl set-hostname ${var.name_prefix}-zk2-${random_string.tf-nifi-random.result}
 # set nodeid
 echo 2 > /opt/node_id
-# install ssm
-yum install -y https://s3.${var.aws_region}.amazonaws.com/amazon-ssm-${var.aws_region}/latest/linux_amd64/amazon-ssm-agent.rpm
-# start/enable ssm
-sytemctl start amazon-ssm-agent && systemctl enable amazon-ssm-agent
 EOF
 }
 
@@ -117,7 +109,7 @@ resource "aws_autoscaling_group" "tf-nifi-zk2-autoscalegroup" {
 # zk3 launchconf and asg
 resource "aws_launch_configuration" "tf-nifi-zk3-launchconf" {
   name_prefix             = "${var.name_prefix}-zk3lconf-${random_string.tf-nifi-random.result}-"
-  image_id                = aws_ami_from_instance.tf-nifi-encrypted-ami.id
+  image_id                = aws_ami_copy.tf-nifi-encrypted-ami.id
   instance_type           = var.instance_type
   key_name                = aws_key_pair.tf-nifi-instance-key.key_name
   iam_instance_profile    = aws_iam_instance_profile.tf-nifi-instance-profile.name
@@ -136,10 +128,6 @@ resource "aws_launch_configuration" "tf-nifi-zk3-launchconf" {
 hostnamectl set-hostname ${var.name_prefix}-zk3-${random_string.tf-nifi-random.result}
 # set nodeid
 echo 3 > /opt/node_id
-# install ssm
-yum install -y https://s3.${var.aws_region}.amazonaws.com/amazon-ssm-${var.aws_region}/latest/linux_amd64/amazon-ssm-agent.rpm
-# start/enable ssm
-sytemctl start amazon-ssm-agent && systemctl enable amazon-ssm-agent
 EOF
 }
 

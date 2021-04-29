@@ -77,7 +77,32 @@ resource "aws_iam_policy" "tf-nifi-instance-policy-lifecycle" {
       "Action": [
         "autoscaling:CompleteLifecycleAction"
       ],
-      "Resource": ["${aws_autoscaling_group.tf-nifi-autoscalegroup.arn}"]
+      "Resource": ["${aws_autoscaling_group.tf-nifi-autoscalegroup.arn}","${aws_autoscaling_group.tf-nifi-zk1-autoscalegroup.arn}","${aws_autoscaling_group.tf-nifi-zk2-autoscalegroup.arn}","${aws_autoscaling_group.tf-nifi-zk3-autoscalegroup.arn}"]
+    }
+  ]
+}
+EOF
+}
+
+resource "aws_iam_policy" "tf-nifi-instance-policy-route53" {
+  name                    = "${var.name_prefix}-instance-policy-route53-${random_string.tf-nifi-random.result}"
+  path                    = "/"
+  description             = "Provides tf-nifi instances update route53 records"
+  policy                  = <<EOF
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "UpdateRoute53",
+      "Effect": "Allow",
+      "Action": ["route53:ChangeResourceRecordSets"],
+      "Resource": ["arn:aws:route53:::hostedzone/${aws_route53_zone.tf-nifi-r53-zone.zone_id}"]
+    },
+    {
+      "Sid": "ListRoute53",
+      "Effect": "Allow",
+      "Action": ["route53:ListHostedZonesByName","route53:ListHostedZones","route53:ListResourceRecordSets"],
+      "Resource": ["*"]
     }
   ]
 }
@@ -117,6 +142,11 @@ resource "aws_iam_role_policy_attachment" "tf-nifi-iam-attach-s3" {
 resource "aws_iam_role_policy_attachment" "tf-nifi-iam-attach-lifecycle" {
   role                    = aws_iam_role.tf-nifi-instance-iam-role.name
   policy_arn              = aws_iam_policy.tf-nifi-instance-policy-lifecycle.arn
+}
+
+resource "aws_iam_role_policy_attachment" "tf-nifi-iam-attach-route53" {
+  role                    = aws_iam_role.tf-nifi-instance-iam-role.name
+  policy_arn              = aws_iam_policy.tf-nifi-instance-policy-route53.arn
 }
 
 resource "aws_iam_instance_profile" "tf-nifi-instance-profile" {

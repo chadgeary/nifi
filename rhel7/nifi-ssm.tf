@@ -88,7 +88,7 @@ resource "aws_ssm_association" "tf-nifi-zookeepers-ssm-assoc" {
   name                    = aws_ssm_document.tf-nifi-ssm-playbook-doc.name
   targets {
     key                   = "tag:NiFi"
-    values                = ["zookeeper"]
+    values                = ["${var.name_prefix}-zookeeper-${random_string.tf-nifi-random.result}"]
   }
   output_location {
     s3_bucket_name          = aws_s3_bucket.tf-nifi-bucket.id
@@ -110,7 +110,7 @@ resource "aws_ssm_association" "tf-nifi-nodes-ssm-assoc" {
   name                    = aws_ssm_document.tf-nifi-ssm-playbook-doc.name
   targets {
     key                   = "tag:NiFi"
-    values                = ["node"]
+    values                = ["${var.name_prefix}-node-${random_string.tf-nifi-random.result}"]
   }
   output_location {
     s3_bucket_name          = aws_s3_bucket.tf-nifi-bucket.id

@@ -4,7 +4,7 @@ resource "aws_kms_key" "tf-nifi-kmscmk-sns" {
   customer_master_key_spec = "SYMMETRIC_DEFAULT"
   enable_key_rotation     = "true"
   tags                    = {
-    Name                  = "tf-nifi-kmscmk-sns"
+    Name                  = "${var.name_prefix}-kms-sns-${random_string.tf-nifi-random.result}"
   }
   policy                  = <<EOF
 {
@@ -63,6 +63,6 @@ EOF
 }
 
 resource "aws_kms_alias" "tf-nifi-kmscmk-sns-alias" {
-  name                    = "alias/tf-nifi-ksmcmk-sns"
+  name                    = "alias/${var.name_prefix}-kms-sns-${random_string.tf-nifi-random.result}"
   target_key_id           = aws_kms_key.tf-nifi-kmscmk-sns.key_id
 }

@@ -7,22 +7,18 @@
 
     - name: set zookeeper connection string
       set_fact:
-        zookeeper_nodes: "{{ name_prefix }}-zk-1-{{ name_suffix }}:2173,{{ name_prefix }}-zk-2-{{ name_suffix }}:2173,{{ name_prefix }}-zk-3-{{ name_suffix }}:2173"
+        zookeeper_nodes: "{{ name_prefix }}-zk1-{{ name_suffix }}.{{ name_prefix }}{{ name_suffix }}.internal:2173,{{ name_prefix }}-zk2-{{ name_suffix }}.{{ name_prefix }}{{ name_suffix }}.internal:2173,{{ name_prefix }}-zk3-{{ name_suffix }}.{{ name_prefix }}{{ name_suffix }}.internal:2173"
+
+    - name: set host in hosts
+      lineinfile:
+        path: /etc/hosts
+        line: "{{ ansible_default_ipv4.address }} {{ ansible_nodename }} {{ ansible_nodename }}.{{ name_prefix }}{{ name_suffix }}.internal"
+        state: present
 
     - name: fetch node_id
       shell: |
         cat /opt/node_id
       register: node_id
-
-    - name: set zookeeper ips in /etc/hosts
-      lineinfile:
-        line: "{{ item }}"
-        path: /etc/hosts
-      with_items:
-        - "# zookeepers"
-        - "{{ zk1_ip }} {{ name_prefix }}-zk-1-{{ name_suffix }}"
-        - "{{ zk2_ip }} {{ name_prefix }}-zk-2-{{ name_suffix }}"
-        - "{{ zk3_ip }} {{ name_prefix }}-zk-3-{{ name_suffix }}"
 
     - name: nifi required packages
       package:
@@ -33,6 +29,7 @@
         - default-jre
         - jq
         - python3-pip
+        - unzip
       retries: 60
       delay: 3
       register: install_packages
@@ -44,9 +41,27 @@
         name: "{{ packages }}"
       vars:
         packages:
+        - awscli
         - boto
         - boto3
         - botocore
+
+    - name: set route53 record
+      route53:
+        state: present
+        overwrite: yes
+        private_zone: yes
+        zone: "{{ name_prefix }}{{ name_suffix }}.internal"
+        record: "{{ name_prefix }}-zk{{ node_id.stdout }}-{{ name_suffix }}.{{ name_prefix }}{{ name_suffix }}.internal"
+        type: A
+        ttl: 600
+        value:
+          - "{{ ansible_default_ipv4.address }}"
+        wait: yes
+      retries: 30
+      delay: 2
+      register: route53_record
+      until: route53_record is not failed
 
     - name: nifi user
       user:
@@ -64,9 +79,6 @@
         - /opt/nifi-certificates
         - /opt/nifi-conf
         - /opt/nifi-downloads
-        - /opt/nifi-cluster
-        - /opt/nifi-cluster/join
-        - /opt/nifi-cluster/invite
 
     - name: remove any previous bucket or kms key id file (for dynamic changes)
       file:
@@ -285,14 +297,14 @@
       with_items:
         - generated_password
       when:
-        - ansible_default_ipv4.address == zk1_ip
+        - ansible_nodename == "{{ name_prefix }}-zk1-{{ name_suffix }}"
 
     - name: check password generated
       stat:
         path: /opt/nifi-conf/generated_password
       register: password_generated
       when:
-        - ansible_default_ipv4.address == zk1_ip
+        - ansible_nodename == "{{ name_prefix }}-zk1-{{ name_suffix }}"
 
     - name: generate password if not generated
       shell: |
@@ -300,7 +312,7 @@
       become_user: nifi
       ignore_errors: True
       when:
-        - ansible_default_ipv4.address == zk1_ip
+        - ansible_nodename == "{{ name_prefix }}-zk1-{{ name_suffix }}"
         - password_generated.stat.exists == false
 
     - name: upload password to s3
@@ -314,7 +326,7 @@
         encryption_kms_key_id: "{{ kms_key_id }}"
       become_user: nifi
       when:
-        - ansible_default_ipv4.address == zk1_ip
+        - ansible_nodename == "{{ name_prefix }}-zk1-{{ name_suffix }}"
 
     - name: get generated password from s3
       aws_s3:
@@ -348,24 +360,38 @@
       lineinfile:
         path: /opt/nifi/conf/state-management.xml
         regexp: '        <property name="Connect String">.*</property>'
-        line: '        <property name="Connect String">{{ zk1_ip }}:2173,{{ zk2_ip }}:2173,{{ zk3_ip }}:2173</property>'
+        line: '        <property name="Connect String">{{ name_prefix }}-zk1-{{ name_suffix }}.{{ name_prefix }}{{ name_suffix }}.internal:2173,{{ name_prefix }}-zk2-{{ name_suffix }}.{{ name_prefix }}{{ name_suffix }}.internal:2173,{{ name_prefix }}-zk3-{{ name_suffix }}.{{ name_prefix }}{{ name_suffix }}.internal:2173</property>'
 
     - name: check ca exists
       stat:
         path: /opt/nifi-certificates/nifi-cert.pem
       register: ca_cert
 
+    - name: get pre-existing ca from s3
+      aws_s3:
+        mode: get
+        bucket: "{{ s3_bucket }}"
+        object: "/nifi/certificates/{{ item }}"
+        dest: "/opt/nifi-certificates/{{ item }}"
+      become_user: nifi
+      ignore_errors: True
+      with_items:
+        - nifi-cert.pem
+        - nifi-key.key
+      when:
+        - ansible_nodename == "{{ name_prefix }}-zk1-{{ name_suffix }}"
+
     - name: generate ca when not exists
       shell: |
         export JAVA_HOME=/usr/lib/jvm/default-java
-        /opt/nifi-toolkit/bin/tls-toolkit.sh standalone -c tf-nifi-1 -d 3650 -k 2048 -s SHA256WITHRSA -T jks --subjectAlternativeNames {{ name_prefix }}-zk-1-{{ name_suffix }}
+        /opt/nifi-toolkit/bin/tls-toolkit.sh standalone -c tf-nifi-1 -d 3650 -k 2048 -s SHA256WITHRSA -T jks --subjectAlternativeNames {{ name_prefix }}-zk1-{{ name_suffix }}.{{ name_prefix }}{{ name_suffix }}.internal
       args:
         chdir: /opt/nifi-certificates/
         executable: /bin/bash
       become_user: nifi
       when:
         - ca_cert.stat.exists == false
-        - ansible_default_ipv4.address == zk1_ip
+        - ansible_nodename == "{{ name_prefix }}-zk1-{{ name_suffix }}"
 
     - name: upload ca to s3
       aws_s3:
@@ -380,7 +406,7 @@
         - nifi-cert.pem
         - nifi-key.key
       when:
-        - ansible_default_ipv4.address == zk1_ip
+        - ansible_nodename == "{{ name_prefix }}-zk1-{{ name_suffix }}"
 
     - name: get ca from s3
       aws_s3:
@@ -399,6 +425,19 @@
       when: 
         - ca_cert.stat.exists == false
 
+    - name: get pre-existing admin from s3
+      aws_s3:
+        mode: get
+        bucket: "{{ s3_bucket }}"
+        object: "/nifi/certificates/admin/{{ item }}"
+        dest: "/opt/nifi-certificates/admin/{{ item }}"
+      become_user: nifi
+      ignore_errors: True
+      with_items:
+        - keystore.pkcs12
+      when:
+        - ansible_nodename == "{{ name_prefix }}-zk1-{{ name_suffix }}"
+
     - name: check admin exists
       stat:
         path: /opt/nifi-certificates/admin/keystore.pkcs12
@@ -407,14 +446,14 @@
     - name: generate admin when not exists
       shell: |
         export JAVA_HOME=/usr/lib/jvm/default-java
-        /opt/nifi-toolkit/bin/tls-toolkit.sh standalone -a RSA -c {{ name_prefix }}-zk-1-{{ name_suffix }} -n admin -d 3650 -k 2048 -s SHA256WITHRSA -T pkcs12 --subjectAlternativeNames admin -P {{ generated_password.stdout }} -S {{ generated_password.stdout }}
+        /opt/nifi-toolkit/bin/tls-toolkit.sh standalone -a RSA -c {{ name_prefix }}-zk1-{{ name_suffix }}.{{ name_prefix }}{{ name_suffix }}.internal -n admin -d 3650 -k 2048 -s SHA256WITHRSA -T pkcs12 --subjectAlternativeNames admin -P {{ generated_password.stdout }} -S {{ generated_password.stdout }}
       args:
         chdir: /opt/nifi-certificates/
         executable: /bin/bash
       become_user: nifi
       when:
         - admin_cert.stat.exists == false
-        - ansible_default_ipv4.address == zk1_ip
+        - ansible_nodename == "{{ name_prefix }}-zk1-{{ name_suffix }}"
 
     - name: upload admin to s3
       aws_s3:
@@ -429,7 +468,7 @@
         - keystore.pkcs12
         - truststore.jks
       when:
-        - ansible_default_ipv4.address == zk1_ip
+        - ansible_nodename == "{{ name_prefix }}-zk1-{{ name_suffix }}"
 
     - name: ensure admin dir for s3 objects
       file:
@@ -466,13 +505,13 @@
 
     - name: check node keystore exists
       stat:
-        path: /opt/nifi-certificates/{{ ansible_nodename }}/keystore.jks
+        path: /opt/nifi-certificates/{{ ansible_nodename }}.{{ name_prefix }}{{ name_suffix }}.internal/keystore.jks
       register: node_cert
 
     - name: generate node keystore when not exists
       shell: |
         export JAVA_HOME=/usr/lib/jvm/default-java
-        /opt/nifi-toolkit/bin/tls-toolkit.sh standalone -n {{ ansible_nodename }} -d 3650 -k 2048 -s SHA256WITHRSA -T jks --subjectAlternativeNames {{ ansible_nodename }} -P {{ generated_password.stdout }} -S {{ generated_password.stdout }}
+        /opt/nifi-toolkit/bin/tls-toolkit.sh standalone -n {{ ansible_nodename }}.{{ name_prefix }}{{ name_suffix }}.internal -d 3650 -k 2048 -s SHA256WITHRSA -T jks --subjectAlternativeNames {{ ansible_nodename }},{{ ansible_nodename }}.{{ name_prefix }}{{ name_suffix }}.internal,{{ lb_dns }} -P {{ generated_password.stdout }} -S {{ generated_password.stdout }}
       args:
         chdir: /opt/nifi-certificates/
         executable: /bin/bash
@@ -517,7 +556,7 @@
         name: nifi
         daemon_reload: yes
       when:
-        - ansible_default_ipv4.address == zk1_ip
+        - ansible_nodename == "{{ name_prefix }}-zk1-{{ name_suffix }}"
 
     - name: wait for users.xml, authorizations.xml
       wait_for:
@@ -528,9 +567,9 @@
         - users.xml
         - authorizations.xml
       when:
-        - ansible_default_ipv4.address == zk1_ip
+        - ansible_nodename == "{{ name_prefix }}-zk1-{{ name_suffix }}"
 
-    - name: put users.xml, authorizations.xml
+    - name: put users.xml, authorizations.xml on s3
       aws_s3:
         mode: put
         bucket: "{{ s3_bucket }}"
@@ -543,7 +582,7 @@
         - users.xml
         - authorizations.xml
       when:
-        - ansible_default_ipv4.address == zk1_ip
+        - ansible_nodename == "{{ name_prefix }}-zk1-{{ name_suffix }}"
 
     - name: get nifi conf files from s3
       aws_s3:
@@ -555,20 +594,18 @@
         - users.xml
         - authorizations.xml
       become_user: nifi
-      retries: 120
-      delay: 10
+      retries: 900
+      delay: 2
       register: nifi_conf_from_s3
       until: nifi_conf_from_s3 is not failed
 
-    - name: nifi-join play
+    - name: copy scale-down script executed by autoscaling ssm doc
       copy:
-        src: "{{ item }}"
-        dest: "/opt/nifi-cluster/{{ item }}"
+        src: scale-down
+        dest: /usr/local/bin/scale-down
         owner: nifi
         group: nifi
-        mode: 0640
-      with_items:
-        - nifi-join.yml
+        mode: 0550
 
     - name: timers and service units
       copy:
@@ -578,24 +615,12 @@
         group: root
         mode: 0640
       with_items:
-        - nifi-join.service
-        - nifi-join.timer
         - nifi.service
         - nifi.timer
 
     - name: nifi systemd
       systemd:
         name: "nifi.{{ item }}"
-        daemon_reload: yes
-        state: started
-        enabled: yes
-      with_items:
-        - service
-        - timer
-
-    - name: nifi-join systemd
-      systemd:
-        name: "nifi-join.{{ item }}"
         daemon_reload: yes
         state: started
         enabled: yes

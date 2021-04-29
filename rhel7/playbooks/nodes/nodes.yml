@@ -358,8 +358,8 @@
       copy:
         src: "{{ item }}"
         dest: "/etc/systemd/system/{{ item }}"
-        owner: nifi
-        group: nifi
+        owner: root
+        group: root
         mode: 0640
       with_items:
         - nifi.service

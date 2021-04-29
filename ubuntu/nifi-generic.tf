@@ -34,24 +34,14 @@ variable "prinet3_cidr" {
   type                     = string
 }
 
-variable "zk1_ip" {
-  type                     = string
-  description              = "An ip from prinet1_cidr for the first nifi node, which runs zookeeper"
+variable "mgmt_cidrs" {
+  type                     = list
+  description              = "Management CIDRs allowed to reach web_port"
 }
 
-variable "zk2_ip" {
-  type                     = string
-  description              = "An ip from prinet2_cidr for the second nifi node, which runs zookeeper"
-}
-
-variable "zk3_ip" {
-  type                     = string
-  description              = "An ip from prinet3_cidr for the third nifi node, which runs zookeeper"
-}
-
-variable "mgmt_cidr" {
-  type                     = string
-  description              = "Subnet CIDR allowed to access NiFi instance(s) via ELB, e.g. 172.16.10.0/30"
+variable "client_cidrs" {
+  type                     = list
+  description              = "Client CIDRs allowed to reach service_port(s)"
 }
 
 variable "instance_type" {
@@ -145,4 +135,24 @@ variable "nifi_url" {
 
 variable "toolkit_url" {
   type                   = string
+}
+
+variable "tcp_service_ports" {
+  type                   = list
+  default                = []
+}
+
+variable "udp_service_ports" {
+  type                   = list
+  default                = []
+}
+
+variable "tcpudp_service_ports" {
+  type                   = list
+  default                = []
+}
+
+variable "web_port" {
+  type                   = number
+  default                = 2170
 }

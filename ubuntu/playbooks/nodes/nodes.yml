@@ -7,17 +7,13 @@
 
     - name: set zookeeper connection string
       set_fact:
-        zookeeper_nodes: "{{ name_prefix }}-zk-1-{{ name_suffix }}:2173,{{ name_prefix }}-zk-2-{{ name_suffix }}:2173,{{ name_prefix }}-zk-3-{{ name_suffix }}:2173"
+        zookeeper_nodes: "{{ name_prefix }}-zk1-{{ name_suffix }}.{{ name_prefix }}{{ name_suffix }}.internal:2173,{{ name_prefix }}-zk2-{{ name_suffix }}.{{ name_prefix }}{{ name_suffix }}.internal:2173,{{ name_prefix }}-zk3-{{ name_suffix }}.{{ name_prefix }}{{ name_suffix }}.internal:2173"
 
-    - name: set zookeeper ips in /etc/hosts
+    - name: set host in hosts
       lineinfile:
-        line: "{{ item }}"
         path: /etc/hosts
-      with_items:
-        - "# zookeepers"
-        - "{{ zk1_ip }} {{ name_prefix }}-zk-1-{{ name_suffix }}"
-        - "{{ zk2_ip }} {{ name_prefix }}-zk-2-{{ name_suffix }}"
-        - "{{ zk3_ip }} {{ name_prefix }}-zk-3-{{ name_suffix }}"
+        line: "{{ ansible_default_ipv4.address }} {{ ansible_nodename }} {{ ansible_nodename }}.{{ name_prefix }}{{ name_suffix }}.internal"
+        state: present
 
     - name: nifi required packages
       package:
@@ -28,6 +24,7 @@
         - default-jre
         - jq
         - python3-pip
+        - unzip
       retries: 60
       delay: 3
       register: install_packages
@@ -43,6 +40,23 @@
         - boto
         - boto3
         - botocore
+
+    - name: set route53 record
+      route53:
+        state: present
+        overwrite: yes
+        private_zone: yes
+        zone: "{{ name_prefix }}{{ name_suffix }}.internal"
+        record: "{{ ansible_nodename }}.{{ name_prefix }}{{ name_suffix }}.internal"
+        type: A
+        ttl: 600
+        value:
+          - "{{ ansible_default_ipv4.address }}"
+        wait: yes
+      retries: 30
+      delay: 2
+      register: route53_record
+      until: route53_record is not failed
 
     - name: nifi user
       user:
@@ -231,7 +245,7 @@
       lineinfile:
         path: /opt/nifi/conf/state-management.xml
         regexp: '        <property name="Connect String">.*</property>'
-        line: '        <property name="Connect String">{{ zk1_ip }}:2173,{{ zk2_ip }}:2173,{{ zk3_ip }}:2173</property>'
+        line: '        <property name="Connect String">{{ name_prefix }}-zk1-{{ name_suffix }}.{{ name_prefix }}{{ name_suffix }}.internal:2173,{{ name_prefix }}-zk2-{{ name_suffix }}.{{ name_prefix }}{{ name_suffix }}.internal:2173,{{ name_prefix }}-zk3-{{ name_suffix }}.{{ name_prefix }}{{ name_suffix }}.internal:2173</property>'
 
     - name: check ca exists
       stat:
@@ -249,7 +263,7 @@
         - nifi-key.key
       become_user: nifi
       when: ca_cert.stat.exists == false
-      retries: 900 
+      retries: 900
       delay: 2
       register: ca_from_s3
       until: ca_from_s3 is not failed
@@ -293,13 +307,13 @@
 
     - name: check node keystore exists
       stat:
-        path: /opt/nifi-certificates/{{ ansible_nodename }}/keystore.jks
+        path: /opt/nifi-certificates/{{ ansible_nodename }}.{{ name_prefix }}{{ name_suffix }}.internal/keystore.jks
       register: node_cert
 
     - name: generate node keystore when not exists
       shell: |
         export JAVA_HOME=/usr/lib/jvm/default-java
-        /opt/nifi-toolkit/bin/tls-toolkit.sh standalone -n {{ ansible_nodename }} -d 3650 -k 2048 -s SHA256WITHRSA -T jks --subjectAlternativeNames {{ ansible_nodename }} -P {{ generated_password.stdout }} -S {{ generated_password.stdout }}
+        /opt/nifi-toolkit/bin/tls-toolkit.sh standalone -n {{ ansible_nodename }}.{{ name_prefix }}{{ name_suffix }}.internal -d 3650 -k 2048 -s SHA256WITHRSA -T jks --subjectAlternativeNames {{ ansible_nodename }},{{ ansible_nodename }}.{{ name_prefix }}{{ name_suffix }}.internal -P {{ generated_password.stdout }} -S {{ generated_password.stdout }}
       args:
         chdir: /opt/nifi-certificates/
         executable: /bin/bash
@@ -325,8 +339,8 @@
       copy:
         src: "{{ item }}"
         dest: "/etc/systemd/system/{{ item }}"
-        owner: nifi
-        group: nifi
+        owner: root
+        group: root
         mode: 0640
       with_items:
         - nifi.service

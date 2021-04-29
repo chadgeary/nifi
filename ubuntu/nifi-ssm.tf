@@ -63,7 +63,7 @@ resource "aws_ssm_document" "tf-nifi-ssm-playbook-doc" {
         "#!/bin/bash",
         "# Ensure ansible and unzip are installed",
         "sudo apt-get update",
-        "sudo DEBIAN_FRONTEND=noninteractive apt-get -y install python3-pip git unzip",
+        "sudo DEBIAN_FRONTEND=noninteractive apt-get -y install python3-pip unzip",
         "sudo pip3 install ansible",
         "echo \"Running Ansible in `pwd`\"",
         "for zip in $(find -iname '*.zip'); do",
@@ -89,14 +89,14 @@ resource "aws_ssm_association" "tf-nifi-zookeepers-ssm-assoc" {
   name                    = aws_ssm_document.tf-nifi-ssm-playbook-doc.name
   targets {
     key                   = "tag:NiFi"
-    values                = ["zookeeper"]
+    values                = ["${var.name_prefix}-zookeeper-${random_string.tf-nifi-random.result}"]
   }
   output_location {
     s3_bucket_name          = aws_s3_bucket.tf-nifi-bucket.id
     s3_key_prefix           = "ssm"
   }
   parameters              = {
-    ExtraVariables          = "SSM=True zk_version=${var.zk_version} nifi_version=${var.nifi_version} zk1_ip=${var.zk1_ip} zk2_ip=${var.zk2_ip} zk3_ip=${var.zk3_ip} elb_dns=${aws_elb.tf-nifi-elb.dns_name} s3_bucket=${aws_s3_bucket.tf-nifi-bucket.id} kms_key_id=${aws_kms_key.tf-nifi-kmscmk-s3.key_id} name_prefix=${var.name_prefix} name_suffix=${random_string.tf-nifi-random.result}"
+    ExtraVariables          = "SSM=True zk_version=${var.zk_version} nifi_version=${var.nifi_version} lb_dns=${aws_lb.tf-nifi-mgmt-nlb.dns_name} s3_bucket=${aws_s3_bucket.tf-nifi-bucket.id} kms_key_id=${aws_kms_key.tf-nifi-kmscmk-s3.key_id} name_prefix=${var.name_prefix} name_suffix=${random_string.tf-nifi-random.result} web_port=${var.web_port}"
     PlaybookFile            = "zookeepers.yml"
     SourceInfo              = "{\"path\":\"https://s3.${var.aws_region}.amazonaws.com/${aws_s3_bucket.tf-nifi-bucket.id}/nifi/zookeepers/\"}"
     SourceType              = "S3"
@@ -111,14 +111,14 @@ resource "aws_ssm_association" "tf-nifi-nodes-ssm-assoc" {
   name                    = aws_ssm_document.tf-nifi-ssm-playbook-doc.name
   targets {
     key                   = "tag:NiFi"
-    values                = ["node"]
+    values                = ["${var.name_prefix}-node-${random_string.tf-nifi-random.result}"]
   }
   output_location {
     s3_bucket_name          = aws_s3_bucket.tf-nifi-bucket.id
     s3_key_prefix           = "ssm"
   }
   parameters              = {
-    ExtraVariables          = "SSM=True nifi_version=${var.nifi_version} zk1_ip=${var.zk1_ip} zk2_ip=${var.zk2_ip} zk3_ip=${var.zk3_ip} elb_dns=${aws_elb.tf-nifi-elb.dns_name} s3_bucket=${aws_s3_bucket.tf-nifi-bucket.id} kms_key_id=${aws_kms_key.tf-nifi-kmscmk-s3.key_id} name_prefix=${var.name_prefix} name_suffix=${random_string.tf-nifi-random.result}"
+    ExtraVariables          = "SSM=True nifi_version=${var.nifi_version} lb_dns=${aws_lb.tf-nifi-mgmt-nlb.dns_name} s3_bucket=${aws_s3_bucket.tf-nifi-bucket.id} kms_key_id=${aws_kms_key.tf-nifi-kmscmk-s3.key_id} name_prefix=${var.name_prefix} name_suffix=${random_string.tf-nifi-random.result} web_port=${var.web_port}"
     PlaybookFile            = "nodes.yml"
     SourceInfo              = "{\"path\":\"https://s3.${var.aws_region}.amazonaws.com/${aws_s3_bucket.tf-nifi-bucket.id}/nifi/nodes/\"}"
     SourceType              = "S3"
