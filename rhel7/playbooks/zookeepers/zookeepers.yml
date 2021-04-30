@@ -452,13 +452,13 @@
       become_user: nifi
       ignore_errors: True
       with_items:
-        - keystore.pkcs12
+        - keystore.p12
       when:
         - ansible_nodename == "{{ name_prefix }}-zk1-{{ name_suffix }}"
 
     - name: check admin exists
       stat:
-        path: /opt/nifi-certificates/admin/keystore.pkcs12
+        path: /opt/nifi-certificates/admin/keystore.p12
       register: admin_cert
 
     - name: generate admin when not exists
@@ -473,6 +473,13 @@
         - admin_cert.stat.exists == false
         - ansible_nodename == "{{ name_prefix }}-zk1-{{ name_suffix }}"
 
+    - name: rename pkcs12 to p12
+      shell: |
+        mv /opt/nifi-certificates/admin/keystore.pkcs12 /opt/nifi-certificates/admin/keystore.p12
+      when:
+        - admin_cert.stat.exists == false
+        - ansible_nodename == "{{ name_prefix }}-zk1-{{ name_suffix }}"
+
     - name: upload admin to s3
       aws_s3:
         mode: put
@@ -483,7 +490,7 @@
         encryption_mode: "aws:kms"
         encryption_kms_key_id: "{{ kms_key_id }}"
       with_items:
-        - keystore.pkcs12
+        - keystore.p12
         - truststore.jks
       when:
         - ansible_nodename == "{{ name_prefix }}-zk1-{{ name_suffix }}"
@@ -503,7 +510,7 @@
         object: "nifi/certificates/admin/{{ item }}"
         dest: "/opt/nifi-certificates/admin/{{ item }}"
       with_items:
-        - keystore.pkcs12
+        - keystore.p12
         - truststore.jks
       retries: 900
       delay: 2
