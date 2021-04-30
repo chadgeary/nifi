@@ -41,11 +41,6 @@ resource "aws_autoscaling_group" "tf-nifi-zk1-autoscalegroup" {
         key                     = "Name"
         value                   = "${var.name_prefix}-zk1-${random_string.tf-nifi-random.result}"
         propagate_at_launch     = true
-      },
-      {
-        key                     = "NiFi"
-        value                   = "${var.name_prefix}-zookeeper-${random_string.tf-nifi-random.result}"
-        propagate_at_launch     = true
       }
     ]
   )
@@ -95,11 +90,6 @@ resource "aws_autoscaling_group" "tf-nifi-zk2-autoscalegroup" {
         key                     = "Name"
         value                   = "${var.name_prefix}-zk2-${random_string.tf-nifi-random.result}"
         propagate_at_launch     = true
-      },
-      {
-        key                     = "NiFi"
-        value                   = "${var.name_prefix}-zookeeper-${random_string.tf-nifi-random.result}"
-        propagate_at_launch     = true
       }
     ]
   )
@@ -148,11 +138,6 @@ resource "aws_autoscaling_group" "tf-nifi-zk3-autoscalegroup" {
       {
         key                     = "Name"
         value                   = "${var.name_prefix}-zk3-${random_string.tf-nifi-random.result}"
-        propagate_at_launch     = true
-      },
-      {
-        key                     = "NiFi"
-        value                   = "${var.name_prefix}-zookeeper-${random_string.tf-nifi-random.result}"
         propagate_at_launch     = true
       }
     ]
