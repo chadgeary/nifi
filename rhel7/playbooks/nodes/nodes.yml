@@ -374,3 +374,14 @@
       with_items:
         - service
         - timer
+
+    - name: wait for web port
+      wait_for:
+        host: "{{ ansible_default_ipv4.address }}"
+        port: "{{ web_port }}"
+        timeout: 600
+
+    - name: run scale-up script
+      shell: |
+        /usr/local/bin/scale-up
+      become_user: nifi

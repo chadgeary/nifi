@@ -13,7 +13,7 @@ S3BUCKET=$(cat /opt/nifi-conf/bucket)
 /opt/nifi-toolkit/bin/cli.sh nifi get-nodes -p /opt/nifi-certificates/admin/cli.properties -ot json > $CLUSTERJSON
 
 # NODEID from HOSTNAME using jq
-NODEID=$(jq -r '.cluster[] | map(select(.address | contains("'$(hostname)'")).nodeId) | @tsv' $CLUSTERJSON)
+NODEID=$(jq -r '.cluster.nodes | map(select(.address | contains("'$(hostname)'")).nodeId) | @tsv' $CLUSTERJSON)
 rm -f $CLUSTERJSON
 echo "$(date) NODEID $NODEID"
 
@@ -161,7 +161,7 @@ sleep $SLEEP_INTERVAL
 # COMPLETE LIFECYCLE ACTION
 LCYCLE_ATTEMPTS=1
 LCYCLE_STATE="INCOMPLETE"
-while [[ $LCYCLE_ACCEMPTS -le $MAX_ATTEMPTS && $LCYCLE_STATE != $TARGET_STATE ]]
+while [[ $LCYCLE_ATTEMPTS -le $MAX_ATTEMPTS && $LCYCLE_STATE != $TARGET_STATE ]]
 do
   /usr/local/bin/aws autoscaling complete-lifecycle-action --lifecycle-hook-name $LIFECYCLEHOOKNAME --auto-scaling-group-name $ASGNAME --lifecycle-action-result $HOOKRESULT --instance-id $INSTANCEID --region $REGION
   if [ $? -eq 0 ]

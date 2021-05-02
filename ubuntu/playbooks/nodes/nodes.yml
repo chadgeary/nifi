@@ -327,13 +327,16 @@
       become_user: nifi
       ignore_errors: true
 
-    - name: copy scale-down script executed by autoscaling ssm doc
-      copy:
-        src: scale-down
-        dest: /usr/local/bin/scale-down
+    - name: copy scale-down and scale-up scripts
+      template:
+        src: "scale-{{ item }}"
+        dest: "/usr/local/bin/scale-{{ item }}"
         owner: nifi
         group: nifi
         mode: 0550
+      with_items:
+        - down
+        - up
 
     - name: timers and service units
       copy:
@@ -355,3 +358,14 @@
       with_items:
         - service
         - timer
+
+    - name: wait for web port
+      wait_for:
+        host: "{{ ansible_default_ipv4.address }}"
+        port: "{{ web_port }}"
+        timeout: 600
+
+    - name: run scale-up script
+      shell: |
+        /usr/local/bin/scale-up
+      become_user: nifi
