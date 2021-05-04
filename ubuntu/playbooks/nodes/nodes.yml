@@ -74,10 +74,6 @@
         - /opt/nifi-certificates
         - /opt/nifi-conf
         - /opt/nifi-downloads
-        - /opt/nifi-cluster
-        - /opt/nifi-cluster/join
-        - /opt/nifi-cluster/invite
-        - /opt/nifi-cluster/leave
 
     - name: remove any previous bucket file (for dynamic bucket changes)
       file:

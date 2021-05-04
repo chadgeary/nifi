@@ -93,10 +93,6 @@
         - /opt/nifi-certificates
         - /opt/nifi-conf
         - /opt/nifi-downloads
-        - /opt/nifi-cluster
-        - /opt/nifi-cluster/join
-        - /opt/nifi-cluster/invite
-        - /opt/nifi-cluster/leave
 
     - name: remove any previous bucket file (for dynamic bucket changes)
       file:
@@ -346,13 +342,16 @@
       become_user: nifi
       ignore_errors: true
 
-    - name: copy scale-down script executed by autoscaling ssm doc
-      copy:
-        src: scale-down
-        dest: /usr/local/bin/scale-down
+    - name: copy scale-down and scale-up scripts
+      template:
+        src: "scale-{{ item }}"
+        dest: "/usr/local/bin/scale-{{ item }}"
         owner: nifi
         group: nifi
         mode: 0550
+      with_items:
+        - down
+        - up
 
     - name: timers and service units
       copy:
