@@ -4,7 +4,6 @@ export JAVA_HOME=/etc/alternatives/jre
 
 # various vars - the curl to 169.254.169.254 are AWS instance-specific API facts
 CLUSTERJSON=$(mktemp)
-S3BUCKET=$(cat /opt/nifi-conf/bucket)
 
 # Retries
 MAX_ATTEMPTS=3
@@ -57,9 +56,9 @@ while [[ $POLICYUP_ATTEMPTS -le $MAX_ATTEMPTS && $POLICYUP_STATE != $TARGET_STAT
 do
   POLICYID=$(curl --silent 'https://{{ lb_dns }}:{{ web_port }}/nifi-api/policies/write/proxy' --insecure --key /opt/nifi-certificates/admin/private_key.pem --cert /opt/nifi-certificates/admin/admin_cert.pem | jq -r '.component.id')
   # Use current policy to build new policy with NODEID
-  curl --silent 'https://{{ lb_dns }}:{{ web_port }}/nifi-api/policies/write/proxy' --insecure --key /opt/nifi-certificates/admin/private_key.pem --cert /opt/nifi-certificates/admin/admin_cert.pem | \
+  curl --fail --silent 'https://{{ lb_dns }}:{{ web_port }}/nifi-api/policies/write/proxy' --insecure --key /opt/nifi-certificates/admin/private_key.pem --cert /opt/nifi-certificates/admin/admin_cert.pem | \
 jq '.component.users += [{"revision": { "version": 0 }, "id": "'$NODEID'","permissions": {"canRead": true,"canWrite": true},"component": {"id": "'$NODEID'", "identity": "CN='$(hostname -f)', OU=NIFI","configurable": true} }]' | \
-curl -X PUT 'https://{{ lb_dns }}:{{ web_port }}/nifi-api/policies/'$POLICYID'' --insecure --key /opt/nifi-certificates/admin/private_key.pem --cert /opt/nifi-certificates/admin/admin_cert.pem -H 'Content-Type: application/json' --data @-
+curl --fail -X PUT 'https://{{ lb_dns }}:{{ web_port }}/nifi-api/policies/'$POLICYID'' --insecure --key /opt/nifi-certificates/admin/private_key.pem --cert /opt/nifi-certificates/admin/admin_cert.pem -H 'Content-Type: application/json' --data @-
   if [ $? -eq 0 ]
   then
     POLICYUP_STATE="COMPLETE"

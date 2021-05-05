@@ -12,7 +12,7 @@
     - name: set host in hosts
       lineinfile:
         path: /etc/hosts
-        line: "{{ ansible_default_ipv4.address }} {{ ansible_nodename }} {{ ansible_nodename }}.{{ name_prefix }}{{ name_suffix }}.internal"
+        line: "{{ ansible_default_ipv4.address }} {{ ansible_nodename }}"
         state: present
 
     - name: nifi required packages
@@ -47,7 +47,7 @@
         overwrite: yes
         private_zone: yes
         zone: "{{ name_prefix }}{{ name_suffix }}.internal"
-        record: "{{ ansible_nodename }}.{{ name_prefix }}{{ name_suffix }}.internal"
+        record: "{{ ansible_nodename }}"
         type: A
         ttl: 600
         value:
@@ -221,7 +221,7 @@
       retries: 900
       delay: 2
       register: pw_from_s3
-      until: pw_from_s3
+      until: pw_from_s3 is not failed
 
     - name: set generated_password var
       shell: |
@@ -303,13 +303,13 @@
 
     - name: check node keystore exists
       stat:
-        path: /opt/nifi-certificates/{{ ansible_nodename }}.{{ name_prefix }}{{ name_suffix }}.internal/keystore.jks
+        path: /opt/nifi-certificates/{{ ansible_nodename }}/keystore.jks
       register: node_cert
 
     - name: generate node keystore when not exists
       shell: |
         export JAVA_HOME=/usr/lib/jvm/default-java
-        /opt/nifi-toolkit/bin/tls-toolkit.sh standalone -n {{ ansible_nodename }}.{{ name_prefix }}{{ name_suffix }}.internal -d 3650 -k 2048 -s SHA256WITHRSA -T jks --subjectAlternativeNames {{ ansible_nodename }},{{ ansible_nodename }}.{{ name_prefix }}{{ name_suffix }}.internal -P {{ generated_password.stdout }} -S {{ generated_password.stdout }}
+        /opt/nifi-toolkit/bin/tls-toolkit.sh standalone -n {{ ansible_nodename }} -d 3650 -k 2048 -s SHA256WITHRSA -T jks --subjectAlternativeNames {{ ansible_nodename }} -P {{ generated_password.stdout }} -S {{ generated_password.stdout }}
       args:
         chdir: /opt/nifi-certificates/
         executable: /bin/bash

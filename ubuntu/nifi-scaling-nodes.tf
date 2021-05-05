@@ -14,6 +14,11 @@ resource "aws_launch_configuration" "tf-nifi-launchconf" {
   lifecycle {
     create_before_destroy   = true
   }
+  user_data               = <<EOF
+#!/bin/bash
+# set fqdn 
+hostnamectl set-hostname $(hostname).${var.name_prefix}${random_string.tf-nifi-random.result}.internal
+EOF
 }
 
 # autoscaling group
