@@ -42,6 +42,9 @@ name_prefix = "tf-nifi"
 vendor_ami_account_number = "099720109477"
 vendor_ami_name_string = "ubuntu/images/hvm-ssd/ubuntu-focal-20.04-amd64-server-20210415"
 
+# days to retain logs in cloudwatch
+log_retention_days = 30
+
 # nifi/nifi-toolkit and zookeeper versions downloaded from https://archive.apache.org/dist/
 nifi_version = "1.13.2"
 zk_version = "3.7.0"

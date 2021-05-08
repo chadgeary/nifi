@@ -46,6 +46,48 @@
         - boto3
         - botocore
 
+    - name: nifi user
+      user:
+        name: nifi
+        comment: Apache NiFi Service Account
+
+    - name: cloudwatch user
+      user:
+        name: cloudwatch
+        comment: AWS Cloudwatch Agent Service Account
+        groups: adm,nifi
+        append: yes
+
+    - name: cloudwatch agent download
+      get_url:
+        url: https://s3.amazonaws.com/amazoncloudwatch-agent/ubuntu/amd64/latest/amazon-cloudwatch-agent.deb
+        dest: /opt/amazon-cloudwatch-agent.deb
+
+    - name: cloudwatch agent install
+      apt:
+        deb: /opt/amazon-cloudwatch-agent.deb
+        state: present
+
+    - name: cloudwatch conf
+      file:
+        path: /opt/aws/amazon-cloudwatch-agent/etc
+        state: directory
+        mode: 0755
+        owner: cloudwatch
+        group: cloudwatch
+
+    - name: cloudwatch conf file
+      template:
+        src: amazon-cloudwatch-agent.json
+        dest: /opt/aws/amazon-cloudwatch-agent/etc/amazon-cloudwatch-agent.json
+        owner: cloudwatch
+        group: cloudwatch
+        mode: '0440'
+
+    - name: cloudwatch agent load configuration file
+      shell: |
+          /opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent-ctl -a fetch-config -m ec2 -c file:/opt/aws/amazon-cloudwatch-agent/etc/amazon-cloudwatch-agent.json -s
+
     - name: set route53 record
       route53:
         state: present
@@ -62,11 +104,6 @@
       delay: 2
       register: route53_record
       until: route53_record is not failed
-
-    - name: nifi user
-      user:
-        name: nifi
-        comment: Apache NiFi Service Account
 
     - name: nifi management directories
       file:

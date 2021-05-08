@@ -2,6 +2,10 @@ data "aws_iam_policy" "tf-nifi-instance-policy-ssm" {
   arn                     = "arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore"
 }
 
+data "aws_iam_policy" "tf-nifi-instance-policy-cw" {
+  arn                     = "arn:aws:iam::aws:policy/CloudWatchAgentServerPolicy"
+}
+
 resource "aws_iam_policy" "tf-nifi-instance-policy-s3" {
   name                    = "${var.name_prefix}-instance-policy-s3-${random_string.tf-nifi-random.result}"
   path                    = "/"
@@ -132,6 +136,11 @@ EOF
 resource "aws_iam_role_policy_attachment" "tf-nifi-iam-attach-ssm" {
   role                    = aws_iam_role.tf-nifi-instance-iam-role.name
   policy_arn              = data.aws_iam_policy.tf-nifi-instance-policy-ssm.arn
+}
+
+resource "aws_iam_role_policy_attachment" "tf-nifi-iam-attach-cw" {
+  role                    = aws_iam_role.tf-nifi-instance-iam-role.name
+  policy_arn              = data.aws_iam_policy.tf-nifi-instance-policy-cw.arn
 }
 
 resource "aws_iam_role_policy_attachment" "tf-nifi-iam-attach-s3" {
