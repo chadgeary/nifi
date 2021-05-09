@@ -208,7 +208,7 @@
 
     - name: check zookeeper unarchived
       stat:
-        path: /opt/zookeeper-{{ zk_version }}/README.md
+        path: /opt/zookeeper-{{ zk_version }}/LICENSE.txt
       register: zk_unarchived
 
     - name: unarchive zookeeper if not unarchived
@@ -239,7 +239,7 @@
 
     - name: check nifi unarchived
       stat:
-        path: /opt/nifi-{{ nifi_version }}/README
+        path: /opt/nifi-{{ nifi_version }}/LICENSE
       register: nifi_unarchived
 
     - name: unarchive nifi when not unarchived
@@ -270,7 +270,7 @@
 
     - name: check toolkit unarchived
       stat:
-        path: /opt/nifi-toolkit-{{ nifi_version }}/README
+        path: /opt/nifi-toolkit-{{ nifi_version }}/LICENSE
       register: toolkit_unarchived
 
     - name: unarchive toolkit when not unarchived

@@ -49,8 +49,28 @@
       user:
         name: cloudwatch
         comment: AWS Cloudwatch Agent Service Account
-        groups: adm,nifi
+        groups: nifi
         append: yes
+
+    - name: set messages and secure readable in logrotate syslog
+      blockinfile:
+        block: |
+          #     cloudwatch to read logs
+                /bin/setfacl -m g:cloudwatch:rx /var/log/messages
+                /bin/setfacl -m g:cloudwatch:rx /var/log/secure
+        insertbefore: "    endscript"
+        path: /etc/logrotate.d/syslog
+
+    - name: set active messages and secure readable
+      acl:
+        path: "/var/log/{{ item }}"
+        entity: cloudwatch
+        etype: group
+        permissions: rx
+        state: present
+      with_items:
+        - messages
+        - secure
 
     - name: cloudwatch agent install 
       yum:
@@ -183,7 +203,7 @@
 
     - name: check nifi unarchived
       stat:
-        path: /opt/nifi-{{ nifi_version }}/README
+        path: /opt/nifi-{{ nifi_version }}/LICENSE
       register: nifi_unarchived
 
     - name: unarchive nifi when not unarchived
@@ -214,7 +234,7 @@
 
     - name: check toolkit unarchived
       stat:
-        path: /opt/nifi-toolkit-{{ nifi_version }}/README
+        path: /opt/nifi-toolkit-{{ nifi_version }}/LICENSE
       register: toolkit_unarchived
 
     - name: unarchive toolkit when not unarchived
