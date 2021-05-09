@@ -208,7 +208,7 @@
 
     - name: check zookeeper unarchived
       stat:
-        path: /opt/zookeeper-{{ zk_version }}/README
+        path: /opt/zookeeper-{{ zk_version }}/README.md
       register: zk_unarchived
 
     - name: unarchive zookeeper if not unarchived
@@ -606,7 +606,7 @@
       wait_for:
         path: "/opt/nifi/conf/{{ item }}"
         state: present
-        timeout: 480
+        timeout: 900
       with_items:
         - users.xml
         - authorizations.xml

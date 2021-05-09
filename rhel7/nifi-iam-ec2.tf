@@ -39,15 +39,6 @@ resource "aws_iam_policy" "tf-nifi-instance-policy-s3" {
       "Resource": ["${aws_s3_bucket.tf-nifi-bucket.arn}/nifi/*","${aws_s3_bucket.tf-nifi-bucket.arn}/ssm/*"]
     },
     {
-      "Sid": "DelObjectsinClusterPrefix",
-      "Effect": "Allow",
-      "Action": [
-        "s3:DeleteObject",
-        "s3:DeleteObjectVersion"
-      ],
-      "Resource": ["${aws_s3_bucket.tf-nifi-bucket.arn}/nifi/cluster/*"]
-    },
-    {
       "Sid": "S3CMK",
       "Effect": "Allow",
       "Action": [
@@ -57,6 +48,20 @@ resource "aws_iam_policy" "tf-nifi-instance-policy-s3" {
         "kms:DescribeKey"
       ],
       "Resource": ["${aws_kms_key.tf-nifi-kmscmk-s3.arn}"]
+    },
+    {
+      "Effect": "Allow",
+      "Action": [
+        "cloudwatch:PutMetricData",
+        "ec2:DescribeVolumes",
+        "ec2:DescribeTags",
+        "logs:PutLogEvents",
+        "logs:DescribeLogStreams",
+        "logs:DescribeLogGroups",
+        "logs:CreateLogStream",
+        "logs:CreateLogGroup"
+      ],
+      "Resource": "*"
     }
   ]
 }

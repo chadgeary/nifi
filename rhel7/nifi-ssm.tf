@@ -95,7 +95,7 @@ resource "aws_ssm_association" "tf-nifi-zookeepers-ssm-assoc" {
     s3_key_prefix           = "ssm"
   }
   parameters              = {
-    ExtraVariables          = "SSM=True zk_version=${var.zk_version} nifi_version=${var.nifi_version} lb_dns=${aws_lb.tf-nifi-mgmt-nlb.dns_name} s3_bucket=${aws_s3_bucket.tf-nifi-bucket.id} kms_key_id=${aws_kms_key.tf-nifi-kmscmk-s3.key_id} name_prefix=${var.name_prefix} name_suffix=${random_string.tf-nifi-random.result} web_port=${var.web_port}"
+    ExtraVariables          = "SSM=True zk_version=${var.zk_version} nifi_version=${var.nifi_version} lb_dns=${aws_lb.tf-nifi-mgmt-nlb.dns_name} s3_bucket=${aws_s3_bucket.tf-nifi-bucket.id} kms_key_id=${aws_kms_key.tf-nifi-kmscmk-s3.key_id} name_prefix=${var.name_prefix} name_suffix=${random_string.tf-nifi-random.result} web_port=${var.web_port} aws_region=${var.aws_region}"
     PlaybookFile            = "zookeepers.yml"
     SourceInfo              = "{\"path\":\"https://s3.${var.aws_region}.amazonaws.com/${aws_s3_bucket.tf-nifi-bucket.id}/nifi/zookeepers/\"}"
     SourceType              = "S3"
@@ -117,7 +117,7 @@ resource "aws_ssm_association" "tf-nifi-nodes-ssm-assoc" {
     s3_key_prefix           = "ssm"
   }
   parameters              = {
-    ExtraVariables          = "SSM=True nifi_version=${var.nifi_version} lb_dns=${aws_lb.tf-nifi-mgmt-nlb.dns_name} s3_bucket=${aws_s3_bucket.tf-nifi-bucket.id} kms_key_id=${aws_kms_key.tf-nifi-kmscmk-s3.key_id} name_prefix=${var.name_prefix} name_suffix=${random_string.tf-nifi-random.result} web_port=${var.web_port}"
+    ExtraVariables          = "SSM=True nifi_version=${var.nifi_version} lb_dns=${aws_lb.tf-nifi-mgmt-nlb.dns_name} s3_bucket=${aws_s3_bucket.tf-nifi-bucket.id} kms_key_id=${aws_kms_key.tf-nifi-kmscmk-s3.key_id} name_prefix=${var.name_prefix} name_suffix=${random_string.tf-nifi-random.result} web_port=${var.web_port} aws_region=${var.aws_region}"
     PlaybookFile            = "nodes.yml"
     SourceInfo              = "{\"path\":\"https://s3.${var.aws_region}.amazonaws.com/${aws_s3_bucket.tf-nifi-bucket.id}/nifi/nodes/\"}"
     SourceType              = "S3"

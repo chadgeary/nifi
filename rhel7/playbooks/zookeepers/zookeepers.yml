@@ -44,6 +44,43 @@
         - boto3
         - botocore
 
+    - name: nifi user
+      user:
+        name: nifi
+        comment: Apache NiFi Service Account
+
+    - name: cloudwatch user
+      user:
+        name: cloudwatch
+        comment: AWS Cloudwatch Agent Service Account
+        groups: adm,nifi
+        append: yes
+
+    - name: cloudwatch agent install
+      yum:
+        name: 'https://s3.amazonaws.com/amazoncloudwatch-agent/amazon_linux/amd64/latest/amazon-cloudwatch-agent.rpm'
+        state: latest
+
+    - name: cloudwatch conf
+      file:
+        path: /opt/aws/amazon-cloudwatch-agent/etc
+        state: directory
+        mode: 0755
+        owner: cloudwatch
+        group: cloudwatch
+
+    - name: cloudwatch conf file
+      template:
+        src: amazon-cloudwatch-agent.json
+        dest: /opt/aws/amazon-cloudwatch-agent/etc/amazon-cloudwatch-agent.json
+        owner: cloudwatch
+        group: cloudwatch
+        mode: '0440'
+
+    - name: cloudwatch agent load configuration file
+      shell: |
+          /opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent-ctl -a fetch-config -m ec2 -c file:/opt/aws/amazon-cloudwatch-agent/etc/amazon-cloudwatch-agent.json -s
+
     - name: set route53 record
       route53:
         state: present
@@ -73,18 +110,12 @@
       unarchive:
         src: /opt/awscli-exe-linux-x86_64.zip
         dest: /opt/
-        creates: /opt/aws
 
     - name: execute awscli installer
       shell: |
         /opt/aws/install
       args:
         creates: /usr/local/bin/aws
-
-    - name: nifi user
-      user:
-        name: nifi
-        comment: Apache NiFi Service Account
 
     - name: nifi management directories
       file:
@@ -189,7 +220,7 @@
 
     - name: check zookeeper unarchived
       stat:
-        path: /opt/zookeeper-{{ zk_version }}/README
+        path: /opt/zookeeper-{{ zk_version }}/README.md
       register: zk_unarchived
 
     - name: unarchive zookeeper if not unarchived
@@ -587,7 +618,7 @@
       wait_for:
         path: "/opt/nifi/conf/{{ item }}"
         state: present
-        timeout: 600
+        timeout: 900
       with_items:
         - users.xml
         - authorizations.xml
