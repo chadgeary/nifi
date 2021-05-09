@@ -2,10 +2,6 @@ data "aws_iam_policy" "tf-nifi-instance-policy-ssm" {
   arn                     = "arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore"
 }
 
-data "aws_iam_policy" "tf-nifi-instance-policy-cw" {
-  arn                     = "arn:aws:iam::aws:policy/CloudWatchAgentServerPolicy"
-}
-
 resource "aws_iam_policy" "tf-nifi-instance-policy-s3" {
   name                    = "${var.name_prefix}-instance-policy-s3-${random_string.tf-nifi-random.result}"
   path                    = "/"
@@ -43,15 +39,6 @@ resource "aws_iam_policy" "tf-nifi-instance-policy-s3" {
       "Resource": ["${aws_s3_bucket.tf-nifi-bucket.arn}/nifi/*","${aws_s3_bucket.tf-nifi-bucket.arn}/ssm/*"]
     },
     {
-      "Sid": "DelObjectsinClusterPrefix",
-      "Effect": "Allow",
-      "Action": [
-        "s3:DeleteObject",
-        "s3:DeleteObjectVersion"
-      ],
-      "Resource": ["${aws_s3_bucket.tf-nifi-bucket.arn}/nifi/cluster/*"]
-    },
-    {
       "Sid": "S3CMK",
       "Effect": "Allow",
       "Action": [
@@ -61,6 +48,20 @@ resource "aws_iam_policy" "tf-nifi-instance-policy-s3" {
         "kms:DescribeKey"
       ],
       "Resource": ["${aws_kms_key.tf-nifi-kmscmk-s3.arn}"]
+    },
+    {
+      "Effect": "Allow",
+      "Action": [
+        "cloudwatch:PutMetricData",
+        "ec2:DescribeVolumes",
+        "ec2:DescribeTags",
+        "logs:PutLogEvents",
+        "logs:DescribeLogStreams",
+        "logs:DescribeLogGroups",
+        "logs:CreateLogStream",
+        "logs:CreateLogGroup"
+      ],
+      "Resource": "*"
     }
   ]
 }
@@ -136,11 +137,6 @@ EOF
 resource "aws_iam_role_policy_attachment" "tf-nifi-iam-attach-ssm" {
   role                    = aws_iam_role.tf-nifi-instance-iam-role.name
   policy_arn              = data.aws_iam_policy.tf-nifi-instance-policy-ssm.arn
-}
-
-resource "aws_iam_role_policy_attachment" "tf-nifi-iam-attach-cw" {
-  role                    = aws_iam_role.tf-nifi-instance-iam-role.name
-  policy_arn              = data.aws_iam_policy.tf-nifi-instance-policy-cw.arn
 }
 
 resource "aws_iam_role_policy_attachment" "tf-nifi-iam-attach-s3" {

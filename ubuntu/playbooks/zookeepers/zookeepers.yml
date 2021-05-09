@@ -162,7 +162,7 @@
       aws_s3:
         mode: get
         bucket: "{{ s3_bucket }}"
-        object: "/nifi/downloads/{{ item }}"
+        object: "nifi/downloads/{{ item }}"
         dest: "/opt/nifi-downloads/{{ item }}"
       with_items:
         - zookeeper.tar.gz
@@ -178,7 +178,7 @@
       aws_s3:
         mode: get
         bucket: "{{ s3_bucket }}"
-        object: "/nifi/downloads/{{ item }}"
+        object: "nifi/downloads/{{ item }}"
         dest: "/opt/nifi-downloads/{{ item }}"
       with_items:
         - nifi.tar.gz
@@ -194,7 +194,7 @@
       aws_s3:
         mode: get
         bucket: "{{ s3_bucket }}"
-        object: "/nifi/downloads/{{ item }}"
+        object: "nifi/downloads/{{ item }}"
         dest: "/opt/nifi-downloads/{{ item }}"
       with_items:
         - nifi-toolkit.tar.gz
@@ -327,7 +327,7 @@
       aws_s3:
         mode: get
         bucket: "{{ s3_bucket }}"
-        object: "/nifi/conf/{{ item }}"
+        object: "nifi/conf/{{ item }}"
         dest: "/opt/nifi-conf/{{ item }}"
       become_user: nifi
       ignore_errors: True
@@ -356,7 +356,7 @@
       aws_s3:
         mode: put
         bucket: "{{ s3_bucket }}"
-        object: /nifi/conf/generated_password
+        object: "nifi/conf/generated_password"
         src: /opt/nifi-conf/generated_password
         encrypt: yes
         encryption_mode: "aws:kms"
@@ -369,7 +369,7 @@
       aws_s3:
         mode: get
         bucket: "{{ s3_bucket }}"
-        object: "/nifi/conf/{{ item }}"
+        object: "nifi/conf/{{ item }}"
         dest: "/opt/nifi-conf/{{ item }}"
       become_user: nifi
       with_items:
@@ -408,7 +408,7 @@
       aws_s3:
         mode: get
         bucket: "{{ s3_bucket }}"
-        object: "/nifi/certificates/{{ item }}"
+        object: "nifi/certificates/{{ item }}"
         dest: "/opt/nifi-certificates/{{ item }}"
       become_user: nifi
       ignore_errors: True
@@ -466,7 +466,7 @@
       aws_s3:
         mode: get
         bucket: "{{ s3_bucket }}"
-        object: "/nifi/certificates/admin/{{ item }}"
+        object: "nifi/certificates/admin/{{ item }}"
         dest: "/opt/nifi-certificates/admin/{{ item }}"
       become_user: nifi
       ignore_errors: True
@@ -617,7 +617,7 @@
       aws_s3:
         mode: put
         bucket: "{{ s3_bucket }}"
-        object: "/nifi/conf/{{ item }}"
+        object: "nifi/conf/{{ item }}"
         src: "/opt/nifi/conf/{{ item }}"
         encrypt: yes
         encryption_mode: "aws:kms"
@@ -632,7 +632,7 @@
       aws_s3:
         mode: get
         bucket: "{{ s3_bucket }}"
-        object: "/nifi/conf/{{ item }}"
+        object: "nifi/conf/{{ item }}"
         dest: "/opt/nifi/conf/{{ item }}"
       with_items:
         - users.xml

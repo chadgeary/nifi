@@ -38,13 +38,13 @@
                     "*"
                 ],
                 "measurement": [
-                    "cpu_usage_idle",
-                    "cpu_usage_iowait",
-                    "cpu_usage_user",
-                    "cpu_usage_system"
+                    "usage_idle",
+                    "usage_iowait",
+		    "usage_nice",
+                    "usage_user",
+                    "usage_system"
                 ],
-                "totalcpu": false,
-                "metrics_collection_interval": 60
+                "totalcpu": false
             },
             "netstat": {
                 "measurement": [
@@ -52,31 +52,28 @@
                     "tcp_syn_sent",
                     "tcp_close",
                     "udp_socket"
-                ],
-                "metrics_collection_interval": 60
+                ]
             },
             "net": {
                 "measurement": [
                     "bytes_sent",
                     "bytes_recv"
                 ],
-                "metrics_collection_interval": 60
+		"resources": [
+	            "*"
+		]
             },
             "disk": {
                 "measurement": [
                     "free",
                     "total",
                     "used",
-                    "used_percent",
-                    "inodes_free",
-                    "inodes_total",
-                    "inodes_used"
+                    "used_percent"
                 ],
                 "resources": [
                     "/"
                 ],
-                "drop_device": true,
-                "metrics_collection_interval": 60
+                "drop_device": true
             },
             "processes": {
                 "measurement": [
@@ -92,8 +89,7 @@
                     "total",
                     "used",
                     "used_percent"
-                ],
-                "metrics_collection_interval": 60
+                ]
             }
         },
         "append_dimensions": {

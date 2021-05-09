@@ -44,7 +44,7 @@ resource "aws_autoscaling_group" "tf-nifi-zk1-autoscalegroup" {
       }
     ]
   )
-  depends_on              = [aws_iam_role_policy_attachment.tf-nifi-iam-attach-ssm, aws_iam_role_policy_attachment.tf-nifi-iam-attach-s3, aws_iam_policy.tf-nifi-instance-policy-route53]
+  depends_on              = [aws_iam_role_policy_attachment.tf-nifi-iam-attach-ssm, aws_iam_role_policy_attachment.tf-nifi-iam-attach-s3, aws_iam_policy.tf-nifi-instance-policy-route53, aws_cloudwatch_log_group.tf-nifi-cloudwatch-log-group]
 }
 
 # zk2 launchconf and asg
@@ -93,7 +93,7 @@ resource "aws_autoscaling_group" "tf-nifi-zk2-autoscalegroup" {
       }
     ]
   )
-  depends_on              = [aws_iam_role_policy_attachment.tf-nifi-iam-attach-ssm, aws_iam_role_policy_attachment.tf-nifi-iam-attach-s3, aws_iam_policy.tf-nifi-instance-policy-route53]
+  depends_on              = [aws_iam_role_policy_attachment.tf-nifi-iam-attach-ssm, aws_iam_role_policy_attachment.tf-nifi-iam-attach-s3, aws_iam_policy.tf-nifi-instance-policy-route53, aws_cloudwatch_log_group.tf-nifi-cloudwatch-log-group]
 }
 
 # zk3 launchconf and asg
@@ -142,5 +142,5 @@ resource "aws_autoscaling_group" "tf-nifi-zk3-autoscalegroup" {
       }
     ]
   )
-  depends_on              = [aws_iam_role_policy_attachment.tf-nifi-iam-attach-ssm, aws_iam_role_policy_attachment.tf-nifi-iam-attach-s3, aws_iam_policy.tf-nifi-instance-policy-route53]
+  depends_on              = [aws_iam_role_policy_attachment.tf-nifi-iam-attach-ssm, aws_iam_role_policy_attachment.tf-nifi-iam-attach-s3, aws_iam_policy.tf-nifi-instance-policy-route53, aws_cloudwatch_log_group.tf-nifi-cloudwatch-log-group]
 }
