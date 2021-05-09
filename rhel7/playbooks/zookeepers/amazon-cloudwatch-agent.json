@@ -11,14 +11,14 @@
             "files": {
                 "collect_list": [
                 {
-                    "file_path": "/var/log/syslog",
+                    "file_path": "/var/log/messages",
                     "log_group_name": "{{ name_prefix }}_{{ name_suffix }}",
-                    "log_stream_name": "{local_hostname}-{instance_id}_syslog"
+                    "log_stream_name": "{local_hostname}-{instance_id}_messages"
                 },
                 {
-                    "file_path": "/var/log/auth.log",
+                    "file_path": "/var/log/secure",
                     "log_group_name": "{{ name_prefix }}_{{ name_suffix }}",
-                    "log_stream_name": "{local_hostname}-{instance_id}_auth"
+                    "log_stream_name": "{local_hostname}-{instance_id}_secure"
                 },
                 {
                     "file_path": "/opt/nifi/logs/nifi-app.log",
