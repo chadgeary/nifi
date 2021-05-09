@@ -161,3 +161,8 @@ variable "web_port" {
   type                   = number
   default                = 2170
 }
+
+variable "log_retention_days" {
+  type                   = number
+  default                = 30
+}

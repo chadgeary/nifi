@@ -40,6 +40,9 @@ name_prefix = "tf-nifi"
 vendor_ami_account_number = "309956199498"
 vendor_ami_name_string = "RHEL-7.*_HVM_GA-20*-x86_64-0-Hourly2-GP2"
 
+# days to retain logs in cloudwatch
+log_retention_days = 30
+
 # nifi/nifi-toolkit and zookeeper versions downloaded from https://archive.apache.org/dist/
 nifi_version = "1.13.2"
 zk_version = "3.7.0"
