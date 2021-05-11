@@ -19,10 +19,13 @@ https://s3.console.aws.amazon.com/s3/object/${aws_s3_bucket.tf-nifi-bucket.id}?r
 https://s3.console.aws.amazon.com/s3/object/${aws_s3_bucket.tf-nifi-bucket.id}?region=${var.aws_region}&prefix=nifi/conf/generated_password
 
 # NLB WebUI
-https://${aws_lb.tf-nifi-mgmt-nlb.dns_name}:${var.web_port}/nifi
+https://${aws_lb.tf-nifi-zk-nlb.dns_name}:${var.web_port}/nifi
 
 # NLB Service Ports
-${aws_lb.tf-nifi-service-nlb.dns_name}
+${aws_lb.tf-nifi-node-nlb.dns_name}
+
+# Instance IDs in Cluster
+aws ec2 describe-instances --query 'Reservations[].Instances[*].[InstanceId, LaunchTime, [Tags[?Key==`Name`].Value][0][0]]' --filters "Name=tag:Cluster,Values=${var.name_prefix}_${random_string.tf-nifi-random.result}" --region ${var.aws_region} --output text
 
 OUTPUT
 }

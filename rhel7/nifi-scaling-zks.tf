@@ -1,3 +1,42 @@
+locals {
+  zk1-asg-tags            = [
+    {
+      key                   = "Name"
+      value                 = "${var.name_prefix}-zk1-${random_string.tf-nifi-random.result}"
+      propagate_at_launch   = true
+    },
+    {
+      key                   = "Cluster"
+      value                 = "${var.name_prefix}_${random_string.tf-nifi-random.result}"
+      propagate_at_launch   = true
+    }
+  ]
+  zk2-asg-tags            = [
+    {
+      key                   = "Name"
+      value                 = "${var.name_prefix}-zk2-${random_string.tf-nifi-random.result}"
+      propagate_at_launch   = true
+    },
+    {
+      key                   = "Cluster"
+      value                 = "${var.name_prefix}_${random_string.tf-nifi-random.result}"
+      propagate_at_launch   = true
+    }
+  ]
+  zk3-asg-tags            = [
+    {
+      key                   = "Name"
+      value                 = "${var.name_prefix}-zk3-${random_string.tf-nifi-random.result}"
+      propagate_at_launch   = true
+    },
+    {
+      key                   = "Cluster"
+      value                 = "${var.name_prefix}_${random_string.tf-nifi-random.result}"
+      propagate_at_launch   = true
+    }
+  ]
+}
+
 # zk1 launchconf and asg
 resource "aws_launch_configuration" "tf-nifi-zk1-launchconf" {
   name_prefix             = "${var.name_prefix}-zk1lconf-${random_string.tf-nifi-random.result}-"
@@ -39,15 +78,14 @@ resource "aws_autoscaling_group" "tf-nifi-zk1-autoscalegroup" {
   lifecycle {
     create_before_destroy   = true
   }
-  tags =                  concat(
-    [
-      {
-        key                     = "Name"
-        value                   = "${var.name_prefix}-zk1-${random_string.tf-nifi-random.result}"
-        propagate_at_launch     = true
-      }
-    ]
-  )
+  dynamic "tag" {
+    for_each                = local.zk1-asg-tags
+    content {
+      key                     = tag.value.key
+      value                   = tag.value.value
+      propagate_at_launch     = tag.value.propagate_at_launch
+    }
+  }
   depends_on              = [aws_iam_role_policy_attachment.tf-nifi-iam-attach-ssm, aws_iam_role_policy_attachment.tf-nifi-iam-attach-s3, aws_iam_policy.tf-nifi-instance-policy-route53, aws_cloudwatch_log_group.tf-nifi-cloudwatch-log-group]
 }
 
@@ -92,15 +130,14 @@ resource "aws_autoscaling_group" "tf-nifi-zk2-autoscalegroup" {
   lifecycle {
     create_before_destroy   = true
   }
-  tags =                  concat(
-    [
-      {
-        key                     = "Name"
-        value                   = "${var.name_prefix}-zk2-${random_string.tf-nifi-random.result}"
-        propagate_at_launch     = true
-      }
-    ]
-  )
+  dynamic "tag" {
+    for_each                = local.zk2-asg-tags
+    content {
+      key                     = tag.value.key
+      value                   = tag.value.value
+      propagate_at_launch     = tag.value.propagate_at_launch
+    }
+  }
   depends_on              = [aws_iam_role_policy_attachment.tf-nifi-iam-attach-ssm, aws_iam_role_policy_attachment.tf-nifi-iam-attach-s3, aws_iam_policy.tf-nifi-instance-policy-route53, aws_cloudwatch_log_group.tf-nifi-cloudwatch-log-group]
 }
 
@@ -145,14 +182,13 @@ resource "aws_autoscaling_group" "tf-nifi-zk3-autoscalegroup" {
   lifecycle {
     create_before_destroy   = true
   }
-  tags =                  concat(
-    [
-      {
-        key                     = "Name"
-        value                   = "${var.name_prefix}-zk3-${random_string.tf-nifi-random.result}"
-        propagate_at_launch     = true
-      }
-    ]
-  )
+  dynamic "tag" {
+    for_each                = local.zk3-asg-tags
+    content {
+      key                     = tag.value.key
+      value                   = tag.value.value
+      propagate_at_launch     = tag.value.propagate_at_launch
+    }
+  }
   depends_on              = [aws_iam_role_policy_attachment.tf-nifi-iam-attach-ssm, aws_iam_role_policy_attachment.tf-nifi-iam-attach-s3, aws_iam_policy.tf-nifi-instance-policy-route53, aws_cloudwatch_log_group.tf-nifi-cloudwatch-log-group]
 }

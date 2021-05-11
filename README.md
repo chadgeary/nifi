@@ -125,23 +125,27 @@ sudo chown $USER nifi.tfvars && chmod 600 nifi.tfvars
 
 # Note the outputs from terraform after the apply completes
 
-# Wait for the virtual machine to become ready (Ansible will setup the services for us). NiFi can take 30+ minutes to initialize.
+# Wait for the virtual machine to become ready (Ansible will setup the services for us). NiFi can take 15+ minutes to initialize.
 ```
 
 # Variables
 ```
 # instance_key
-# a public SSH key for SSH access to the instance via user `ubuntu`.
+# a public SSH key for SSH access to the instance via user `ec2-user` or `ubuntu`, service port 22 must be exposed.
 # cat ~/.ssh/id_rsa.pub
 
-# mgmt_cidr
-# an IP range granted webUI, EC2 SSH access.
+# mgmt_cidrs
+# IP ranges granted web_port access.
+
+# client_cidrs
+# IP ranges granted service port(s) access.
 
 # kms_manager
 # The AWS username (not root) granted access to read configuration files in S3.
+
+# name_prefix
+# a short alphanumeric* string *(must starting with a letter) applied to various AWS resource names.
 ```
 
 # Post-Deployment
-* Check the [State Manager](https://console.aws.amazon.com/systems-manager/state-manager) for `Status: Complete`
-* Check the [Load Balancer](https://us-east-2.console.aws.amazon.com/ec2/v2/home?LoadBalancers#LoadBalancers:sort=loadBalancerName) for `Status: InService`
-
+Review terraform output for quick links to State Manager (ansible) status, Load Balancer health, Cloudwatch logs, and the admin certificate in S3 which must be added to a browser for web access.

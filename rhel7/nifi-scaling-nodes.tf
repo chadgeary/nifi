@@ -1,3 +1,19 @@
+# tags for the node asg
+locals {
+  node-asg-tags            = [
+    {
+      key                   = "Name"
+      value                 = "${var.name_prefix}-node-${random_string.tf-nifi-random.result}"
+      propagate_at_launch   = true
+    },
+    {
+      key                   = "Cluster"
+      value                 = "${var.name_prefix}_${random_string.tf-nifi-random.result}"
+      propagate_at_launch   = true
+    }
+  ]
+}
+
 # launch conf
 resource "aws_launch_configuration" "tf-nifi-launchconf" {
   name_prefix             = "${var.name_prefix}-lconf-${random_string.tf-nifi-random.result}-"
@@ -36,15 +52,14 @@ resource "aws_autoscaling_group" "tf-nifi-autoscalegroup" {
   lifecycle {
     create_before_destroy   = true
   }
-  tags =                  concat(
-    [
-      {
-        key                     = "Name"
-        value                   = "${var.name_prefix}-node-${random_string.tf-nifi-random.result}"
-        propagate_at_launch     = true
-      }
-    ]
-  )
+  dynamic "tag" {
+    for_each                = local.node-asg-tags
+    content {
+      key                     = tag.value.key
+      value                   = tag.value.value
+      propagate_at_launch     = tag.value.propagate_at_launch
+    }
+  }
   depends_on              = [aws_iam_role_policy_attachment.tf-nifi-iam-attach-ssm, aws_iam_role_policy_attachment.tf-nifi-iam-attach-s3, aws_cloudwatch_log_group.tf-nifi-cloudwatch-log-group]
 }
 

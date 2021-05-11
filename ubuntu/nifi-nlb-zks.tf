@@ -1,17 +1,17 @@
 # mgmt load balancer
-resource "aws_lb" "tf-nifi-mgmt-nlb" {
-  name                    = "${var.name_prefix}-mgmt-nlb-${random_string.tf-nifi-random.result}"
+resource "aws_lb" "tf-nifi-zk-nlb" {
+  name                    = "${var.name_prefix}-zk-nlb-${random_string.tf-nifi-random.result}"
   subnets                 = [aws_subnet.tf-nifi-pubnet1.id, aws_subnet.tf-nifi-pubnet2.id, aws_subnet.tf-nifi-pubnet3.id]
   load_balancer_type      = "network"
   tags                    = {
-    Name                    = "${var.name_prefix}-mgmt-nlb-${random_string.tf-nifi-random.result}"
+    Name                    = "${var.name_prefix}-zk-nlb-${random_string.tf-nifi-random.result}"
   }
 }
 
 resource "aws_lb_listener" "tf-nifi-mgmt-listen-tcp" {
   port                    = var.web_port
   protocol                = "TCP"
-  load_balancer_arn       = aws_lb.tf-nifi-mgmt-nlb.arn
+  load_balancer_arn       = aws_lb.tf-nifi-zk-nlb.arn
   default_action {
     type                    = "forward"
     target_group_arn        = aws_lb_target_group.tf-nifi-mgmt-target-tcp.arn
