@@ -25,7 +25,9 @@ https://${aws_lb.tf-nifi-zk-nlb.dns_name}:${var.web_port}/nifi
 ${aws_lb.tf-nifi-node-nlb.dns_name}
 
 # Instance IDs in Cluster
-aws ec2 describe-instances --query 'Reservations[].Instances[*].[InstanceId, LaunchTime, [Tags[?Key==`Name`].Value][0][0]]' --filters "Name=tag:Cluster,Values=${var.name_prefix}_${random_string.tf-nifi-random.result}" --region ${var.aws_region} --output text
+aws ec2 describe-instances --region ${var.aws_region} --query 'Reservations[].Instances[*].[InstanceId, LaunchTime, [Tags[?Key==`Name`].Value][0][0]]' --filters "Name=tag:Cluster,Values=${var.name_prefix}_${random_string.tf-nifi-random.result}" --output text
 
+# Connecting via SSM
+aws ssm start-session --region ${var.aws_region} --target i-SOME_INSTANCE
 OUTPUT
 }
