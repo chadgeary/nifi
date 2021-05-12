@@ -358,7 +358,10 @@
         export JAVA_HOME=/usr/lib/jvm/default-java
         /opt/nifi-toolkit/bin/cli.sh nifi create-user --userName "CN={{ ansible_nodename }}, OU=NIFI" -p /opt/nifi-certificates/admin/cli.properties
       become_user: nifi
-      ignore_errors: true
+      retries: 900
+      delay: 2
+      register: create_node_user
+      until: (create_node_user is not failed) or ("user group already exists with the identity" in create_node_user.stderr)
 
     - name: copy scale-down and scale-up scripts
       template:
