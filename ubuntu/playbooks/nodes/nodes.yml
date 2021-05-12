@@ -361,7 +361,7 @@
       retries: 900
       delay: 2
       register: create_node_user
-      until: (create_node_user is not failed) or ("user group already exists with the identity" in create_node_user.stderr)
+      until: (create_node_user is not failed) or ("user group already exists with the identity" in create_node_user.stdout)
 
     - name: copy scale-down and scale-up scripts
       template:
