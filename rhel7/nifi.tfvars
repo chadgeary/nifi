@@ -33,8 +33,8 @@ instance_vol_size = 15
 minimum_node_count = 0
 maximum_node_count = 0
 
-# the name prefix for various resources (e.g. "tf-nifi" for "tf-nifi-encrypted-ami", "tf-nifi-zookeeper-1", ...)
-name_prefix = "tf-nifi"
+# the name prefix for various resources (e.g. "nifi" for "nifi-encrypted-ami", "nifi-zk1-", ...)
+name_prefix = "nifi"
 
 # the vendor supplying the AMI and the AMI name - default is official RHEL7
 vendor_ami_account_number = "309956199498"
@@ -43,7 +43,7 @@ vendor_ami_name_string = "RHEL-7.*_HVM_GA-20*-x86_64-0-Hourly2-GP2"
 # days to retain logs in cloudwatch
 log_retention_days = 30
 
-# nifi/nifi-toolkit and zookeeper versions downloaded from https://archive.apache.org/dist/
+# nifi/nifi-toolkit and zookeeper versions downloaded from urls below
 nifi_version = "1.13.2"
 zk_version = "3.7.0"
 

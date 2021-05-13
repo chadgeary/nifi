@@ -31,12 +31,12 @@ instance_type = "r5.large"
 instance_vol_size = 15
 
 # the initial size (min) and max count of non-zookeeper nifi nodes.
-# scale is based on CPU load (see nifi-scaling.tf)
+# scale is based on CPU load (see nifi-scaling-nodes.tf)
 minimum_node_count = 0
 maximum_node_count = 0
 
-# the name prefix for various resources (e.g. "tf-nifi" for "tf-nifi-encrypted-ami", "tf-nifi-zookeeper-1", ...)
-name_prefix = "tf-nifi"
+# the name prefix for various resources (e.g. "nifi" for "nifi-encrypted-ami", "nifi-zk1-", ...)
+name_prefix = "nifi"
 
 # the vendor supplying the AMI and the AMI name - default is official Ubuntu 20.04
 vendor_ami_account_number = "099720109477"
@@ -45,7 +45,7 @@ vendor_ami_name_string = "ubuntu/images/hvm-ssd/ubuntu-focal-20.04-amd64-server-
 # days to retain logs in cloudwatch
 log_retention_days = 30
 
-# nifi/nifi-toolkit and zookeeper versions downloaded from https://archive.apache.org/dist/
+# nifi/nifi-toolkit and zookeeper versions downloaded from urls below
 nifi_version = "1.13.2"
 zk_version = "3.7.0"
 
