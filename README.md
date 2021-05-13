@@ -6,11 +6,11 @@ NiFi secure+autoscaling cluster built automatically in AWS via Terraform+Ansible
 - Follow Step-by-Step (compatible with Windows and Ubuntu)
 
 # Contact
-[https://discord.gg/G6W4UDJEZ3](Discord)
+[Discord](https://discord.gg/G6W4UDJEZ3)
 
 # Video
 Follow along with me as I go through the step-by-step instructions below.
-[https://youtu.be/cH85VAFGrvA](Youtube)
+[Youtube](https://youtu.be/cH85VAFGrvA)
 
 # Step-by-Step Terraform Deployment 
 Windows Users install WSL (Windows Subsystem Linux)
