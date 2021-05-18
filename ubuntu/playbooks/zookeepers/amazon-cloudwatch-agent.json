@@ -1,6 +1,6 @@
 {
     "agent": {
-        "metrics_collection_interval": 60,
+        "metrics_collection_interval": 360,
         "region": "{{ aws_region }}",
         "logfile": "/opt/aws/amazon-cloudwatch-agent/logs/amazon-cloudwatch-agent.log",
         "debug": false,
@@ -80,8 +80,7 @@
                     "running",
                     "sleeping",
                     "dead"
-                ],
-                "metrics_collection_interval": 60
+                ]
             },
             "mem": {
                 "measurement": [
