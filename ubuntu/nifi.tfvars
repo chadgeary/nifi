@@ -30,6 +30,10 @@ instance_type = "r5.large"
 # the root block size of the instances (in GiB)
 instance_vol_size = 15
 
+# enable second or third zookeeper+nifi nodes (1 for yes, 0 for no)
+enable_zk2 = 1
+enable_zk3 = 0
+
 # the initial size (min) and max count of non-zookeeper nifi nodes.
 # scale is based on CPU load (see nifi-scaling-nodes.tf)
 minimum_node_count = 0
@@ -44,6 +48,10 @@ vendor_ami_name_string = "ubuntu/images/hvm-ssd/ubuntu-focal-20.04-amd64-server-
 
 # days to retain logs in cloudwatch
 log_retention_days = 30
+
+# health check frequency
+health_check_unit = "minutes"
+health_check_count = 5
 
 # nifi/nifi-toolkit and zookeeper versions downloaded from urls below
 nifi_version = "1.13.2"

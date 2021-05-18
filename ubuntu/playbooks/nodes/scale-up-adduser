@@ -1,0 +1,40 @@
+#!/bin/bash
+# Adds proxy request permission to node from cluster
+export JAVA_HOME=/usr/lib/jvm/default-java
+
+# Responses
+USERRESPONSE=$(mktemp)
+
+# Retries
+MAX_ATTEMPTS=60
+SLEEP_INTERVAL=5
+TARGET_STATE="COMPLETE"
+
+# Create user (if not exists)
+USER_ATTEMPTS=1
+USER_STATE="INCOMPLETE"
+while [[ $USER_ATTEMPTS -le $MAX_ATTEMPTS && $USER_STATE != $TARGET_STATE ]]
+do
+  # Create the user
+  /opt/nifi-toolkit/bin/cli.sh nifi create-user --userName "CN={{ ansible_nodename }}, OU=NIFI" -p /opt/nifi-certificates/admin/cli.properties > $USERRESPONSE
+  if [ $? -eq 0 ]
+  then
+    echo "USER ADDED"
+    USER_STATE="COMPLETE"
+    exit 0
+  else
+    grep --quiet "user group already exists with the identity" $USERRESPONSE
+    if [ $? -eq 0 ]
+    then
+      echo "USER EXISTS"
+      USER_STATE="COMPLETE"
+      exit 0
+    else
+      USER_ATTEMPTS=$(($USER_ATTEMPTS+1))
+      sleep $SLEEP_INTERVAL
+    fi
+  fi
+done
+
+echo "MAX_ATTEMPTS REACHED, EXITING"
+exit 1

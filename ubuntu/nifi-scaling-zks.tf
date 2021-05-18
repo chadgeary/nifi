@@ -3,7 +3,7 @@ locals {
   zk1-asg-tags            = [
     {
       key                   = "Name"
-      value                 = "${var.name_prefix}-zk1-${random_string.tf-nifi-random.result}"
+      value                 = "zk1.${var.name_prefix}${random_string.tf-nifi-random.result}.internal"
       propagate_at_launch   = true
     },
     {
@@ -15,7 +15,7 @@ locals {
   zk2-asg-tags            = [
     {
       key                   = "Name"
-      value                 = "${var.name_prefix}-zk2-${random_string.tf-nifi-random.result}"
+      value                 = "zk2.${var.name_prefix}${random_string.tf-nifi-random.result}.internal"
       propagate_at_launch   = true
     },
     {
@@ -27,7 +27,7 @@ locals {
   zk3-asg-tags            = [
     {
       key                   = "Name"
-      value                 = "${var.name_prefix}-zk3-${random_string.tf-nifi-random.result}"
+      value                 = "zk3.${var.name_prefix}${random_string.tf-nifi-random.result}.internal"
       propagate_at_launch   = true
     },
     {
@@ -57,7 +57,7 @@ resource "aws_launch_configuration" "tf-nifi-zk1-launchconf" {
   user_data               = <<EOF
 #!/bin/bash
 # set hostname
-hostnamectl set-hostname ${var.name_prefix}-zk1-${random_string.tf-nifi-random.result}
+hostnamectl set-hostname zk1.${var.name_prefix}${random_string.tf-nifi-random.result}.internal
 # set nodeid
 echo 1 > /opt/node_id
 EOF
@@ -72,6 +72,8 @@ resource "aws_autoscaling_group" "tf-nifi-zk1-autoscalegroup" {
   termination_policies    = ["ClosestToNextInstanceHour"]
   min_size                = 1
   max_size                = 1
+  health_check_type       = "EC2"
+  health_check_grace_period = 1800
   lifecycle {
     create_before_destroy   = true
   }
@@ -83,7 +85,7 @@ resource "aws_autoscaling_group" "tf-nifi-zk1-autoscalegroup" {
       propagate_at_launch     = tag.value.propagate_at_launch
     }
   }
-  depends_on              = [aws_iam_role_policy_attachment.tf-nifi-iam-attach-ssm, aws_iam_role_policy_attachment.tf-nifi-iam-attach-s3, aws_iam_policy.tf-nifi-instance-policy-route53, aws_cloudwatch_log_group.tf-nifi-cloudwatch-log-group]
+  depends_on              = [aws_iam_role_policy_attachment.tf-nifi-iam-attach-ssm, aws_iam_role_policy_attachment.tf-nifi-iam-attach-s3, aws_iam_policy.tf-nifi-instance-policy-route53, aws_cloudwatch_log_group.tf-nifi-cloudwatch-log-group-ec2]
 }
 
 # zk2 launchconf and asg
@@ -105,7 +107,7 @@ resource "aws_launch_configuration" "tf-nifi-zk2-launchconf" {
   user_data               = <<EOF
 #!/bin/bash
 # set hostname
-hostnamectl set-hostname ${var.name_prefix}-zk2-${random_string.tf-nifi-random.result}
+hostnamectl set-hostname zk2.${var.name_prefix}${random_string.tf-nifi-random.result}.internal
 # set nodeid
 echo 2 > /opt/node_id
 EOF
@@ -118,8 +120,10 @@ resource "aws_autoscaling_group" "tf-nifi-zk2-autoscalegroup" {
   vpc_zone_identifier     = [aws_subnet.tf-nifi-prinet2.id]
   service_linked_role_arn = aws_iam_service_linked_role.tf-nifi-autoscale-slr.arn
   termination_policies    = ["ClosestToNextInstanceHour"]
-  min_size                = 1
-  max_size                = 1
+  min_size                = var.enable_zk2
+  max_size                = var.enable_zk2
+  health_check_type       = "EC2"
+  health_check_grace_period = 1800
   lifecycle {
     create_before_destroy   = true
   }
@@ -131,7 +135,7 @@ resource "aws_autoscaling_group" "tf-nifi-zk2-autoscalegroup" {
       propagate_at_launch     = tag.value.propagate_at_launch
     }
   }
-  depends_on              = [aws_iam_role_policy_attachment.tf-nifi-iam-attach-ssm, aws_iam_role_policy_attachment.tf-nifi-iam-attach-s3, aws_iam_policy.tf-nifi-instance-policy-route53, aws_cloudwatch_log_group.tf-nifi-cloudwatch-log-group]
+  depends_on              = [aws_iam_role_policy_attachment.tf-nifi-iam-attach-ssm, aws_iam_role_policy_attachment.tf-nifi-iam-attach-s3, aws_iam_policy.tf-nifi-instance-policy-route53, aws_cloudwatch_log_group.tf-nifi-cloudwatch-log-group-ec2]
 }
 
 # zk3 launchconf and asg
@@ -153,7 +157,7 @@ resource "aws_launch_configuration" "tf-nifi-zk3-launchconf" {
   user_data               = <<EOF
 #!/bin/bash
 # set hostname
-hostnamectl set-hostname ${var.name_prefix}-zk3-${random_string.tf-nifi-random.result}
+hostnamectl set-hostname zk3.${var.name_prefix}${random_string.tf-nifi-random.result}.internal
 # set nodeid
 echo 3 > /opt/node_id
 EOF
@@ -166,8 +170,10 @@ resource "aws_autoscaling_group" "tf-nifi-zk3-autoscalegroup" {
   vpc_zone_identifier     = [aws_subnet.tf-nifi-prinet3.id]
   service_linked_role_arn = aws_iam_service_linked_role.tf-nifi-autoscale-slr.arn
   termination_policies    = ["ClosestToNextInstanceHour"]
-  min_size                = 1
-  max_size                = 1
+  min_size                = var.enable_zk3
+  max_size                = var.enable_zk3
+  health_check_type       = "EC2"
+  health_check_grace_period = 1800
   lifecycle {
     create_before_destroy   = true
   }
@@ -179,5 +185,5 @@ resource "aws_autoscaling_group" "tf-nifi-zk3-autoscalegroup" {
       propagate_at_launch     = tag.value.propagate_at_launch
     }
   }
-  depends_on              = [aws_iam_role_policy_attachment.tf-nifi-iam-attach-ssm, aws_iam_role_policy_attachment.tf-nifi-iam-attach-s3, aws_iam_policy.tf-nifi-instance-policy-route53, aws_cloudwatch_log_group.tf-nifi-cloudwatch-log-group]
+  depends_on              = [aws_iam_role_policy_attachment.tf-nifi-iam-attach-ssm, aws_iam_role_policy_attachment.tf-nifi-iam-attach-s3, aws_iam_policy.tf-nifi-instance-policy-route53, aws_cloudwatch_log_group.tf-nifi-cloudwatch-log-group-ec2]
 }

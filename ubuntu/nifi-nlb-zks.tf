@@ -24,6 +24,7 @@ resource "aws_lb_target_group" "tf-nifi-mgmt-target-tcp" {
   protocol                 = "TCP"
   vpc_id                  = aws_vpc.tf-nifi-vpc.id
   preserve_client_ip      = "true"
+  deregistration_delay    = 10
   health_check {
     enabled                 = "true"
     healthy_threshold       = 3

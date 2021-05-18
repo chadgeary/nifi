@@ -36,7 +36,7 @@ resource "aws_s3_bucket" "tf-nifi-bucket" {
       "Sid": "Instance and Lambda getnifi List",
       "Effect": "Allow",
       "Principal": {
-        "AWS": ["${aws_iam_role.tf-nifi-instance-iam-role.arn}","arn:aws:sts::${data.aws_caller_identity.tf-nifi-aws-account.account_id}:assumed-role/${var.name_prefix}-lambda-getnifi-role-${random_string.tf-nifi-random.result}/${var.name_prefix}-lambda-getnifi-${random_string.tf-nifi-random.result}"]
+        "AWS": ["${aws_iam_role.tf-nifi-instance-iam-role.arn}","arn:aws:sts::${data.aws_caller_identity.tf-nifi-aws-account.account_id}:assumed-role/${var.name_prefix}-iam-role-lambda-getnifi-${random_string.tf-nifi-random.result}/${var.name_prefix}-lambda-getnifi-${random_string.tf-nifi-random.result}"]
       },
       "Action": [
         "s3:ListBucket",
@@ -75,7 +75,7 @@ resource "aws_s3_bucket" "tf-nifi-bucket" {
       "Sid": "Lambda getnifi Put",
       "Effect": "Allow",
       "Principal": {
-        "AWS": ["arn:aws:sts::${data.aws_caller_identity.tf-nifi-aws-account.account_id}:assumed-role/${var.name_prefix}-lambda-getnifi-role-${random_string.tf-nifi-random.result}/${var.name_prefix}-lambda-getnifi-${random_string.tf-nifi-random.result}"]
+        "AWS": ["arn:aws:sts::${data.aws_caller_identity.tf-nifi-aws-account.account_id}:assumed-role/${var.name_prefix}-iam-role-lambda-getnifi-${random_string.tf-nifi-random.result}/${var.name_prefix}-lambda-getnifi-${random_string.tf-nifi-random.result}"]
       },
       "Action": [
         "s3:PutObject",
@@ -87,16 +87,19 @@ resource "aws_s3_bucket" "tf-nifi-bucket" {
       ]
     },
     {
-      "Sid": "Instance Delete",
+      "Sid": "Lambda health Get",
       "Effect": "Allow",
       "Principal": {
-        "AWS": ["${aws_iam_role.tf-nifi-instance-iam-role.arn}"]
+        "AWS": ["arn:aws:sts::${data.aws_caller_identity.tf-nifi-aws-account.account_id}:assumed-role/${var.name_prefix}-iam-role-lambda-health-${random_string.tf-nifi-random.result}/${var.name_prefix}-lambda-health-${random_string.tf-nifi-random.result}"]
       },
       "Action": [
-        "s3:DeleteObject",
-        "s3:DeleteObjectVersion"
+        "s3:GetObject",
+        "s3:GetObjectAcl"
       ],
-      "Resource": ["arn:aws:s3:::${var.name_prefix}-bucket-${random_string.tf-nifi-random.result}/nifi/cluster/*"]
+      "Resource": [
+        "arn:aws:s3:::${var.name_prefix}-bucket-${random_string.tf-nifi-random.result}/nifi/certificates/admin/admin_cert.pem",
+        "arn:aws:s3:::${var.name_prefix}-bucket-${random_string.tf-nifi-random.result}/nifi/certificates/admin/private_key.pem"
+      ]
     }
   ]
 }

@@ -10,19 +10,19 @@
         "logs_collected": {
             "files": {
                 "collect_list": [
-                {
+		{
                     "file_path": "/var/log/syslog",
-                    "log_group_name": "{{ name_prefix }}_{{ name_suffix }}",
+                    "log_group_name": "/aws/ec2/{{ name_prefix }}_{{ name_suffix }}",
                     "log_stream_name": "{local_hostname}-{instance_id}_syslog"
                 },
                 {
                     "file_path": "/var/log/auth.log",
-                    "log_group_name": "{{ name_prefix }}_{{ name_suffix }}",
+                    "log_group_name": "/aws/ec2/{{ name_prefix }}_{{ name_suffix }}",
                     "log_stream_name": "{local_hostname}-{instance_id}_auth"
                 },
                 {
                     "file_path": "/opt/nifi/logs/nifi-app.log",
-                    "log_group_name": "{{ name_prefix }}_{{ name_suffix }}",
+                    "log_group_name": "/aws/ec2/{{ name_prefix }}_{{ name_suffix }}",
                     "log_stream_name": "{local_hostname}-{instance_id}_nifi-app.log"
                 }
                 ]

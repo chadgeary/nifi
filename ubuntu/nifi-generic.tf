@@ -74,6 +74,16 @@ variable "zk_version" {
   description              = "The version of Apache Zookeeper, e.g. 3.6.1"
 }
 
+variable "enable_zk2" {
+  type                     = number
+  description              = "Whether to enable zk2 (1) or not (0)"
+}
+
+variable "enable_zk3" {
+  type                     = number
+  description              = "Whether to enable zk3 (1) or not (0)"
+}
+
 variable "minimum_node_count" {
   type                     = number
   description              = "The minimum number of non-zookeeper NiFi nodes in the Autoscaling Group"
@@ -160,4 +170,14 @@ variable "web_port" {
 variable "log_retention_days" {
   type                   = number
   default                = 30
+}
+
+variable "health_check_unit" {
+  type                   = string
+  default                = "minutes"
+}
+
+variable "health_check_count" {
+  type                   = string
+  default                = "5"
 }
