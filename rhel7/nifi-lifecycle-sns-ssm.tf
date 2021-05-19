@@ -1,6 +1,6 @@
 # sns topic called by lifecycle hooks
-resource "aws_sns_topic" "tf-nifi-sns-node-down" {
-  name                    = "${var.name_prefix}-sns-node-down-${random_string.tf-nifi-random.result}"
+resource "aws_sns_topic" "tf-nifi-sns-scaledown" {
+  name                    = "${var.name_prefix}-sns-scaledown-${random_string.tf-nifi-random.result}"
   kms_master_key_id       = aws_kms_key.tf-nifi-kmscmk-sns.arn
   delivery_policy         = <<EOF
 {
@@ -24,15 +24,15 @@ EOF
 }
 
 # sns subscription for lambda
-resource "aws_sns_topic_subscription" "tf-nifi-lambda-sub-sns-node-down" {
-  topic_arn               = aws_sns_topic.tf-nifi-sns-node-down.arn
+resource "aws_sns_topic_subscription" "tf-nifi-lambda-sub-sns-scaledown" {
+  topic_arn               = aws_sns_topic.tf-nifi-sns-scaledown.arn
   protocol                = "lambda"
-  endpoint                = aws_lambda_function.tf-nifi-lambda-node-down.arn
+  endpoint                = aws_lambda_function.tf-nifi-lambda-scaledown.arn
 }
 
 # ssm document run by the lambda function, executes scale-down shell script, then notifies lifecycle hook complete
-resource "aws_ssm_document" "tf-nifi-ssmdoc-node-down" {
-  name                    = "${var.name_prefix}-ssmdoc-node-down-${random_string.tf-nifi-random.result}"
+resource "aws_ssm_document" "tf-nifi-ssmdoc-scaledown" {
+  name                    = "${var.name_prefix}-ssmdoc-scaledown-${random_string.tf-nifi-random.result}"
   document_type           = "Command"
   content                 = <<DOC
 {

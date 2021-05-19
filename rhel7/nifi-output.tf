@@ -12,7 +12,7 @@ https://console.aws.amazon.com/systems-manager/state-manager/${aws_ssm_associati
 https://console.aws.amazon.com/ec2/v2/home?region=${var.aws_region}#TargetGroup:targetGroupArn=${aws_lb_target_group.tf-nifi-mgmt-target-tcp.arn}
 
 # Cloudwatch Logs
-https://console.aws.amazon.com/cloudwatch/home?region=${var.aws_region}#logsV2:log-groups/log-group/${var.name_prefix}_${random_string.tf-nifi-random.result}
+https://console.aws.amazon.com/cloudwatch/home?region=${var.aws_region}#logsV2:log-groups/log-group/$252Faws$252Fec2$252F${var.name_prefix}_${random_string.tf-nifi-random.result}
 
 # Admin Certificate + Secret
 https://s3.console.aws.amazon.com/s3/object/${aws_s3_bucket.tf-nifi-bucket.id}?region=${var.aws_region}&prefix=nifi/certificates/admin/keystore.p12
@@ -25,7 +25,7 @@ https://${aws_lb.tf-nifi-zk-nlb.dns_name}:${var.web_port}/nifi
 ${aws_lb.tf-nifi-node-nlb.dns_name}
 
 # Instance IDs in Cluster
-aws ec2 describe-instances --region ${var.aws_region} --query 'Reservations[].Instances[*].[InstanceId, LaunchTime, [Tags[?Key==`Name`].Value][0][0]]' --filters "Name=tag:Cluster,Values=${var.name_prefix}_${random_string.tf-nifi-random.result}" --output text
+aws ec2 describe-instances --region ${var.aws_region} --query 'Reservations[].Instances[*].[InstanceId, LaunchTime, [Tags[?Key==`Name`].Value][0][0]]' --filters Name=tag:Cluster,Values=${var.name_prefix}_${random_string.tf-nifi-random.result} Name=instance-state-name,Values=pending,running --output text
 
 # Connecting via SSM
 aws ssm start-session --region ${var.aws_region} --target i-SOME_INSTANCE

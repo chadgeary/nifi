@@ -49,7 +49,7 @@
       user:
         name: cloudwatch
         comment: AWS Cloudwatch Agent Service Account
-        groups: nifi
+        groups: adm,nifi
         append: yes
 
     - name: set messages and secure readable in logrotate syslog
@@ -72,7 +72,7 @@
         - messages
         - secure
 
-    - name: cloudwatch agent install 
+    - name: cloudwatch agent install
       yum:
         name: 'https://s3.amazonaws.com/amazoncloudwatch-agent/amazon_linux/amd64/latest/amazon-cloudwatch-agent.rpm'
         state: latest
@@ -173,7 +173,7 @@
       aws_s3:
         mode: get
         bucket: "{{ s3_bucket }}"
-        object: "/nifi/downloads/{{ item }}"
+        object: "nifi/downloads/{{ item }}"
         dest: "/opt/nifi-downloads/{{ item }}"
       with_items:
         - nifi.tar.gz
@@ -189,7 +189,7 @@
       aws_s3:
         mode: get
         bucket: "{{ s3_bucket }}"
-        object: "/nifi/downloads/{{ item }}"
+        object: "nifi/downloads/{{ item }}"
         dest: "/opt/nifi-downloads/{{ item }}"
       with_items:
         - nifi-toolkit.tar.gz
@@ -283,7 +283,7 @@
       aws_s3:
         mode: get
         bucket: "{{ s3_bucket }}"
-        object: "/nifi/conf/{{ item }}"
+        object: "nifi/conf/{{ item }}"
         dest: "/opt/nifi-conf/{{ item }}"
       with_items:
         - generated_password
@@ -356,6 +356,8 @@
       with_items:
         - keystore.p12
         - truststore.jks
+        - private_key.pem
+        - admin_cert.pem
       when: admin_cert.stat.exists == false
       become_user: nifi
       retries: 900
@@ -386,17 +388,7 @@
       become_user: nifi
       when: node_cert.stat.exists == false
 
-    - name: create user
-      shell: |
-        export JAVA_HOME=/etc/alternatives/jre
-        /opt/nifi-toolkit/bin/cli.sh nifi create-user --userName "CN={{ ansible_nodename }}, OU=NIFI" -p /opt/nifi-certificates/admin/cli.properties
-      become_user: nifi
-      retries: 900
-      delay: 2
-      register: create_node_user
-      until: (create_node_user is not failed) or ("user group already exists with the identity" in create_node_user.stdout)
-
-    - name: copy scale-down and scale-up scripts
+    - name: copy scale-down scale-user and scale-up scripts
       template:
         src: "scale-{{ item }}"
         dest: "/usr/local/bin/scale-{{ item }}"
@@ -405,7 +397,8 @@
         mode: 0550
       with_items:
         - down
-        - up
+        - up-adduser
+        - up-permitproxy
 
     - name: timers and service units
       copy:
@@ -417,6 +410,11 @@
       with_items:
         - nifi.service
         - nifi.timer
+
+    - name: run scale-up script to add node as user
+      shell: |
+        /usr/local/bin/scale-up-adduser
+      become_user: nifi
 
     - name: nifi systemd
       systemd:
@@ -434,7 +432,7 @@
         port: "{{ web_port }}"
         timeout: 600
 
-    - name: run scale-up script
+    - name: run scale-up script to permit node to proxy
       shell: |
-        /usr/local/bin/scale-up
+        /usr/local/bin/scale-up-permitproxy
       become_user: nifi

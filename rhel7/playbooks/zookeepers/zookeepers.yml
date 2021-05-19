@@ -7,18 +7,18 @@
 
     - name: set zookeeper connection string
       set_fact:
-        zookeeper_nodes: "{{ name_prefix }}-zk1-{{ name_suffix }}.{{ name_prefix }}{{ name_suffix }}.internal:2173,{{ name_prefix }}-zk2-{{ name_suffix }}.{{ name_prefix }}{{ name_suffix }}.internal:2173,{{ name_prefix }}-zk3-{{ name_suffix }}.{{ name_prefix }}{{ name_suffix }}.internal:2173"
-
-    - name: set host in hosts
-      lineinfile:
-        path: /etc/hosts
-        line: "{{ ansible_default_ipv4.address }} {{ ansible_nodename }} {{ ansible_nodename }}.{{ name_prefix }}{{ name_suffix }}.internal"
-        state: present
+        zookeeper_nodes: "zk1.{{ name_prefix }}{{ name_suffix }}.internal:2173,zk2.{{ name_prefix }}{{ name_suffix }}.internal:2173,zk3.{{ name_prefix }}{{ name_suffix }}.internal:2173"
 
     - name: fetch node_id
       shell: |
         cat /opt/node_id
       register: node_id
+
+    - name: set host in hosts
+      lineinfile:
+        path: /etc/hosts
+        line: "{{ ansible_default_ipv4.address }} zk{{ node_id.stdout }} {{ ansible_nodename }}"
+        state: present
 
     - name: nifi required packages
       package:
@@ -53,28 +53,8 @@
       user:
         name: cloudwatch
         comment: AWS Cloudwatch Agent Service Account
-        groups: nifi
+        groups: adm,nifi
         append: yes
-
-    - name: set messages and secure readable in logrotate syslog
-      blockinfile:
-        block: |
-          #     cloudwatch to read logs
-                /bin/setfacl -m g:cloudwatch:rx /var/log/messages
-                /bin/setfacl -m g:cloudwatch:rx /var/log/secure
-        insertbefore: "    endscript"
-        path: /etc/logrotate.d/syslog
-
-    - name: set active messages and secure readable 
-      acl:
-        path: "/var/log/{{ item }}"
-        entity: cloudwatch
-        etype: group
-        permissions: rx
-        state: present
-      with_items:
-        - messages
-        - secure
 
     - name: cloudwatch agent install
       yum:
@@ -107,7 +87,7 @@
         overwrite: yes
         private_zone: yes
         zone: "{{ name_prefix }}{{ name_suffix }}.internal"
-        record: "{{ name_prefix }}-zk{{ node_id.stdout }}-{{ name_suffix }}.{{ name_prefix }}{{ name_suffix }}.internal"
+        record: "zk{{ node_id.stdout }}.{{ name_prefix }}{{ name_suffix }}.internal"
         type: A
         ttl: 600
         value:
@@ -194,7 +174,7 @@
       aws_s3:
         mode: get
         bucket: "{{ s3_bucket }}"
-        object: "/nifi/downloads/{{ item }}"
+        object: "nifi/downloads/{{ item }}"
         dest: "/opt/nifi-downloads/{{ item }}"
       with_items:
         - zookeeper.tar.gz
@@ -210,7 +190,7 @@
       aws_s3:
         mode: get
         bucket: "{{ s3_bucket }}"
-        object: "/nifi/downloads/{{ item }}"
+        object: "nifi/downloads/{{ item }}"
         dest: "/opt/nifi-downloads/{{ item }}"
       with_items:
         - nifi.tar.gz
@@ -226,7 +206,7 @@
       aws_s3:
         mode: get
         bucket: "{{ s3_bucket }}"
-        object: "/nifi/downloads/{{ item }}"
+        object: "nifi/downloads/{{ item }}"
         dest: "/opt/nifi-downloads/{{ item }}"
       with_items:
         - nifi-toolkit.tar.gz
@@ -359,21 +339,21 @@
       aws_s3:
         mode: get
         bucket: "{{ s3_bucket }}"
-        object: "/nifi/conf/{{ item }}"
+        object: "nifi/conf/{{ item }}"
         dest: "/opt/nifi-conf/{{ item }}"
       become_user: nifi
       ignore_errors: True
       with_items:
         - generated_password
       when:
-        - ansible_nodename == "{{ name_prefix }}-zk1-{{ name_suffix }}"
+        - ansible_nodename == "zk1.{{ name_prefix }}{{ name_suffix }}.internal"
 
     - name: check password generated
       stat:
         path: /opt/nifi-conf/generated_password
       register: password_generated
       when:
-        - ansible_nodename == "{{ name_prefix }}-zk1-{{ name_suffix }}"
+        - ansible_nodename == "zk1.{{ name_prefix }}{{ name_suffix }}.internal"
 
     - name: generate password if not generated
       shell: |
@@ -381,27 +361,27 @@
       become_user: nifi
       ignore_errors: True
       when:
-        - ansible_nodename == "{{ name_prefix }}-zk1-{{ name_suffix }}"
+        - ansible_nodename == "zk1.{{ name_prefix }}{{ name_suffix }}.internal"
         - password_generated.stat.exists == false
 
     - name: upload password to s3
       aws_s3:
         mode: put
         bucket: "{{ s3_bucket }}"
-        object: /nifi/conf/generated_password
+        object: "nifi/conf/generated_password"
         src: /opt/nifi-conf/generated_password
         encrypt: yes
         encryption_mode: "aws:kms"
         encryption_kms_key_id: "{{ kms_key_id }}"
       become_user: nifi
       when:
-        - ansible_nodename == "{{ name_prefix }}-zk1-{{ name_suffix }}"
+        - ansible_nodename == "zk1.{{ name_prefix }}{{ name_suffix }}.internal"
 
     - name: get generated password from s3
       aws_s3:
         mode: get
         bucket: "{{ s3_bucket }}"
-        object: "/nifi/conf/{{ item }}"
+        object: "nifi/conf/{{ item }}"
         dest: "/opt/nifi-conf/{{ item }}"
       become_user: nifi
       with_items:
@@ -429,7 +409,7 @@
       lineinfile:
         path: /opt/nifi/conf/state-management.xml
         regexp: '        <property name="Connect String">.*</property>'
-        line: '        <property name="Connect String">{{ name_prefix }}-zk1-{{ name_suffix }}.{{ name_prefix }}{{ name_suffix }}.internal:2173,{{ name_prefix }}-zk2-{{ name_suffix }}.{{ name_prefix }}{{ name_suffix }}.internal:2173,{{ name_prefix }}-zk3-{{ name_suffix }}.{{ name_prefix }}{{ name_suffix }}.internal:2173</property>'
+        line: '        <property name="Connect String">zk1.{{ name_prefix }}{{ name_suffix }}.internal:2173,zk2.{{ name_prefix }}{{ name_suffix }}.internal:2173,zk3.{{ name_prefix }}{{ name_suffix }}.internal:2173</property>'
 
     - name: check ca exists
       stat:
@@ -440,7 +420,7 @@
       aws_s3:
         mode: get
         bucket: "{{ s3_bucket }}"
-        object: "/nifi/certificates/{{ item }}"
+        object: "nifi/certificates/{{ item }}"
         dest: "/opt/nifi-certificates/{{ item }}"
       become_user: nifi
       ignore_errors: True
@@ -448,19 +428,19 @@
         - nifi-cert.pem
         - nifi-key.key
       when:
-        - ansible_nodename == "{{ name_prefix }}-zk1-{{ name_suffix }}"
+        - ansible_nodename == "zk1.{{ name_prefix }}{{ name_suffix }}.internal"
 
     - name: generate ca when not exists
       shell: |
         export JAVA_HOME=/etc/alternatives/jre
-        /opt/nifi-toolkit/bin/tls-toolkit.sh standalone -c tf-nifi-1 -d 3650 -k 2048 -s SHA256WITHRSA -T jks --subjectAlternativeNames {{ name_prefix }}-zk1-{{ name_suffix }}.{{ name_prefix }}{{ name_suffix }}.internal
+        /opt/nifi-toolkit/bin/tls-toolkit.sh standalone -c zk1.{{ name_prefix }}{{ name_suffix }}.internal -d 3650 -k 2048 -s SHA256WITHRSA -T jks --subjectAlternativeNames zk1.{{ name_prefix }}{{ name_suffix }}.internal,zk2.{{ name_prefix }}{{ name_suffix }}.internal,zk3.{{ name_prefix }}{{ name_suffix }}.internal,{{ lb_dns }}
       args:
         chdir: /opt/nifi-certificates/
         executable: /bin/bash
       become_user: nifi
       when:
         - ca_cert.stat.exists == false
-        - ansible_nodename == "{{ name_prefix }}-zk1-{{ name_suffix }}"
+        - ansible_nodename == "zk1.{{ name_prefix }}{{ name_suffix }}.internal"
 
     - name: upload ca to s3
       aws_s3:
@@ -475,7 +455,7 @@
         - nifi-cert.pem
         - nifi-key.key
       when:
-        - ansible_nodename == "{{ name_prefix }}-zk1-{{ name_suffix }}"
+        - ansible_nodename == "zk1.{{ name_prefix }}{{ name_suffix }}.internal"
 
     - name: get ca from s3
       aws_s3:
@@ -498,14 +478,17 @@
       aws_s3:
         mode: get
         bucket: "{{ s3_bucket }}"
-        object: "/nifi/certificates/admin/{{ item }}"
+        object: "nifi/certificates/admin/{{ item }}"
         dest: "/opt/nifi-certificates/admin/{{ item }}"
       become_user: nifi
       ignore_errors: True
       with_items:
         - keystore.p12
+        - truststore.jks
+        - admin_cert.pem
+        - private_key.pem
       when:
-        - ansible_nodename == "{{ name_prefix }}-zk1-{{ name_suffix }}"
+        - ansible_nodename == "zk1.{{ name_prefix }}{{ name_suffix }}.internal"
 
     - name: check admin exists
       stat:
@@ -515,21 +498,24 @@
     - name: generate admin when not exists
       shell: |
         export JAVA_HOME=/etc/alternatives/jre
-        /opt/nifi-toolkit/bin/tls-toolkit.sh standalone -a RSA -c {{ name_prefix }}-zk1-{{ name_suffix }}.{{ name_prefix }}{{ name_suffix }}.internal -n admin -d 3650 -k 2048 -s SHA256WITHRSA -T pkcs12 --subjectAlternativeNames admin -P {{ generated_password.stdout }} -S {{ generated_password.stdout }}
+        /opt/nifi-toolkit/bin/tls-toolkit.sh standalone -a RSA -c zk1.{{ name_prefix }}{{ name_suffix }}.internal -n admin -d 3650 -k 2048 -s SHA256WITHRSA -T pkcs12 --subjectAlternativeNames admin,admin{{ name_prefix }}{{ name_suffix }} -P {{ generated_password.stdout }} -S {{ generated_password.stdout }}
       args:
         chdir: /opt/nifi-certificates/
         executable: /bin/bash
       become_user: nifi
       when:
         - admin_cert.stat.exists == false
-        - ansible_nodename == "{{ name_prefix }}-zk1-{{ name_suffix }}"
+        - ansible_nodename == "zk1.{{ name_prefix }}{{ name_suffix }}.internal"
 
-    - name: rename pkcs12 to p12
+
+    - name: rename pkcs12 to p12 and extract
       shell: |
         mv /opt/nifi-certificates/admin/keystore.pkcs12 /opt/nifi-certificates/admin/keystore.p12
+        openssl pkcs12 -in /opt/nifi-certificates/admin/keystore.p12 -nodes -nocerts -out /opt/nifi-certificates/admin/private_key.pem -passin file:/opt/nifi-conf/generated_password
+        openssl pkcs12 -in /opt/nifi-certificates/admin/keystore.p12 -nokeys -out /opt/nifi-certificates/admin/admin_cert.pem -passin file:/opt/nifi-conf/generated_password
       when:
         - admin_cert.stat.exists == false
-        - ansible_nodename == "{{ name_prefix }}-zk1-{{ name_suffix }}"
+        - ansible_nodename == "zk1.{{ name_prefix }}{{ name_suffix }}.internal"
 
     - name: upload admin to s3
       aws_s3:
@@ -543,8 +529,10 @@
       with_items:
         - keystore.p12
         - truststore.jks
+        - admin_cert.pem
+        - private_key.pem
       when:
-        - ansible_nodename == "{{ name_prefix }}-zk1-{{ name_suffix }}"
+        - ansible_nodename == "zk1.{{ name_prefix }}{{ name_suffix }}.internal"
 
     - name: ensure admin dir for s3 objects
       file:
@@ -563,6 +551,8 @@
       with_items:
         - keystore.p12
         - truststore.jks
+        - private_key.pem
+        - admin_cert.pem
       retries: 900
       delay: 2
       register: admin_from_s3
@@ -581,13 +571,13 @@
 
     - name: check node keystore exists
       stat:
-        path: /opt/nifi-certificates/{{ ansible_nodename }}.{{ name_prefix }}{{ name_suffix }}.internal/keystore.jks
+        path: /opt/nifi-certificates/{{ ansible_nodename }}/keystore.jks
       register: node_cert
 
     - name: generate node keystore when not exists
       shell: |
         export JAVA_HOME=/etc/alternatives/jre
-        /opt/nifi-toolkit/bin/tls-toolkit.sh standalone -n {{ ansible_nodename }}.{{ name_prefix }}{{ name_suffix }}.internal -d 3650 -k 2048 -s SHA256WITHRSA -T jks --subjectAlternativeNames {{ ansible_nodename }},{{ ansible_nodename }}.{{ name_prefix }}{{ name_suffix }}.internal,{{ lb_dns }} -P {{ generated_password.stdout }} -S {{ generated_password.stdout }}
+        /opt/nifi-toolkit/bin/tls-toolkit.sh standalone -n {{ ansible_nodename }} -d 3650 -k 2048 -s SHA256WITHRSA -T jks --subjectAlternativeNames zk{{ node_id.stdout }},{{ ansible_nodename }},{{ lb_dns }} -P {{ generated_password.stdout }} -S {{ generated_password.stdout }}
       args:
         chdir: /opt/nifi-certificates/
         executable: /bin/bash
@@ -632,7 +622,7 @@
         name: nifi
         daemon_reload: yes
       when:
-        - ansible_nodename == "{{ name_prefix }}-zk1-{{ name_suffix }}"
+        - ansible_nodename == "zk1.{{ name_prefix }}{{ name_suffix }}.internal"
 
     - name: wait for users.xml, authorizations.xml
       wait_for:
@@ -643,13 +633,13 @@
         - users.xml
         - authorizations.xml
       when:
-        - ansible_nodename == "{{ name_prefix }}-zk1-{{ name_suffix }}"
+        - ansible_nodename == "zk1.{{ name_prefix }}{{ name_suffix }}.internal"
 
     - name: put users.xml, authorizations.xml on s3
       aws_s3:
         mode: put
         bucket: "{{ s3_bucket }}"
-        object: "/nifi/conf/{{ item }}"
+        object: "nifi/conf/{{ item }}"
         src: "/opt/nifi/conf/{{ item }}"
         encrypt: yes
         encryption_mode: "aws:kms"
@@ -658,13 +648,13 @@
         - users.xml
         - authorizations.xml
       when:
-        - ansible_nodename == "{{ name_prefix }}-zk1-{{ name_suffix }}"
+        - ansible_nodename == "zk1.{{ name_prefix }}{{ name_suffix }}.internal"
 
     - name: get nifi conf files from s3
       aws_s3:
         mode: get
         bucket: "{{ s3_bucket }}"
-        object: "/nifi/conf/{{ item }}"
+        object: "nifi/conf/{{ item }}"
         dest: "/opt/nifi/conf/{{ item }}"
       with_items:
         - users.xml

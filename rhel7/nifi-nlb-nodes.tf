@@ -48,6 +48,7 @@ resource "aws_lb_target_group" "tf-nifi-service-target-tcp" {
   protocol                 = "TCP"
   vpc_id                  = aws_vpc.tf-nifi-vpc.id
   preserve_client_ip      = "true"
+  deregistration_delay    = 10
   health_check {
     enabled                 = "true"
     healthy_threshold       = 3
@@ -64,6 +65,7 @@ resource "aws_lb_target_group" "tf-nifi-service-target-udp" {
   protocol                 = "UDP"
   vpc_id                  = aws_vpc.tf-nifi-vpc.id
   preserve_client_ip      = "true"
+  deregistration_delay    = 10
   health_check {
     enabled                 = "true"
     healthy_threshold       = 3
@@ -81,6 +83,7 @@ resource "aws_lb_target_group" "tf-nifi-service-target-tcpudp" {
   protocol                 = "TCP_UDP"
   vpc_id                  = aws_vpc.tf-nifi-vpc.id
   preserve_client_ip      = "true"
+  deregistration_delay    = 10
   health_check {
     enabled                 = "true"
     healthy_threshold       = 3

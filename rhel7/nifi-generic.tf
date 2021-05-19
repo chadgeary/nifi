@@ -34,19 +34,14 @@ variable "prinet3_cidr" {
   type                     = string
 }
 
-variable "encrypted_ami_ip" {
-  type                     = string
-  description              = "An ip from prinet1_cidr for the instance used to create an encrypted AMI with a custom KMS CMK"
-}
-
 variable "mgmt_cidrs" {
   type                     = list
-  description              = "Subnet CIDRs allowed to access NiFi instance(s) via mgmt NLB, e.g. 172.16.10.0/30"
+  description              = "Management CIDRs allowed to reach web_port"
 }
 
 variable "client_cidrs" {
   type                     = list
-  description              = "Subnet CIDRs allowed to access NiFi instance(s) via service NLB, e.g. 172.16.10.0/30"
+  description              = "Client CIDRs allowed to reach service_port(s)"
 }
 
 variable "instance_type" {
@@ -77,6 +72,16 @@ variable "nifi_version" {
 variable "zk_version" {
   type                     = string
   description              = "The version of Apache Zookeeper, e.g. 3.6.1"
+}
+
+variable "enable_zk2" {
+  type                     = number
+  description              = "Whether to enable zk2 (1) or not (0)"
+}
+
+variable "enable_zk3" {
+  type                     = number
+  description              = "Whether to enable zk3 (1) or not (0)"
 }
 
 variable "minimum_node_count" {
@@ -165,4 +170,14 @@ variable "web_port" {
 variable "log_retention_days" {
   type                   = number
   default                = 30
+}
+
+variable "health_check_unit" {
+  type                   = string
+  default                = "minutes"
+}
+
+variable "health_check_count" {
+  type                   = string
+  default                = "5"
 }

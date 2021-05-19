@@ -3,7 +3,7 @@ locals {
   node-asg-tags            = [
     {
       key                   = "Name"
-      value                 = "${var.name_prefix}-node-${random_string.tf-nifi-random.result}"
+      value                 = "node.${var.name_prefix}${random_string.tf-nifi-random.result}.internal"
       propagate_at_launch   = true
     },
     {
@@ -32,6 +32,8 @@ resource "aws_launch_configuration" "tf-nifi-launchconf" {
   }
   user_data               = <<EOF
 #!/bin/bash
+# set fqdn 
+hostnamectl set-hostname $(hostname).${var.name_prefix}${random_string.tf-nifi-random.result}.internal
 # install ssm
 yum install -y https://s3.${var.aws_region}.amazonaws.com/amazon-ssm-${var.aws_region}/latest/linux_amd64/amazon-ssm-agent.rpm
 # start/enable ssm
@@ -49,6 +51,8 @@ resource "aws_autoscaling_group" "tf-nifi-autoscalegroup" {
   termination_policies    = ["ClosestToNextInstanceHour"]
   min_size                = var.minimum_node_count
   max_size                = var.maximum_node_count
+  health_check_type       = "EC2"
+  health_check_grace_period = 1800
   lifecycle {
     create_before_destroy   = true
   }
@@ -60,7 +64,7 @@ resource "aws_autoscaling_group" "tf-nifi-autoscalegroup" {
       propagate_at_launch     = tag.value.propagate_at_launch
     }
   }
-  depends_on              = [aws_iam_role_policy_attachment.tf-nifi-iam-attach-ssm, aws_iam_role_policy_attachment.tf-nifi-iam-attach-s3, aws_cloudwatch_log_group.tf-nifi-cloudwatch-log-group]
+  depends_on              = [aws_iam_role_policy_attachment.tf-nifi-iam-attach-ssm, aws_iam_role_policy_attachment.tf-nifi-iam-attach-s3, aws_cloudwatch_log_group.tf-nifi-cloudwatch-log-group-ec2]
 }
 
 # scale up policy and metric alarm

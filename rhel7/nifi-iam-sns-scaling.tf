@@ -37,7 +37,7 @@ resource "aws_iam_policy" "tf-nifi-autoscale-snspolicy-1" {
       "Action": [
         "sns:Publish"
       ],
-      "Resource": ["${aws_sns_topic.tf-nifi-sns-node-down.arn}"]
+      "Resource": ["${aws_sns_topic.tf-nifi-sns-scaledown.arn}"]
     }
   ]
 }

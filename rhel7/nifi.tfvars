@@ -19,6 +19,8 @@ tcp_service_ports = [2200, 2201]
 udp_service_ports = []
 tcpudp_service_ports = []
 
+# inter-cluster communication occurs on ports web_port and 2171 through 2176
+
 # public ssh key
 instance_key = "ssh-rsa AAAAB3NzaD2yc2EAAAADAQABAAABAQCNsxnMWfrG3SoLr4uJMavf43YkM5wCbdO7X5uBvRU8oh1W+A/Nd/jie2tc3UpwDZwS3w6MAfnu8B1gE9lzcgTu1FFf0us5zIWYR/mSoOFKlTiaI7Uaqkc+YzmVw/fy1iFxDDeaZfoc0vuQvPr+LsxUL5UY4ko4tynCSp7zgVpot/OppqdHl5J+DYhNubm8ess6cugTustUZoDmJdo2ANQENeBUNkBPXUnMO1iulfNb6GnwWJ0Z5TRRLGSu2gya2wMLeo1rBJ5cbZZgVLMVHiKgwBy/svUQreR8R+fpVW+Q4rx6sPAltLaOUONn0SF2BvvJUueqxpAIaA2rU4MS420P"
 
@@ -28,8 +30,12 @@ instance_type = "r5.large"
 # the root block size of the instances (in GiB)
 instance_vol_size = 15
 
+# enable second or third zookeeper+nifi nodes (1 for yes, 0 for no)
+enable_zk2 = 1
+enable_zk3 = 0
+
 # the initial size (min) and max count of non-zookeeper nifi nodes.
-# scale is based on CPU load (see nifi-scaling.tf)
+# scale is based on CPU load (see nifi-scaling-nodes.tf)
 minimum_node_count = 0
 maximum_node_count = 0
 
@@ -42,6 +48,10 @@ vendor_ami_name_string = "RHEL-7.*_HVM_GA-20*-x86_64-0-Hourly2-GP2"
 
 # days to retain logs in cloudwatch
 log_retention_days = 30
+
+# health check frequency
+health_check_unit = "minutes"
+health_check_count = 5
 
 # nifi/nifi-toolkit and zookeeper versions downloaded from urls below
 nifi_version = "1.13.2"
@@ -60,7 +70,3 @@ pubnet3_cidr = "10.10.10.32/28"
 prinet1_cidr = "10.10.10.64/26"
 prinet2_cidr = "10.10.10.128/26"
 prinet3_cidr = "10.10.10.192/26"
-
-# RHEL requires an AMI be created from an EC2 instance ( RHEL AMI -> EC2 Instance -> Encrypted AMI ), instead of a direct AMI-to-AMI copy.
-# This is the IP of the instance, it must be in one of the prinet cidrs.
-encrypted_ami_ip = "10.10.10.72"
