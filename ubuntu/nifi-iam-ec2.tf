@@ -1,5 +1,5 @@
 data "aws_iam_policy" "tf-nifi-instance-policy-ssm" {
-  arn                     = "arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore"
+  arn                     = "arn:${data.aws_partition.tf-nifi-aws-partition.partition}:iam::aws:policy/AmazonSSMManagedInstanceCore"
 }
 
 resource "aws_iam_policy" "tf-nifi-instance-policy-s3" {
@@ -101,7 +101,7 @@ resource "aws_iam_policy" "tf-nifi-instance-policy-route53" {
       "Sid": "UpdateRoute53",
       "Effect": "Allow",
       "Action": ["route53:ChangeResourceRecordSets"],
-      "Resource": ["arn:aws:route53:::hostedzone/${aws_route53_zone.tf-nifi-r53-zone.zone_id}"]
+      "Resource": ["arn:${data.aws_partition.tf-nifi-aws-partition.partition}:route53:::hostedzone/${aws_route53_zone.tf-nifi-r53-zone.zone_id}"]
     },
     {
       "Sid": "ListRoute53",

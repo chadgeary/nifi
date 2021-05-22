@@ -67,7 +67,7 @@ resource "aws_autoscaling_group" "tf-nifi-zk1-autoscalegroup" {
   name_prefix             = "${var.name_prefix}-zk1asg-${random_string.tf-nifi-random.result}-"
   launch_configuration    = aws_launch_configuration.tf-nifi-zk1-launchconf.name
   target_group_arns       = concat(aws_lb_target_group.tf-nifi-service-target-tcp[*].arn,aws_lb_target_group.tf-nifi-service-target-udp[*].arn,aws_lb_target_group.tf-nifi-service-target-tcpudp[*].arn,[aws_lb_target_group.tf-nifi-mgmt-target-tcp.arn])
-  vpc_zone_identifier     = [aws_subnet.tf-nifi-prinet1.id]
+  vpc_zone_identifier     = [aws_subnet.tf-nifi-prinet1.id, aws_subnet.tf-nifi-prinet2.id]
   service_linked_role_arn = aws_iam_service_linked_role.tf-nifi-autoscale-slr.arn
   termination_policies    = ["ClosestToNextInstanceHour"]
   min_size                = 1
@@ -117,7 +117,7 @@ resource "aws_autoscaling_group" "tf-nifi-zk2-autoscalegroup" {
   name_prefix             = "${var.name_prefix}-zk2asg-${random_string.tf-nifi-random.result}-"
   launch_configuration    = aws_launch_configuration.tf-nifi-zk2-launchconf.name
   target_group_arns       = concat(aws_lb_target_group.tf-nifi-service-target-tcp[*].arn,aws_lb_target_group.tf-nifi-service-target-udp[*].arn,aws_lb_target_group.tf-nifi-service-target-tcpudp[*].arn,[aws_lb_target_group.tf-nifi-mgmt-target-tcp.arn])
-  vpc_zone_identifier     = [aws_subnet.tf-nifi-prinet2.id]
+  vpc_zone_identifier     = [aws_subnet.tf-nifi-prinet2.id, aws_subnet.tf-nifi-prinet3.id]
   service_linked_role_arn = aws_iam_service_linked_role.tf-nifi-autoscale-slr.arn
   termination_policies    = ["ClosestToNextInstanceHour"]
   min_size                = var.enable_zk2
@@ -167,7 +167,7 @@ resource "aws_autoscaling_group" "tf-nifi-zk3-autoscalegroup" {
   name_prefix             = "${var.name_prefix}-zk3asg-${random_string.tf-nifi-random.result}-"
   launch_configuration    = aws_launch_configuration.tf-nifi-zk3-launchconf.name
   target_group_arns       = concat(aws_lb_target_group.tf-nifi-service-target-tcp[*].arn,aws_lb_target_group.tf-nifi-service-target-udp[*].arn,aws_lb_target_group.tf-nifi-service-target-tcpudp[*].arn,[aws_lb_target_group.tf-nifi-mgmt-target-tcp.arn])
-  vpc_zone_identifier     = [aws_subnet.tf-nifi-prinet3.id]
+  vpc_zone_identifier     = [aws_subnet.tf-nifi-prinet3.id, aws_subnet.tf-nifi-prinet1.id]
   service_linked_role_arn = aws_iam_service_linked_role.tf-nifi-autoscale-slr.arn
   termination_policies    = ["ClosestToNextInstanceHour"]
   min_size                = var.enable_zk3

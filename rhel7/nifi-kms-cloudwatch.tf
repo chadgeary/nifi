@@ -36,7 +36,7 @@ resource "aws_kms_key" "tf-nifi-kmscmk-cloudwatch" {
       "Resource": "*",
       "Condition": {
         "ArnEquals": {
-          "kms:EncryptionContext:aws:logs:arn": "arn:aws:logs:${var.aws_region}:${data.aws_caller_identity.tf-nifi-aws-account.account_id}:log-group:/aws/ec2/${var.name_prefix}_${random_string.tf-nifi-random.result}"
+          "kms:EncryptionContext:aws:logs:arn": "arn:${data.aws_partition.tf-nifi-aws-partition.partition}:logs:${var.aws_region}:${data.aws_caller_identity.tf-nifi-aws-account.account_id}:log-group:/aws/ec2/${var.name_prefix}_${random_string.tf-nifi-random.result}"
         }
       }
     },
@@ -56,7 +56,7 @@ resource "aws_kms_key" "tf-nifi-kmscmk-cloudwatch" {
       "Resource": "*",
       "Condition": {
         "ArnEquals": {
-          "kms:EncryptionContext:aws:logs:arn": "arn:aws:logs:${var.aws_region}:${data.aws_caller_identity.tf-nifi-aws-account.account_id}:log-group:/aws/lambda/${var.name_prefix}-lambda-getnifi-${random_string.tf-nifi-random.result}"
+          "kms:EncryptionContext:aws:logs:arn": "arn:${data.aws_partition.tf-nifi-aws-partition.partition}:logs:${var.aws_region}:${data.aws_caller_identity.tf-nifi-aws-account.account_id}:log-group:/aws/lambda/${var.name_prefix}-lambda-getnifi-${random_string.tf-nifi-random.result}"
         }
       }
     },
@@ -76,7 +76,7 @@ resource "aws_kms_key" "tf-nifi-kmscmk-cloudwatch" {
       "Resource": "*",
       "Condition": {
         "ArnEquals": {
-          "kms:EncryptionContext:aws:logs:arn": "arn:aws:logs:${var.aws_region}:${data.aws_caller_identity.tf-nifi-aws-account.account_id}:log-group:/aws/lambda/${var.name_prefix}-lambda-health-${random_string.tf-nifi-random.result}"
+          "kms:EncryptionContext:aws:logs:arn": "arn:${data.aws_partition.tf-nifi-aws-partition.partition}:logs:${var.aws_region}:${data.aws_caller_identity.tf-nifi-aws-account.account_id}:log-group:/aws/lambda/${var.name_prefix}-lambda-health-${random_string.tf-nifi-random.result}"
         }
       }
     },
@@ -96,7 +96,7 @@ resource "aws_kms_key" "tf-nifi-kmscmk-cloudwatch" {
       "Resource": "*",
       "Condition": {
         "ArnEquals": {
-          "kms:EncryptionContext:aws:logs:arn": "arn:aws:logs:${var.aws_region}:${data.aws_caller_identity.tf-nifi-aws-account.account_id}:log-group:/aws/lambda/${var.name_prefix}-lambda-scaledown-${random_string.tf-nifi-random.result}"
+          "kms:EncryptionContext:aws:logs:arn": "arn:${data.aws_partition.tf-nifi-aws-partition.partition}:logs:${var.aws_region}:${data.aws_caller_identity.tf-nifi-aws-account.account_id}:log-group:/aws/lambda/${var.name_prefix}-lambda-scaledown-${random_string.tf-nifi-random.result}"
         }
       }
     },

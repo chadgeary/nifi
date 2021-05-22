@@ -1,9 +1,9 @@
 data "aws_iam_policy" "tf-nifi-iam-policy-lambda-getnifi-1" {
-  arn                     = "arn:aws:iam::aws:policy/AmazonSSMFullAccess"
+  arn                     = "arn:${data.aws_partition.tf-nifi-aws-partition.partition}:iam::aws:policy/AmazonSSMFullAccess"
 }
 
 data "aws_iam_policy" "tf-nifi-iam-policy-lambda-getnifi-2" {
-  arn                     = "arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
+  arn                     = "arn:${data.aws_partition.tf-nifi-aws-partition.partition}:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
 }
 
 resource "aws_iam_policy" "tf-nifi-iam-policy-lambda-getnifi-3" {

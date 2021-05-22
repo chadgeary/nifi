@@ -128,6 +128,10 @@ data "aws_iam_user" "tf-nifi-kmsmanager" {
   user_name               = var.kms_manager
 }
 
+# aws, gov, or cn
+data "aws_partition" "tf-nifi-aws-partition" {
+}
+
 # random string as suffix
 resource "random_string" "tf-nifi-random" {
   length                            = 5

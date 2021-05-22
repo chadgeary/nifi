@@ -28,21 +28,21 @@ resource "aws_s3_bucket" "tf-nifi-bucket" {
         "s3:*"
       ],
       "Resource": [
-        "arn:aws:s3:::${var.name_prefix}-bucket-${random_string.tf-nifi-random.result}",
-        "arn:aws:s3:::${var.name_prefix}-bucket-${random_string.tf-nifi-random.result}/*"
+        "arn:${data.aws_partition.tf-nifi-aws-partition.partition}:s3:::${var.name_prefix}-bucket-${random_string.tf-nifi-random.result}",
+        "arn:${data.aws_partition.tf-nifi-aws-partition.partition}:s3:::${var.name_prefix}-bucket-${random_string.tf-nifi-random.result}/*"
       ]
     },
     {
       "Sid": "Instance and Lambda getnifi List",
       "Effect": "Allow",
       "Principal": {
-        "AWS": ["${aws_iam_role.tf-nifi-instance-iam-role.arn}","arn:aws:sts::${data.aws_caller_identity.tf-nifi-aws-account.account_id}:assumed-role/${var.name_prefix}-iam-role-lambda-getnifi-${random_string.tf-nifi-random.result}/${var.name_prefix}-lambda-getnifi-${random_string.tf-nifi-random.result}"]
+        "AWS": ["${aws_iam_role.tf-nifi-instance-iam-role.arn}","arn:${data.aws_partition.tf-nifi-aws-partition.partition}:sts::${data.aws_caller_identity.tf-nifi-aws-account.account_id}:assumed-role/${var.name_prefix}-iam-role-lambda-getnifi-${random_string.tf-nifi-random.result}/${var.name_prefix}-lambda-getnifi-${random_string.tf-nifi-random.result}"]
       },
       "Action": [
         "s3:ListBucket",
         "s3:ListBucketMultipartUploads"
       ],
-      "Resource": ["arn:aws:s3:::${var.name_prefix}-bucket-${random_string.tf-nifi-random.result}","arn:aws:s3:::${var.name_prefix}-bucket-${random_string.tf-nifi-random.result}/nifi/downloads/*"]
+      "Resource": ["arn:${data.aws_partition.tf-nifi-aws-partition.partition}:s3:::${var.name_prefix}-bucket-${random_string.tf-nifi-random.result}","arn:${data.aws_partition.tf-nifi-aws-partition.partition}:s3:::${var.name_prefix}-bucket-${random_string.tf-nifi-random.result}/nifi/downloads/*"]
     },
     {
       "Sid": "Instance Get",
@@ -54,7 +54,7 @@ resource "aws_s3_bucket" "tf-nifi-bucket" {
         "s3:GetObject",
         "s3:GetObjectVersion"
       ],
-      "Resource": ["arn:aws:s3:::${var.name_prefix}-bucket-${random_string.tf-nifi-random.result}/*"]
+      "Resource": ["arn:${data.aws_partition.tf-nifi-aws-partition.partition}:s3:::${var.name_prefix}-bucket-${random_string.tf-nifi-random.result}/*"]
     },
     {
       "Sid": "Instance Put",
@@ -67,15 +67,15 @@ resource "aws_s3_bucket" "tf-nifi-bucket" {
         "s3:PutObjectAcl"
       ],
       "Resource": [
-        "arn:aws:s3:::${var.name_prefix}-bucket-${random_string.tf-nifi-random.result}/nifi/*",
-        "arn:aws:s3:::${var.name_prefix}-bucket-${random_string.tf-nifi-random.result}/ssm/*"
+        "arn:${data.aws_partition.tf-nifi-aws-partition.partition}:s3:::${var.name_prefix}-bucket-${random_string.tf-nifi-random.result}/nifi/*",
+        "arn:${data.aws_partition.tf-nifi-aws-partition.partition}:s3:::${var.name_prefix}-bucket-${random_string.tf-nifi-random.result}/ssm/*"
       ]
     },
     {
       "Sid": "Lambda getnifi Put",
       "Effect": "Allow",
       "Principal": {
-        "AWS": ["arn:aws:sts::${data.aws_caller_identity.tf-nifi-aws-account.account_id}:assumed-role/${var.name_prefix}-iam-role-lambda-getnifi-${random_string.tf-nifi-random.result}/${var.name_prefix}-lambda-getnifi-${random_string.tf-nifi-random.result}"]
+        "AWS": ["arn:${data.aws_partition.tf-nifi-aws-partition.partition}:sts::${data.aws_caller_identity.tf-nifi-aws-account.account_id}:assumed-role/${var.name_prefix}-iam-role-lambda-getnifi-${random_string.tf-nifi-random.result}/${var.name_prefix}-lambda-getnifi-${random_string.tf-nifi-random.result}"]
       },
       "Action": [
         "s3:PutObject",
@@ -83,22 +83,22 @@ resource "aws_s3_bucket" "tf-nifi-bucket" {
         "s3:AbortMultipartUpload"
       ],
       "Resource": [
-        "arn:aws:s3:::${var.name_prefix}-bucket-${random_string.tf-nifi-random.result}/nifi/downloads/*"
+        "arn:${data.aws_partition.tf-nifi-aws-partition.partition}:s3:::${var.name_prefix}-bucket-${random_string.tf-nifi-random.result}/nifi/downloads/*"
       ]
     },
     {
       "Sid": "Lambda health Get",
       "Effect": "Allow",
       "Principal": {
-        "AWS": ["arn:aws:sts::${data.aws_caller_identity.tf-nifi-aws-account.account_id}:assumed-role/${var.name_prefix}-iam-role-lambda-health-${random_string.tf-nifi-random.result}/${var.name_prefix}-lambda-health-${random_string.tf-nifi-random.result}"]
+        "AWS": ["arn:${data.aws_partition.tf-nifi-aws-partition.partition}:sts::${data.aws_caller_identity.tf-nifi-aws-account.account_id}:assumed-role/${var.name_prefix}-iam-role-lambda-health-${random_string.tf-nifi-random.result}/${var.name_prefix}-lambda-health-${random_string.tf-nifi-random.result}"]
       },
       "Action": [
         "s3:GetObject",
         "s3:GetObjectAcl"
       ],
       "Resource": [
-        "arn:aws:s3:::${var.name_prefix}-bucket-${random_string.tf-nifi-random.result}/nifi/certificates/admin/admin_cert.pem",
-        "arn:aws:s3:::${var.name_prefix}-bucket-${random_string.tf-nifi-random.result}/nifi/certificates/admin/private_key.pem"
+        "arn:${data.aws_partition.tf-nifi-aws-partition.partition}:s3:::${var.name_prefix}-bucket-${random_string.tf-nifi-random.result}/nifi/certificates/admin/admin_cert.pem",
+        "arn:${data.aws_partition.tf-nifi-aws-partition.partition}:s3:::${var.name_prefix}-bucket-${random_string.tf-nifi-random.result}/nifi/certificates/admin/private_key.pem"
       ]
     }
   ]

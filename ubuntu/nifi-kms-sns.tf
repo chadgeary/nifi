@@ -38,7 +38,7 @@ resource "aws_kms_key" "tf-nifi-kmscmk-sns" {
         "StringEquals": {
           "kms:CallerAccount": "${data.aws_caller_identity.tf-nifi-aws-account.account_id}",
           "kms:ViaService": "sns.${var.aws_region}.amazonaws.com",
-          "aws:PrincipalArn": "arn:aws:sns:${var.aws_region}:${data.aws_caller_identity.tf-nifi-aws-account.account_id}:tf-nifi-sns-scaledown"
+          "aws:PrincipalArn": "arn:${data.aws_partition.tf-nifi-aws-partition.partition}:sns:${var.aws_region}:${data.aws_caller_identity.tf-nifi-aws-account.account_id}:tf-nifi-sns-scaledown"
         }
       }
     },
