@@ -73,7 +73,7 @@ resource "aws_ssm_document" "tf-nifi-ssm-playbook-doc" {
         "   echo \"The specified Playbook file doesn't exist in the downloaded bundle. Please review the relative path and file name.\" >&2",
         "   exit 2",
         "fi",
-        "ansible-playbook -i \"localhost,\" -c local -e \"{{ExtraVariables}}\" \"{{Verbose}}\" \"$${PlaybookFile}\""
+        "export AWS_DEFAULT_REGION=${var.aws_region} && export AWS_REGION=${var.aws_region} && ansible-playbook -i \"localhost,\" -c local -e \"{{ExtraVariables}}\" \"{{Verbose}}\" \"$${PlaybookFile}\""
       ]
       }
     }
