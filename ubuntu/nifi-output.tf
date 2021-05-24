@@ -29,5 +29,12 @@ AWS_PROFILE=${var.aws_profile} aws ec2 describe-instances --region ${var.aws_reg
 
 # Connecting via SSM
 AWS_PROFILE=${var.aws_profile} aws ssm start-session --region ${var.aws_region} --target i-SOME_INSTANCE
+
+# Re-run Ansible (SSM Associations)
+# Zookeepers
+AWS_PROFILE=${var.aws_profile} aws ssm start-associations-once --region ${var.aws_region} --association-ids ${aws_ssm_association.tf-nifi-zookeepers-ssm-assoc.association_id}
+# Nodes
+AWS_PROFILE=${var.aws_profile} aws ssm start-associations-once --region ${var.aws_region} --association-ids ${aws_ssm_association.tf-nifi-nodes-ssm-assoc.association_id}
+
 OUTPUT
 }

@@ -276,6 +276,7 @@
         owner: nifi
         group: nifi
         mode: 0640
+      register: nifi_properties_file
 
     - name: connect string in state-management
       lineinfile:
@@ -392,7 +393,7 @@
       systemd:
         name: "nifi.{{ item }}"
         daemon_reload: yes
-        state: started
+        state: "{% if nifi_properties_file.changed %}restarted{% else %}started{% endif %}"
         enabled: yes
       with_items:
         - service
