@@ -25,9 +25,9 @@ https://${aws_lb.tf-nifi-zk-nlb.dns_name}:${var.web_port}/nifi
 ${aws_lb.tf-nifi-node-nlb.dns_name}
 
 # Instance IDs in Cluster
-aws ec2 describe-instances --region ${var.aws_region} --query 'Reservations[].Instances[*].[InstanceId, LaunchTime, [Tags[?Key==`Name`].Value][0][0]]' --filters Name=tag:Cluster,Values=${var.name_prefix}_${random_string.tf-nifi-random.result} Name=instance-state-name,Values=pending,running --output text
+AWS_PROFILE=${var.aws_profile} aws ec2 describe-instances --region ${var.aws_region} --query 'Reservations[].Instances[*].[InstanceId, LaunchTime, [Tags[?Key==`Name`].Value][0][0]]' --filters Name=tag:Cluster,Values=${var.name_prefix}_${random_string.tf-nifi-random.result} Name=instance-state-name,Values=pending,running --output text
 
 # Connecting via SSM
-aws ssm start-session --region ${var.aws_region} --target i-SOME_INSTANCE
+AWS_PROFILE=${var.aws_profile} aws ssm start-session --region ${var.aws_region} --target i-SOME_INSTANCE
 OUTPUT
 }
