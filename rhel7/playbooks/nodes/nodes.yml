@@ -171,6 +171,7 @@
 
     - name: download nifi from s3 if not downloaded
       aws_s3:
+        region: "{{ aws_region }}"
         mode: get
         bucket: "{{ s3_bucket }}"
         object: "nifi/downloads/{{ item }}"
@@ -187,6 +188,7 @@
 
     - name: download toolkit from s3 if not downloaded
       aws_s3:
+        region: "{{ aws_region }}"
         mode: get
         bucket: "{{ s3_bucket }}"
         object: "nifi/downloads/{{ item }}"
@@ -281,6 +283,7 @@
 
     - name: pull generated password from s3
       aws_s3:
+        region: "{{ aws_region }}"
         mode: get
         bucket: "{{ s3_bucket }}"
         object: "nifi/conf/{{ item }}"
@@ -320,6 +323,7 @@
 
     - name: pull ca from s3
       aws_s3:
+        region: "{{ aws_region }}"
         mode: get
         bucket: "{{ s3_bucket }}"
         object: "nifi/certificates/{{ item }}"
@@ -349,6 +353,7 @@
 
     - name: pull admin from s3
       aws_s3:
+        region: "{{ aws_region }}"
         mode: get
         bucket: "{{ s3_bucket }}"
         object: "nifi/certificates/admin/{{ item }}"

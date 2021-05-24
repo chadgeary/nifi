@@ -172,6 +172,7 @@
 
     - name: download zk from s3 if not downloaded
       aws_s3:
+        region: "{{ aws_region }}"
         mode: get
         bucket: "{{ s3_bucket }}"
         object: "nifi/downloads/{{ item }}"
@@ -188,6 +189,7 @@
 
     - name: download nifi from s3 if not downloaded
       aws_s3:
+        region: "{{ aws_region }}"
         mode: get
         bucket: "{{ s3_bucket }}"
         object: "nifi/downloads/{{ item }}"
@@ -204,6 +206,7 @@
 
     - name: download toolkit from s3 if not downloaded
       aws_s3:
+        region: "{{ aws_region }}"
         mode: get
         bucket: "{{ s3_bucket }}"
         object: "nifi/downloads/{{ item }}"
@@ -337,6 +340,7 @@
 
     - name: get pre-existing generated password from s3
       aws_s3:
+        region: "{{ aws_region }}"
         mode: get
         bucket: "{{ s3_bucket }}"
         object: "nifi/conf/{{ item }}"
@@ -366,6 +370,7 @@
 
     - name: upload password to s3
       aws_s3:
+        region: "{{ aws_region }}"
         mode: put
         bucket: "{{ s3_bucket }}"
         object: "nifi/conf/generated_password"
@@ -379,6 +384,7 @@
 
     - name: get generated password from s3
       aws_s3:
+        region: "{{ aws_region }}"
         mode: get
         bucket: "{{ s3_bucket }}"
         object: "nifi/conf/{{ item }}"
@@ -418,6 +424,7 @@
 
     - name: get pre-existing ca from s3
       aws_s3:
+        region: "{{ aws_region }}"
         mode: get
         bucket: "{{ s3_bucket }}"
         object: "nifi/certificates/{{ item }}"
@@ -444,6 +451,7 @@
 
     - name: upload ca to s3
       aws_s3:
+        region: "{{ aws_region }}"
         mode: put
         bucket: "{{ s3_bucket }}"
         object: "nifi/certificates/{{ item }}"
@@ -459,6 +467,7 @@
 
     - name: get ca from s3
       aws_s3:
+        region: "{{ aws_region }}"
         mode: get
         bucket: "{{ s3_bucket }}"
         object: "nifi/certificates/{{ item }}"
@@ -476,6 +485,7 @@
 
     - name: get pre-existing admin from s3
       aws_s3:
+        region: "{{ aws_region }}"
         mode: get
         bucket: "{{ s3_bucket }}"
         object: "nifi/certificates/admin/{{ item }}"
@@ -519,6 +529,7 @@
 
     - name: upload admin to s3
       aws_s3:
+        region: "{{ aws_region }}"
         mode: put
         bucket: "{{ s3_bucket }}"
         object: "nifi/certificates/admin/{{ item }}"
@@ -544,6 +555,7 @@
 
     - name: pull admin from s3
       aws_s3:
+        region: "{{ aws_region }}"
         mode: get
         bucket: "{{ s3_bucket }}"
         object: "nifi/certificates/admin/{{ item }}"
@@ -637,6 +649,7 @@
 
     - name: put users.xml, authorizations.xml on s3
       aws_s3:
+        region: "{{ aws_region }}"
         mode: put
         bucket: "{{ s3_bucket }}"
         object: "nifi/conf/{{ item }}"
@@ -652,6 +665,7 @@
 
     - name: get nifi conf files from s3
       aws_s3:
+        region: "{{ aws_region }}"
         mode: get
         bucket: "{{ s3_bucket }}"
         object: "nifi/conf/{{ item }}"
