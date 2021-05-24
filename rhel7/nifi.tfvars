@@ -30,7 +30,8 @@ instance_type = "r5.large"
 # the root block size of the instances (in GiB)
 instance_vol_size = 15
 
-# enable second or third zookeeper+nifi nodes (1 for yes, 0 for no)
+# enable first/second/third zookeeper+nifi nodes (1 for yes, 0 for no)
+enable_zk1 = 1
 enable_zk2 = 1
 enable_zk3 = 0
 

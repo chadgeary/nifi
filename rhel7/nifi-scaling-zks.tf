@@ -74,8 +74,8 @@ resource "aws_autoscaling_group" "tf-nifi-zk1-autoscalegroup" {
   vpc_zone_identifier     = [aws_subnet.tf-nifi-prinet1.id, aws_subnet.tf-nifi-prinet2.id]
   service_linked_role_arn = aws_iam_service_linked_role.tf-nifi-autoscale-slr.arn
   termination_policies    = ["ClosestToNextInstanceHour"]
-  min_size                = 1
-  max_size                = 1
+  min_size                = var.enable_zk1
+  max_size                = var.enable_zk1
   health_check_type       = "EC2"
   health_check_grace_period = 1800
   lifecycle {

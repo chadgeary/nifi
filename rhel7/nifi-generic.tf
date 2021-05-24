@@ -74,6 +74,11 @@ variable "zk_version" {
   description              = "The version of Apache Zookeeper, e.g. 3.6.1"
 }
 
+variable "enable_zk1" {
+  type                     = number
+  description              = "Whether to enable zk1 (1) or not (0)"
+}
+
 variable "enable_zk2" {
   type                     = number
   description              = "Whether to enable zk2 (1) or not (0)"
