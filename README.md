@@ -153,3 +153,17 @@ sudo chown $USER nifi.tfvars && chmod 600 nifi.tfvars
 
 # Post-Deployment
 Review terraform output for quick links to State Manager (ansible) status, Load Balancer health, Cloudwatch logs, and the admin certificate in S3 which must be added to a browser for web access.
+
+# Maintenance
+If modifying nifi.properties:
+1. Change the nifi.properties file in `playbooks/zookeepers/` and `playbooks/nodes/`
+2. Re-run `terraform apply -var-file="nifi.tfvars"`
+3. Re-apply the SSM associations mentioned in `terraform output`
+
+If re-sizing instances (or re-basing AMI):
+1. Change the instance type in `nifi.tfvars`
+2. Re-run `terraform apply -var-file="nifi.tfvars"`
+3. Scale the node autoscaling group down, either all at once (min 0 / max 0) or incrementally to replace instances of the old size.
+4. Scale the zookeeper autoscaling groups down, always leave at least one zookeeper running, e.g.:
+  - If zk1 and zk2 are running, scale zk2 down (min 0 / max 0) then back up (min 1 / max 1). Once the new zk2 is healthy,
+  - scale zk1 down (min 0 / max 0) then back up (min 1 / max 1)

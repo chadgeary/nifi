@@ -350,14 +350,14 @@
       with_items:
         - generated_password
       when:
-        - ansible_nodename == "zk1.{{ name_prefix }}{{ name_suffix }}.internal"
+        - ansible_nodename == 'zk1.' + name_prefix + name_suffix + '.internal'
 
     - name: check password generated
       stat:
         path: /opt/nifi-conf/generated_password
       register: password_generated
       when:
-        - ansible_nodename == "zk1.{{ name_prefix }}{{ name_suffix }}.internal"
+        - ansible_nodename == 'zk1.' + name_prefix + name_suffix + '.internal'
 
     - name: generate password if not generated
       shell: |
@@ -365,7 +365,7 @@
       become_user: nifi
       ignore_errors: True
       when:
-        - ansible_nodename == "zk1.{{ name_prefix }}{{ name_suffix }}.internal"
+        - ansible_nodename == 'zk1.' + name_prefix + name_suffix + '.internal'
         - password_generated.stat.exists == false
 
     - name: upload password to s3
@@ -380,7 +380,7 @@
         encryption_kms_key_id: "{{ kms_key_id }}"
       become_user: nifi
       when:
-        - ansible_nodename == "zk1.{{ name_prefix }}{{ name_suffix }}.internal"
+        - ansible_nodename == 'zk1.' + name_prefix + name_suffix + '.internal'
 
     - name: get generated password from s3
       aws_s3:
@@ -436,7 +436,7 @@
         - nifi-cert.pem
         - nifi-key.key
       when:
-        - ansible_nodename == "zk1.{{ name_prefix }}{{ name_suffix }}.internal"
+        - ansible_nodename == 'zk1.' + name_prefix + name_suffix + '.internal'
 
     - name: generate ca when not exists
       shell: |
@@ -448,7 +448,7 @@
       become_user: nifi
       when:
         - ca_cert.stat.exists == false
-        - ansible_nodename == "zk1.{{ name_prefix }}{{ name_suffix }}.internal"
+        - ansible_nodename == 'zk1.' + name_prefix + name_suffix + '.internal'
 
     - name: upload ca to s3
       aws_s3:
@@ -464,7 +464,7 @@
         - nifi-cert.pem
         - nifi-key.key
       when:
-        - ansible_nodename == "zk1.{{ name_prefix }}{{ name_suffix }}.internal"
+        - ansible_nodename == 'zk1.' + name_prefix + name_suffix + '.internal'
 
     - name: get ca from s3
       aws_s3:
@@ -499,7 +499,7 @@
         - admin_cert.pem
         - private_key.pem
       when:
-        - ansible_nodename == "zk1.{{ name_prefix }}{{ name_suffix }}.internal"
+        - ansible_nodename == 'zk1.' + name_prefix + name_suffix + '.internal'
 
     - name: check admin exists
       stat:
@@ -516,7 +516,7 @@
       become_user: nifi
       when:
         - admin_cert.stat.exists == false
-        - ansible_nodename == "zk1.{{ name_prefix }}{{ name_suffix }}.internal"
+        - ansible_nodename == 'zk1.' + name_prefix + name_suffix + '.internal'
 
 
     - name: rename pkcs12 to p12 and extract
@@ -526,7 +526,7 @@
         openssl pkcs12 -in /opt/nifi-certificates/admin/keystore.p12 -nokeys -out /opt/nifi-certificates/admin/admin_cert.pem -passin file:/opt/nifi-conf/generated_password
       when:
         - admin_cert.stat.exists == false
-        - ansible_nodename == "zk1.{{ name_prefix }}{{ name_suffix }}.internal"
+        - ansible_nodename == 'zk1.' + name_prefix + name_suffix + '.internal'
 
     - name: upload admin to s3
       aws_s3:
@@ -544,7 +544,7 @@
         - admin_cert.pem
         - private_key.pem
       when:
-        - ansible_nodename == "zk1.{{ name_prefix }}{{ name_suffix }}.internal"
+        - ansible_nodename == 'zk1.' + name_prefix + name_suffix + '.internal'
 
     - name: ensure admin dir for s3 objects
       file:
@@ -635,7 +635,7 @@
         name: nifi
         daemon_reload: yes
       when:
-        - ansible_nodename == "zk1.{{ name_prefix }}{{ name_suffix }}.internal"
+        - ansible_nodename == 'zk1.' + name_prefix + name_suffix + '.internal'
 
     - name: wait for users.xml, authorizations.xml
       wait_for:
@@ -646,7 +646,7 @@
         - users.xml
         - authorizations.xml
       when:
-        - ansible_nodename == "zk1.{{ name_prefix }}{{ name_suffix }}.internal"
+        - ansible_nodename == 'zk1.' + name_prefix + name_suffix + '.internal'
 
     - name: put users.xml, authorizations.xml on s3
       aws_s3:
@@ -662,7 +662,7 @@
         - users.xml
         - authorizations.xml
       when:
-        - ansible_nodename == "zk1.{{ name_prefix }}{{ name_suffix }}.internal"
+        - ansible_nodename == 'zk1.' + name_prefix + name_suffix + '.internal'
 
     - name: get nifi conf files from s3
       aws_s3:
