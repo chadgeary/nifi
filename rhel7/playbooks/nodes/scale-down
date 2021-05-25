@@ -9,19 +9,31 @@ INSTANCEID=$(curl http://169.254.169.254/latest/meta-data/instance-id)
 CLUSTERJSON=$(mktemp)
 S3BUCKET=$(cat /opt/nifi-conf/bucket)
 
-# List nodes in json
-/opt/nifi-toolkit/bin/cli.sh nifi get-nodes -p /opt/nifi-certificates/admin/cli.properties -ot json > $CLUSTERJSON
-
-# NODEID from HOSTNAME using jq
-NODEID=$(jq -r '.cluster.nodes | map(select(.address | contains("'$(hostname)'")).nodeId) | @tsv' $CLUSTERJSON)
-rm -f $CLUSTERJSON
-echo "$(date) NODEID $NODEID"
-
-# For DISCONNECT/DISCONNECTED/OFFLOAD/OFFLOADED/DELETE/LCYCLE
+# For NODEID/DISCONNECT/DISCONNECTED/OFFLOAD/OFFLOADED/DELETE/LCYCLE
 # the max attempts and target state
-MAX_ATTEMPTS=3
-SLEEP_INTERVAL=35
+MAX_ATTEMPTS=60
+SLEEP_INTERVAL=2
 TARGET_STATE="COMPLETE"
+
+# GET NODEID
+NODEID_ATTEMPTS=1
+NODEID_STATE="INCOMPLETE"
+while [[ $NODEID_ATTEMPTS -le $MAX_ATTEMPTS && $NODEID_STATE != $TARGET_STATE ]]
+do
+  echo "$(date) NODEID LIST ATTEMPT $NODEID_ATTEMPTS"
+  /opt/nifi-toolkit/bin/cli.sh nifi get-nodes -p /opt/nifi-certificates/admin/cli.properties -ot json > $CLUSTERJSON
+  jq -r '.cluster.nodes | map(select(.address | contains("'$(hostname)'")).nodeId) | @tsv' $CLUSTERJSON
+  if [ $? -eq 0 ]
+  then
+    NODEID=$(jq -r '.cluster.nodes | map(select(.address | contains("'$(hostname)'")).nodeId) | @tsv' $CLUSTERJSON)
+    NODEID_STATE=$TARGET_STATE
+    rm -f $CLUSTERJSON
+    echo "$(date) NODEID $NODEID"
+  else
+    NODEID_ATTEMPTS=$(($NODEID_ATTEMPTS+1))
+    sleep $SLEEP_INTERVAL
+  fi
+done
 
 # SEND DISCONNECT
 DISCO_ATTEMPTS=1
