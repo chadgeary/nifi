@@ -22,6 +22,13 @@
         "containerPort": 3888,
         "hostPort": 3888
       }
-    ]
+    ],
+    "logConfiguration": {
+      "logDriver": "json-file",
+      "options": {
+        "max-size": "100m",
+        "max-file": "10"
+      }
+    }
   }
 ]

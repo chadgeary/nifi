@@ -403,6 +403,15 @@
       become_user: nifi
       register: generated_password
 
+    - name: bootstrap.conf
+      template:
+        src: bootstrap.conf
+        dest: /opt/nifi/conf/bootstrap.conf
+        owner: nifi
+        group: nifi
+        mode: 0640
+      register: nifi_bootstrap_conf_file
+
     - name: nifi properties
       template:
         src: nifi.properties
@@ -711,13 +720,13 @@
     - name: stepped sleep to ensure one node stays up
       pause:
         minutes: "{{ (node_id.stdout | int) - 1 }}"
-      when: nifi_properties_file.changed or nifi_log_file.changed
+      when: nifi_properties_file.changed or nifi_log_file.changed or nifi_bootstrap_conf_file.changed
 
     - name: nifi systemd
       systemd:
         name: "nifi.{{ item }}"
         daemon_reload: yes
-        state: "{% if nifi_properties_file.changed or nifi_log_file.changed %}restarted{% else %}started{% endif %}"
+        state: "{% if nifi_properties_file.changed or nifi_log_file.changed or nifi_bootstrap_conf_file.changed %}restarted{% else %}started{% endif %}"
         enabled: yes
       with_items:
         - service
