@@ -1,12 +1,12 @@
 resource "aws_kms_key" "tf-nifi-kmscmk-lambda" {
-  description             = "Key for tf-nifi lambda"
-  key_usage               = "ENCRYPT_DECRYPT"
+  description              = "Key for tf-nifi lambda"
+  key_usage                = "ENCRYPT_DECRYPT"
   customer_master_key_spec = "SYMMETRIC_DEFAULT"
-  enable_key_rotation     = "true"
-  tags                    = {
-    Name                  = "${var.name_prefix}-kmscmk-lambda-${random_string.tf-nifi-random.result}"
+  enable_key_rotation      = "true"
+  tags = {
+    Name = "${var.name_prefix}-kmscmk-lambda-${random_string.tf-nifi-random.result}"
   }
-  policy                  = <<EOF
+  policy = <<EOF
 {
   "Id": "tf-nifi-kmskeypolicy-lambda",
   "Version": "2012-10-17",
@@ -46,6 +46,6 @@ EOF
 }
 
 resource "aws_kms_alias" "tf-nifi-kmscmk-lambda-alias" {
-  name                    = "alias/${var.name_prefix}-ksmcmk-lambda-${random_string.tf-nifi-random.result}"
-  target_key_id           = aws_kms_key.tf-nifi-kmscmk-lambda.key_id
+  name          = "alias/${var.name_prefix}-ksmcmk-lambda-${random_string.tf-nifi-random.result}"
+  target_key_id = aws_kms_key.tf-nifi-kmscmk-lambda.key_id
 }

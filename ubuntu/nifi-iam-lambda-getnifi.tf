@@ -1,16 +1,16 @@
 data "aws_iam_policy" "tf-nifi-iam-policy-lambda-getnifi-1" {
-  arn                     = "arn:${data.aws_partition.tf-nifi-aws-partition.partition}:iam::aws:policy/AmazonSSMFullAccess"
+  arn = "arn:${data.aws_partition.tf-nifi-aws-partition.partition}:iam::aws:policy/AmazonSSMFullAccess"
 }
 
 data "aws_iam_policy" "tf-nifi-iam-policy-lambda-getnifi-2" {
-  arn                     = "arn:${data.aws_partition.tf-nifi-aws-partition.partition}:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
+  arn = "arn:${data.aws_partition.tf-nifi-aws-partition.partition}:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
 }
 
 resource "aws_iam_policy" "tf-nifi-iam-policy-lambda-getnifi-3" {
-  name                    = "${var.name_prefix}-iam-policy-lambda-getnifi-${random_string.tf-nifi-random.result}"
-  path                    = "/"
-  description             = "Provides lambda and S3 KMS plus S3 put"
-  policy                  = <<EOF
+  name        = "${var.name_prefix}-iam-policy-lambda-getnifi-${random_string.tf-nifi-random.result}"
+  path        = "/"
+  description = "Provides lambda and S3 KMS plus S3 put"
+  policy      = <<EOF
 {
   "Version": "2012-10-17",
   "Statement": [
@@ -63,9 +63,9 @@ EOF
 }
 
 resource "aws_iam_role" "tf-nifi-iam-role-lambda-getnifi" {
-  name                    = "${var.name_prefix}-iam-role-lambda-getnifi-${random_string.tf-nifi-random.result}"
-  path                    = "/"
-  assume_role_policy      = <<EOF
+  name               = "${var.name_prefix}-iam-role-lambda-getnifi-${random_string.tf-nifi-random.result}"
+  path               = "/"
+  assume_role_policy = <<EOF
 {
   "Version": "2012-10-17",
   "Statement": [
@@ -83,16 +83,16 @@ EOF
 }
 
 resource "aws_iam_role_policy_attachment" "tf-nifi-iam-attach-lambda-getnifi-1" {
-  role                    = aws_iam_role.tf-nifi-iam-role-lambda-getnifi.name
-  policy_arn              = data.aws_iam_policy.tf-nifi-iam-policy-lambda-getnifi-1.arn
+  role       = aws_iam_role.tf-nifi-iam-role-lambda-getnifi.name
+  policy_arn = data.aws_iam_policy.tf-nifi-iam-policy-lambda-getnifi-1.arn
 }
 
 resource "aws_iam_role_policy_attachment" "tf-nifi-iam-attach-lambda-getnifi-2" {
-  role                    = aws_iam_role.tf-nifi-iam-role-lambda-getnifi.name
-  policy_arn              = data.aws_iam_policy.tf-nifi-iam-policy-lambda-getnifi-2.arn
+  role       = aws_iam_role.tf-nifi-iam-role-lambda-getnifi.name
+  policy_arn = data.aws_iam_policy.tf-nifi-iam-policy-lambda-getnifi-2.arn
 }
 
 resource "aws_iam_role_policy_attachment" "tf-nifi-iam-attach-lambda-getnifi-3" {
-  role                    = aws_iam_role.tf-nifi-iam-role-lambda-getnifi.name
-  policy_arn              = aws_iam_policy.tf-nifi-iam-policy-lambda-getnifi-3.arn
+  role       = aws_iam_role.tf-nifi-iam-role-lambda-getnifi.name
+  policy_arn = aws_iam_policy.tf-nifi-iam-policy-lambda-getnifi-3.arn
 }
