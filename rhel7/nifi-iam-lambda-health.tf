@@ -1,12 +1,12 @@
 data "aws_iam_policy" "tf-nifi-iam-policy-lambda-health-1" {
-  arn                     = "arn:${data.aws_partition.tf-nifi-aws-partition.partition}:iam::aws:policy/service-role/AWSLambdaVPCAccessExecutionRole"
+  arn = "arn:${data.aws_partition.tf-nifi-aws-partition.partition}:iam::aws:policy/service-role/AWSLambdaVPCAccessExecutionRole"
 }
 
 resource "aws_iam_policy" "tf-nifi-iam-policy-lambda-health-2" {
-  name                    = "${var.name_prefix}-iam-policy-lambda-health-${random_string.tf-nifi-random.result}"
-  path                    = "/"
-  description             = "Provides lambda EC2 and InstanceHealth permission"
-  policy                  = <<EOF
+  name        = "${var.name_prefix}-iam-policy-lambda-health-${random_string.tf-nifi-random.result}"
+  path        = "/"
+  description = "Provides lambda EC2 and InstanceHealth permission"
+  policy      = <<EOF
 {
   "Version": "2012-10-17",
   "Statement": [
@@ -77,9 +77,9 @@ EOF
 }
 
 resource "aws_iam_role" "tf-nifi-iam-role-lambda-health" {
-  name                    = "${var.name_prefix}-iam-role-lambda-health-${random_string.tf-nifi-random.result}"
-  path                    = "/"
-  assume_role_policy      = <<EOF
+  name               = "${var.name_prefix}-iam-role-lambda-health-${random_string.tf-nifi-random.result}"
+  path               = "/"
+  assume_role_policy = <<EOF
 {
   "Version": "2012-10-17",
   "Statement": [
@@ -97,11 +97,11 @@ EOF
 }
 
 resource "aws_iam_role_policy_attachment" "tf-nifi-iam-attach-health-lambda-1" {
-  role                    = aws_iam_role.tf-nifi-iam-role-lambda-health.name
-  policy_arn              = data.aws_iam_policy.tf-nifi-iam-policy-lambda-health-1.arn
+  role       = aws_iam_role.tf-nifi-iam-role-lambda-health.name
+  policy_arn = data.aws_iam_policy.tf-nifi-iam-policy-lambda-health-1.arn
 }
 
 resource "aws_iam_role_policy_attachment" "tf-nifi-iam-attach-health-lambda-2" {
-  role                    = aws_iam_role.tf-nifi-iam-role-lambda-health.name
-  policy_arn              = aws_iam_policy.tf-nifi-iam-policy-lambda-health-2.arn
+  role       = aws_iam_role.tf-nifi-iam-role-lambda-health.name
+  policy_arn = aws_iam_policy.tf-nifi-iam-policy-lambda-health-2.arn
 }

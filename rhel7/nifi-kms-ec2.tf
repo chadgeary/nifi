@@ -1,12 +1,12 @@
 resource "aws_kms_key" "tf-nifi-kmscmk-ec2" {
-  description             = "Key for tf-nifi ec2/ebs"
-  key_usage               = "ENCRYPT_DECRYPT"
+  description              = "Key for tf-nifi ec2/ebs"
+  key_usage                = "ENCRYPT_DECRYPT"
   customer_master_key_spec = "SYMMETRIC_DEFAULT"
-  enable_key_rotation     = "true"
-  tags                    = {
-    Name                  = "${var.name_prefix}-kmscmk-ec2-${random_string.tf-nifi-random.result}"
+  enable_key_rotation      = "true"
+  tags = {
+    Name = "${var.name_prefix}-kmscmk-ec2-${random_string.tf-nifi-random.result}"
   }
-  policy                  = <<EOF
+  policy     = <<EOF
 {
   "Id": "tf-nifi-kmskeypolicy-ec2",
   "Version": "2012-10-17",
@@ -91,10 +91,10 @@ resource "aws_kms_key" "tf-nifi-kmscmk-ec2" {
   ]
 }
 EOF
-  depends_on              = [aws_iam_service_linked_role.tf-nifi-autoscale-slr]
+  depends_on = [aws_iam_service_linked_role.tf-nifi-autoscale-slr]
 }
 
 resource "aws_kms_alias" "tf-nifi-kmscmk-ec2-alias" {
-  name                    = "alias/${var.name_prefix}-ksmcmk-ec2-${random_string.tf-nifi-random.result}"
-  target_key_id           = aws_kms_key.tf-nifi-kmscmk-ec2.key_id
+  name          = "alias/${var.name_prefix}-ksmcmk-ec2-${random_string.tf-nifi-random.result}"
+  target_key_id = aws_kms_key.tf-nifi-kmscmk-ec2.key_id
 }

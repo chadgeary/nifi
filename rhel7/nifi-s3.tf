@@ -1,7 +1,7 @@
 # s3 bucket
 resource "aws_s3_bucket" "tf-nifi-bucket" {
-  bucket                  = "${var.name_prefix}-bucket-${random_string.tf-nifi-random.result}"
-  acl                     = "private"
+  bucket = "${var.name_prefix}-bucket-${random_string.tf-nifi-random.result}"
+  acl    = "private"
   versioning {
     enabled = true
   }
@@ -13,8 +13,8 @@ resource "aws_s3_bucket" "tf-nifi-bucket" {
       }
     }
   }
-  force_destroy           = true
-  policy                  = <<POLICY
+  force_destroy = true
+  policy        = <<POLICY
 {
   "Version": "2012-10-17",
   "Statement": [
@@ -117,18 +117,18 @@ resource "aws_s3_bucket_public_access_block" "tf-nifi-bucket-pubaccessblock" {
 
 # s3 objects (zookeeper playbook)
 resource "aws_s3_bucket_object" "tf-nifi-zookeepers-files" {
-  for_each                = fileset("playbooks/zookeepers/", "*")
-  bucket                  = aws_s3_bucket.tf-nifi-bucket.id
-  key                     = "nifi/zookeepers/${each.value}"
-  content_base64          = base64encode(file("${path.module}/playbooks/zookeepers/${each.value}"))
-  kms_key_id              = aws_kms_key.tf-nifi-kmscmk-s3.arn
+  for_each       = fileset("playbooks/zookeepers/", "*")
+  bucket         = aws_s3_bucket.tf-nifi-bucket.id
+  key            = "nifi/zookeepers/${each.value}"
+  content_base64 = base64encode(file("${path.module}/playbooks/zookeepers/${each.value}"))
+  kms_key_id     = aws_kms_key.tf-nifi-kmscmk-s3.arn
 }
 
 # s3 objects (nodes playbook)
 resource "aws_s3_bucket_object" "tf-nifi-nodes-files" {
-  for_each                = fileset("playbooks/nodes/", "*")
-  bucket                  = aws_s3_bucket.tf-nifi-bucket.id
-  key                     = "nifi/nodes/${each.value}"
-  content_base64          = base64encode(file("${path.module}/playbooks/nodes/${each.value}")) 
-  kms_key_id              = aws_kms_key.tf-nifi-kmscmk-s3.arn
+  for_each       = fileset("playbooks/nodes/", "*")
+  bucket         = aws_s3_bucket.tf-nifi-bucket.id
+  key            = "nifi/nodes/${each.value}"
+  content_base64 = base64encode(file("${path.module}/playbooks/nodes/${each.value}"))
+  kms_key_id     = aws_kms_key.tf-nifi-kmscmk-s3.arn
 }

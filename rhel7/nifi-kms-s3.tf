@@ -1,12 +1,12 @@
 resource "aws_kms_key" "tf-nifi-kmscmk-s3" {
-  description             = "Key for tf-nifi s3"
-  key_usage               = "ENCRYPT_DECRYPT"
+  description              = "Key for tf-nifi s3"
+  key_usage                = "ENCRYPT_DECRYPT"
   customer_master_key_spec = "SYMMETRIC_DEFAULT"
-  enable_key_rotation     = "true"
-  tags                    = {
-    Name                  = "tf-nifi-kmscmk-s3"
+  enable_key_rotation      = "true"
+  tags = {
+    Name = "tf-nifi-kmscmk-s3"
   }
-  policy                  = <<EOF
+  policy = <<EOF
 {
   "Id": "tf-nifi-kmskeypolicy-s3",
   "Version": "2012-10-17",
@@ -107,6 +107,6 @@ EOF
 }
 
 resource "aws_kms_alias" "tf-nifi-kmscmk-s3-alias" {
-  name                    = "alias/tf-nifi-ksmcmk-s3"
-  target_key_id           = aws_kms_key.tf-nifi-kmscmk-s3.key_id
+  name          = "alias/tf-nifi-ksmcmk-s3"
+  target_key_id = aws_kms_key.tf-nifi-kmscmk-s3.key_id
 }

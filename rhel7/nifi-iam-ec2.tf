@@ -1,12 +1,12 @@
 data "aws_iam_policy" "tf-nifi-instance-policy-ssm" {
-  arn                     = "arn:${data.aws_partition.tf-nifi-aws-partition.partition}:iam::aws:policy/AmazonSSMManagedInstanceCore"
+  arn = "arn:${data.aws_partition.tf-nifi-aws-partition.partition}:iam::aws:policy/AmazonSSMManagedInstanceCore"
 }
 
 resource "aws_iam_policy" "tf-nifi-instance-policy-s3" {
-  name                    = "${var.name_prefix}-instance-policy-s3-${random_string.tf-nifi-random.result}"
-  path                    = "/"
-  description             = "Provides tf-nifi instances access to endpoint, s3 objects/bucket"
-  policy                  = <<EOF
+  name        = "${var.name_prefix}-instance-policy-s3-${random_string.tf-nifi-random.result}"
+  path        = "/"
+  description = "Provides tf-nifi instances access to endpoint, s3 objects/bucket"
+  policy      = <<EOF
 {
   "Version": "2012-10-17",
   "Statement": [
@@ -69,10 +69,10 @@ EOF
 }
 
 resource "aws_iam_policy" "tf-nifi-instance-policy-lifecycle" {
-  name                    = "${var.name_prefix}-instance-policy-lifecycle-${random_string.tf-nifi-random.result}"
-  path                    = "/"
-  description             = "Provides tf-nifi instances complete autoscale lifecycle"
-  policy                  = <<EOF
+  name        = "${var.name_prefix}-instance-policy-lifecycle-${random_string.tf-nifi-random.result}"
+  path        = "/"
+  description = "Provides tf-nifi instances complete autoscale lifecycle"
+  policy      = <<EOF
 {
   "Version": "2012-10-17",
   "Statement": [
@@ -90,10 +90,10 @@ EOF
 }
 
 resource "aws_iam_policy" "tf-nifi-instance-policy-route53" {
-  name                    = "${var.name_prefix}-instance-policy-route53-${random_string.tf-nifi-random.result}"
-  path                    = "/"
-  description             = "Provides tf-nifi instances update route53 records"
-  policy                  = <<EOF
+  name        = "${var.name_prefix}-instance-policy-route53-${random_string.tf-nifi-random.result}"
+  path        = "/"
+  description = "Provides tf-nifi instances update route53 records"
+  policy      = <<EOF
 {
   "Version": "2012-10-17",
   "Statement": [
@@ -115,9 +115,9 @@ EOF
 }
 
 resource "aws_iam_role" "tf-nifi-instance-iam-role" {
-  name                    = "${var.name_prefix}-instance-role-${random_string.tf-nifi-random.result}"
-  path                    = "/"
-  assume_role_policy      = <<EOF
+  name               = "${var.name_prefix}-instance-role-${random_string.tf-nifi-random.result}"
+  path               = "/"
+  assume_role_policy = <<EOF
 {
   "Version": "2012-10-17",
   "Statement": [
@@ -135,26 +135,26 @@ EOF
 }
 
 resource "aws_iam_role_policy_attachment" "tf-nifi-iam-attach-ssm" {
-  role                    = aws_iam_role.tf-nifi-instance-iam-role.name
-  policy_arn              = data.aws_iam_policy.tf-nifi-instance-policy-ssm.arn
+  role       = aws_iam_role.tf-nifi-instance-iam-role.name
+  policy_arn = data.aws_iam_policy.tf-nifi-instance-policy-ssm.arn
 }
 
 resource "aws_iam_role_policy_attachment" "tf-nifi-iam-attach-s3" {
-  role                    = aws_iam_role.tf-nifi-instance-iam-role.name
-  policy_arn              = aws_iam_policy.tf-nifi-instance-policy-s3.arn
+  role       = aws_iam_role.tf-nifi-instance-iam-role.name
+  policy_arn = aws_iam_policy.tf-nifi-instance-policy-s3.arn
 }
 
 resource "aws_iam_role_policy_attachment" "tf-nifi-iam-attach-lifecycle" {
-  role                    = aws_iam_role.tf-nifi-instance-iam-role.name
-  policy_arn              = aws_iam_policy.tf-nifi-instance-policy-lifecycle.arn
+  role       = aws_iam_role.tf-nifi-instance-iam-role.name
+  policy_arn = aws_iam_policy.tf-nifi-instance-policy-lifecycle.arn
 }
 
 resource "aws_iam_role_policy_attachment" "tf-nifi-iam-attach-route53" {
-  role                    = aws_iam_role.tf-nifi-instance-iam-role.name
-  policy_arn              = aws_iam_policy.tf-nifi-instance-policy-route53.arn
+  role       = aws_iam_role.tf-nifi-instance-iam-role.name
+  policy_arn = aws_iam_policy.tf-nifi-instance-policy-route53.arn
 }
 
 resource "aws_iam_instance_profile" "tf-nifi-instance-profile" {
-  name                    = "${var.name_prefix}-instance-profile-${random_string.tf-nifi-random.result}"
-  role                    = aws_iam_role.tf-nifi-instance-iam-role.name
+  name = "${var.name_prefix}-instance-profile-${random_string.tf-nifi-random.result}"
+  role = aws_iam_role.tf-nifi-instance-iam-role.name
 }

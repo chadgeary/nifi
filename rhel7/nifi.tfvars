@@ -1,6 +1,6 @@
 # aws profile (e.g. from aws configure, usually "default")
 aws_profile = "default"
-aws_region = "us-east-1"
+aws_region  = "us-east-1"
 
 # existing aws iam user granted access to the kms key (for browsing KMS encrypted services like S3 or SNS).
 kms_manager = "some_iam_user"
@@ -15,8 +15,8 @@ client_cidrs = []
 web_port = 2170
 
 # service ports for traffic inbound via service NLB
-tcp_service_ports = [2200, 2201]
-udp_service_ports = []
+tcp_service_ports    = [2200, 2201]
+udp_service_ports    = []
 tcpudp_service_ports = []
 
 # inter-cluster communication occurs on ports web_port and 2171 through 2176
@@ -45,27 +45,27 @@ name_prefix = "nifi"
 
 # the vendor supplying the AMI and the AMI name - default is official RHEL7
 vendor_ami_account_number = "309956199498"
-vendor_ami_name_string = "RHEL-7.*_HVM_GA-20*-x86_64-0-Hourly2-GP2"
+vendor_ami_name_string    = "RHEL-7.*_HVM_GA-20*-x86_64-0-Hourly2-GP2"
 
 # days to retain logs in cloudwatch
 log_retention_days = 30
 
 # health check frequency - if an instance fails a health check it is terminated and replaced
 health_check_enable = true
-health_check_unit = "minutes"
-health_check_count = 10
+health_check_unit   = "minutes"
+health_check_count  = 10
 
 # nifi/nifi-toolkit and zookeeper versions downloaded from urls below
 nifi_version = "1.13.2"
-zk_version = "3.7.0"
+zk_version   = "3.7.0"
 
 # urls for a lambda function to fetch zookeeper, nifi, and nifi toolkit and put to s3
-zk_url = "https://apache.osuosl.org/zookeeper/zookeeper-3.7.0/apache-zookeeper-3.7.0-bin.tar.gz"
-nifi_url = "https://apache.osuosl.org/nifi/1.13.2/nifi-1.13.2-bin.tar.gz"
+zk_url      = "https://apache.osuosl.org/zookeeper/zookeeper-3.7.0/apache-zookeeper-3.7.0-bin.tar.gz"
+nifi_url    = "https://apache.osuosl.org/nifi/1.13.2/nifi-1.13.2-bin.tar.gz"
 toolkit_url = "https://apache.osuosl.org/nifi/1.13.2/nifi-toolkit-1.13.2-bin.tar.gz"
 
 # vpc specific vars, modify these values if there would be overlap with existing resources.
-vpc_cidr = "10.10.10.0/24"
+vpc_cidr     = "10.10.10.0/24"
 pubnet1_cidr = "10.10.10.0/28"
 pubnet2_cidr = "10.10.10.16/28"
 pubnet3_cidr = "10.10.10.32/28"
