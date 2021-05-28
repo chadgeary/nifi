@@ -311,6 +311,15 @@
         mode: 0640
       register: nifi_properties_file
 
+    - name: logback.xml
+      template:
+        src: logback.xml
+        dest: /opt/nifi/conf/logback.xml
+        owner: nifi
+        group: nifi
+        mode: 0640
+      register: nifi_log_file
+
     - name: connect string in state-management
       lineinfile:
         path: /opt/nifi/conf/state-management.xml
@@ -426,7 +435,7 @@
       systemd:
         name: "nifi.{{ item }}"
         daemon_reload: yes
-        state: "{% if nifi_properties_file.changed %}restarted{% else %}started{% endif %}"
+        state: "{% if nifi_properties_file.changed or nifi_log_file.changed %}restarted{% else %}started{% endif %}"
         enabled: yes
       with_items:
         - service
@@ -442,3 +451,7 @@
       shell: |
         /usr/local/bin/scale-up-permitproxy
       become_user: nifi
+      retries: 60
+      delay: 3
+      register: scale_up
+      until: scale_up is not failed

@@ -50,9 +50,10 @@ vendor_ami_name_string = "RHEL-7.*_HVM_GA-20*-x86_64-0-Hourly2-GP2"
 # days to retain logs in cloudwatch
 log_retention_days = 30
 
-# health check frequency
+# health check frequency - if an instance fails a health check it is terminated and replaced
+health_check_enable = true
 health_check_unit = "minutes"
-health_check_count = 5
+health_check_count = 10
 
 # nifi/nifi-toolkit and zookeeper versions downloaded from urls below
 nifi_version = "1.13.2"

@@ -98,7 +98,7 @@ resource "aws_security_group_rule" "tf-nifi-prisg-self-in" {
   type                    = "ingress"
   description             = "IN FROM SELF - SELF PORTS"
   from_port               = "2171"
-  to_port                 = "2176"
+  to_port                 = "2177"
   protocol                = "tcp"
   source_security_group_id = aws_security_group.tf-nifi-prisg.id
 }
@@ -118,7 +118,7 @@ resource "aws_security_group_rule" "tf-nifi-prisg-self-out" {
   type                    = "egress"
   description             = "OUT TO SELF - SELF PORTS"
   from_port               = "2171"
-  to_port                 = "2176"
+  to_port                 = "2177"
   protocol                = "tcp"
   source_security_group_id = aws_security_group.tf-nifi-prisg.id
 }

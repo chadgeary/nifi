@@ -181,6 +181,11 @@ variable "log_retention_days" {
   default                = 30
 }
 
+variable "health_check_enable" {
+  type                   = bool
+  default                = true
+}
+
 variable "health_check_unit" {
   type                   = string
   default                = "minutes"
