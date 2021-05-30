@@ -36,7 +36,7 @@ resource "aws_codepipeline" "zk-codepipe" {
       output_artifacts = ["build_output"]
       version          = "1"
       configuration = {
-        ProjectName = "${var.name_prefix}-codebuild-${random_string.tf-nifi-random.result}"
+        ProjectName = aws_codepipeline.zk-codepipe.name
       }
     }
   }

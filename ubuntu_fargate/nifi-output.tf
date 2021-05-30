@@ -14,7 +14,7 @@ https://console.aws.amazon.com/ec2/v2/home?region=${var.aws_region}#TargetGroup:
 # Cloudwatch Logs
 https://console.aws.amazon.com/cloudwatch/home?region=${var.aws_region}#logsV2:log-groups/log-group/$252Faws$252Fec2$252F${var.name_prefix}_${random_string.tf-nifi-random.result}
 
-# Admin Certificate + Secret
+# Admin Certificate
 https://s3.console.aws.amazon.com/s3/object/${aws_s3_bucket.tf-nifi-bucket.id}?region=${var.aws_region}&prefix=nifi/certificates/admin/keystore.p12
 
 # NLB WebUI
