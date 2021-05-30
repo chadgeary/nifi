@@ -9,15 +9,6 @@
       set_fact:
         zookeeper_nodes: "{{ zk_nlb }}:{{ zk_port }}"
 
-    - name: get secret
-      set_fact:
-        nifi_secret: "{{ lookup('aws_ssm', name_prefix + '-nifi-secret-' + name_suffix, decrypt=True, region=aws_region) }}"
-
-    - name: set secret absent
-      file:
-        state: absent
-        path: /opt/nifi-conf/nifi_secret
-
     - name: set host in hosts
       lineinfile:
         path: /etc/hosts
@@ -49,6 +40,15 @@
         - boto
         - boto3
         - botocore
+
+    - name: get secret
+      set_fact:
+        nifi_secret: "{{ lookup('aws_ssm', name_prefix + '-nifi-secret-' + name_suffix, decrypt=True, region=aws_region) }}"
+
+    - name: set secret absent
+      file:
+        state: absent
+        path: /opt/nifi-conf/nifi_secret
 
     - name: nifi user
       user:
@@ -250,14 +250,6 @@
         owner: nifi
         group: nifi
 
-    - name: authorizers.xml
-      template:
-        src: authorizers.xml
-        dest: /opt/nifi/conf/authorizers.xml
-        owner: nifi
-        group: nifi
-        mode: 0640
-
     - name: nifi systemd service file
       copy:
         src: nifi.service
@@ -299,11 +291,6 @@
         regexp: '        <property name="Connect String">.*</property>'
         line: '        <property name="Connect String">{{ zk_nlb }}:{{ zk_port }}</property>'
 
-    - name: check ca exists
-      stat:
-        path: /opt/nifi-certificates/nifi-cert.pem
-      register: ca_cert
-
     - name: get pre-existing ca from s3
       aws_s3:
         region: "{{ aws_region }}"
@@ -317,6 +304,19 @@
         - nifi-cert.pem
         - nifi-key.key
 
+    - name: check ca exists
+      stat:
+        path: /opt/nifi-certificates/nifi-cert.pem
+      register: ca_cert
+
+    - name: authorizers.xml
+      template:
+        src: authorizers.xml
+        dest: /opt/nifi/conf/authorizers.xml
+        owner: nifi
+        group: nifi
+        mode: 0640
+
     - name: generate ca when not exists
       shell: |
         export JAVA_HOME=/usr/lib/jvm/default-java
@@ -324,24 +324,20 @@
       args:
         chdir: /opt/nifi-certificates/
         executable: /bin/bash
+      when: ca_cert.stat.exists == false
       become_user: nifi
 
-    - name: pull ca from s3
+    - name: push ca to s3
       aws_s3:
         region: "{{ aws_region }}"
-        mode: get
+        mode: put
         bucket: "{{ s3_bucket }}"
         object: "nifi/certificates/{{ item }}"
-        dest: "/opt/nifi-certificates/{{ item }}"
+        src: "/opt/nifi-certificates/{{ item }}"
       with_items:
         - nifi-cert.pem
         - nifi-key.key
       become_user: nifi
-      when: ca_cert.stat.exists == false
-      retries: 900
-      delay: 2
-      register: ca_from_s3
-      until: ca_from_s3 is not failed
 
     - name: get pre-existing admin from s3
       aws_s3:
@@ -465,11 +461,6 @@
         - nifi.service
         - nifi.timer
 
-    - name: run scale-up script to add node as user
-      shell: |
-        /usr/local/bin/scale-up-adduser
-      become_user: nifi
-
     - name: nifi systemd
       systemd:
         name: "nifi.{{ item }}"
@@ -479,6 +470,11 @@
       with_items:
         - service
         - timer
+
+    - name: run scale-up script to add node as user
+      shell: |
+        /usr/local/bin/scale-up-adduser
+      become_user: nifi
 
     - name: wait for web port
       wait_for:

@@ -152,3 +152,24 @@ resource "aws_security_group_rule" "tf-nifi-prisg-self-out-websg" {
   protocol                 = "tcp"
   source_security_group_id = aws_security_group.tf-nifi-prisg.id
 }
+
+# zk
+resource "aws_security_group_rule" "tf-nifi-sg-zk-in" {
+  security_group_id = aws_security_group.tf-nifi-prisg.id
+  type              = "ingress"
+  description       = "IN FROM PRINET ZK"
+  from_port         = var.zk_portnifi
+  to_port           = var.zk_portnifi
+  protocol          = "tcp"
+  cidr_blocks       = [var.prinet1_cidr, var.prinet2_cidr, var.prinet3_cidr]
+}
+
+resource "aws_security_group_rule" "tf-nifi-sg-zk-out" {
+  security_group_id = aws_security_group.tf-nifi-prisg.id
+  type              = "egress"
+  description       = "OUT FROM PRINET ZK"
+  from_port         = var.zk_portnifi
+  to_port           = var.zk_portnifi
+  protocol          = "tcp"
+  cidr_blocks       = [var.prinet1_cidr, var.prinet2_cidr, var.prinet3_cidr]
+}

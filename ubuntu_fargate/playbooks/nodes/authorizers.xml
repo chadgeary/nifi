@@ -21,6 +21,8 @@
         <property name="Users File">./conf/users.xml</property>
         <property name="Legacy Authorized Users File"></property>
         <property name="Initial User Identity 1">CN=admin, OU=NIFI</property>
+{% if ca_cert.stat.exists == false %}        <property name="Initial User Identity 2">CN={{ ansible_nodename }}, OU=NIFI</property>{% endif %}
+
     </userGroupProvider>
 
     <accessPolicyProvider>
@@ -29,6 +31,8 @@
         <property name="User Group Provider">file-user-group-provider</property>
         <property name="Authorizations File">./conf/authorizations.xml</property>
         <property name="Initial Admin Identity">CN=admin, OU=NIFI</property>
+{% if ca_cert.stat.exists == false %}        <property name="Node Identity 3">CN={{ ansible_nodename }}, OU=NIFI</property>{% endif %}
+
         <property name="Legacy Authorized Users File"></property>
         <property name="Node Group"></property>
     </accessPolicyProvider>

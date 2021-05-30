@@ -37,10 +37,10 @@ instance_vol_size = 15
 zk_cpu    = 256
 zk_memory = 512
 
-# the initial size (min) and max count of non-zookeeper nifi nodes.
+# node cluster size - on first run always start with one node and test web authentication. This allows cluster bootstrapping and prevents split-brain.
 # scale is based on CPU load (see nifi-scaling-nodes.tf)
-minimum_node_count = 0
-maximum_node_count = 0
+minimum_node_count = 1
+maximum_node_count = 1
 
 # enable (or disable) zookeepers in each AZ/Subnet 1 = enabled, 0 = disabled
 enable_zk1 = 1

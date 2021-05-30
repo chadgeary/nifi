@@ -41,7 +41,7 @@ EOF
 resource "aws_autoscaling_group" "tf-nifi-autoscalegroup" {
   name_prefix               = "${var.name_prefix}-asg-${random_string.tf-nifi-random.result}-"
   launch_configuration      = aws_launch_configuration.tf-nifi-launchconf.name
-  target_group_arns         = concat(aws_lb_target_group.tf-nifi-service-target-tcp[*].arn, aws_lb_target_group.tf-nifi-service-target-udp[*].arn, aws_lb_target_group.tf-nifi-service-target-tcpudp[*].arn)
+  target_group_arns         = concat([aws_lb_target_group.tf-nifi-service-target-web.arn], aws_lb_target_group.tf-nifi-service-target-tcp[*].arn, aws_lb_target_group.tf-nifi-service-target-udp[*].arn, aws_lb_target_group.tf-nifi-service-target-tcpudp[*].arn)
   vpc_zone_identifier       = [aws_subnet.tf-nifi-prinet1.id, aws_subnet.tf-nifi-prinet2.id, aws_subnet.tf-nifi-prinet3.id]
   service_linked_role_arn   = aws_iam_service_linked_role.tf-nifi-autoscale-slr.arn
   termination_policies      = ["ClosestToNextInstanceHour"]
