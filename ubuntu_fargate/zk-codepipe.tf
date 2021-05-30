@@ -36,7 +36,7 @@ resource "aws_codepipeline" "zk-codepipe" {
       output_artifacts = ["build_output"]
       version          = "1"
       configuration = {
-        ProjectName = aws_codepipeline.zk-codepipe.name
+        ProjectName = aws_codebuild.zk-codebuild.name
       }
     }
   }
