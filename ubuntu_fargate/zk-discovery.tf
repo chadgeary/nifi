@@ -5,7 +5,7 @@ resource "aws_service_discovery_private_dns_namespace" "zk-svcnamespace" {
 }
 
 resource "aws_service_discovery_service" "zk-svcdiscoveryA" {
-  name = "${var.name_prefix}-zk-svcdiscoveryA-${random_string.tf-nifi-random.result}.internal"
+  name = "zka"
   dns_config {
     namespace_id = aws_service_discovery_private_dns_namespace.zk-svcnamespace.id
     dns_records {
@@ -20,7 +20,7 @@ resource "aws_service_discovery_service" "zk-svcdiscoveryA" {
 }
 
 resource "aws_service_discovery_service" "zk-svcdiscoveryB" {
-  name = "${var.name_prefix}-zk-svcdiscoveryB-${random_string.tf-nifi-random.result}.internal"
+  name = "zkb"
   dns_config {
     namespace_id = aws_service_discovery_private_dns_namespace.zk-svcnamespace.id
     dns_records {
@@ -35,7 +35,7 @@ resource "aws_service_discovery_service" "zk-svcdiscoveryB" {
 }
 
 resource "aws_service_discovery_service" "zk-svcdiscoveryC" {
-  name = "${var.name_prefix}-zk-svcdiscoveryC-${random_string.tf-nifi-random.result}.internal"
+  name = "zkc"
   dns_config {
     namespace_id = aws_service_discovery_private_dns_namespace.zk-svcnamespace.id
     dns_records {

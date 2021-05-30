@@ -88,6 +88,7 @@ resource "aws_cloudwatch_metric_alarm" "tf-nifi-cpu-metric-alarm-up" {
   }
   actions_enabled = true
   alarm_actions   = [aws_autoscaling_policy.tf-nifi-autoscalepolicy-up.arn]
+  depends_on      = [aws_codebuild_project.zk-codebuild]
 }
 
 # scale down policy and metric alarm

@@ -7,7 +7,7 @@
 
     - name: set zookeeper connection string
       set_fact:
-        zookeeper_nodes: "{{ zk_nlb }}:{{ zk_port }}"
+        zookeeper_nodes: "zka.{{ name_prefix }}_{{ name_suffix }}.internal:{{ zk_port }},zkb.{{ name_prefix }}_{{ name_suffix }}.internal:{{ zk_port }},zkc.{{ name_prefix }}_{{ name_suffix }}.internal:{{ zk_port }}"
 
     - name: set host in hosts
       lineinfile:
@@ -289,7 +289,7 @@
       lineinfile:
         path: /opt/nifi/conf/state-management.xml
         regexp: '        <property name="Connect String">.*</property>'
-        line: '        <property name="Connect String">{{ zk_nlb }}:{{ zk_port }}</property>'
+        line: '        <property name="Connect String">zka.{{ name_prefix }}_{{ name_suffix }}.internal:{{ zk_port }},zkb.{{ name_prefix }}_{{ name_suffix }}.internal:{{ zk_port }},zkc.{{ name_prefix }}_{{ name_suffix }}.internal:{{ zk_port }}</property>'
 
     - name: get pre-existing ca from s3
       aws_s3:
@@ -461,6 +461,12 @@
         - nifi.service
         - nifi.timer
 
+    - name: run scale-up script to add node as user
+      shell: |
+        /usr/local/bin/scale-up-adduser
+      become_user: nifi
+      when: ca_cert.stat.exists == true
+
     - name: nifi systemd
       systemd:
         name: "nifi.{{ item }}"
@@ -470,11 +476,6 @@
       with_items:
         - service
         - timer
-
-    - name: run scale-up script to add node as user
-      shell: |
-        /usr/local/bin/scale-up-adduser
-      become_user: nifi
 
     - name: wait for web port
       wait_for:
@@ -490,3 +491,4 @@
       delay: 3
       register: scale_up
       until: scale_up is not failed
+      when: ca_cert.stat.exists == true

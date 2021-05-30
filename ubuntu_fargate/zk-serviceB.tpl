@@ -5,9 +5,8 @@
     "essential": true,
     "environment": [
       {"name": "ZOO_MY_ID", "value": "2"},
-      {"name": "ZOO_SERVERS", "value": "server.1=${name_prefix}-zk-svcdiscoverya-${aws_suffix}.internal.${name_prefix}_${aws_suffix}.internal:${zk_portnifi}:${zkA_port2}:participant;${name_prefix}-zk-svcdiscoverya-${aws_suffix}.internal.${name_prefix}_${aws_suffix}.internal:${zkA_port3} server.2=0.0.0.0:2888:3888:participant;0.0.0.0:2181 server.3=${name_prefix}-zk-svcdiscoveryc-${aws_suffix}.internal.${name_prefix}_${aws_suffix}.internal:${zk_portnifi}:${zkC_port2}:participant;${name_prefix}-zk-svcdiscoveryc-${aws_suffix}.internal.${name_prefix}_${aws_suffix}.internal:${zkC_port3}"},
-      {"name": "ZOO_4LW_COMMANDS_WHITELIST", "value": "*"},
-      {"name": "ZOO_LOG4J_PROP", "value": "ERROR"}
+      {"name": "ZOO_SERVERS", "value": "server.1=zka.${name_prefix}_${aws_suffix}.internal:2888:3888:participant;zka.${name_prefix}_${aws_suffix}.internal:2181 server.2=0.0.0.0:2888:3888:participant;0.0.0.0:2181 server.3=zkc.${name_prefix}_${aws_suffix}.internal:2888:3888:participant;zkc.${name_prefix}_${aws_suffix}.internal:2181"},
+      {"name": "ZOO_4LW_COMMANDS_WHITELIST", "value": "*"}
     ], 
     "portMappings": [
       {

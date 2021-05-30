@@ -36,7 +36,5 @@ Cluster Service(s):
   https://console.aws.amazon.com/ecs/home?region=${var.aws_region}#/clusters/${var.name_prefix}-ecscluster-${random_string.tf-nifi-random.result}/services/${var.name_prefix}-ecsA-${random_string.tf-nifi-random.result}/tasks
   https://console.aws.amazon.com/ecs/home?region=${var.aws_region}#/clusters/${var.name_prefix}-ecscluster-${random_string.tf-nifi-random.result}/services/${var.name_prefix}-ecsB-${random_string.tf-nifi-random.result}/tasks
   https://console.aws.amazon.com/ecs/home?region=${var.aws_region}#/clusters/${var.name_prefix}-ecscluster-${random_string.tf-nifi-random.result}/services/${var.name_prefix}-ecsC-${random_string.tf-nifi-random.result}/tasks
-Load Balancer:
-  https://console.aws.amazon.com/ec2/v2/home?region=${var.aws_region}#TargetGroup:targetGroupArn=${aws_lb_target_group.zk-lbtg-nifi.arn}
 OUTPUT
 }

@@ -7,28 +7,30 @@ resource "aws_security_group" "zk-prisg" {
   }
 }
 
+# self zookeeper
 resource "aws_security_group_rule" "zk-sg-zk-in" {
-  for_each          = toset([tostring(var.zk_portnifi), tostring(var.zkA_port2), tostring(var.zkA_port3), tostring(var.zkB_port2), tostring(var.zkB_port3), tostring(var.zkC_port2), tostring(var.zkC_port3), "2181", "2888", "3888"])
+  for_each          = toset(["2181", "2888", "3888"])
   security_group_id = aws_security_group.zk-prisg.id
   type              = "ingress"
-  description       = "IN FROM PRINET ZK ${each.key}"
+  description       = "IN FROM SELF ZK ${each.key}"
   from_port         = each.key
   to_port           = each.key
   protocol          = "tcp"
-  cidr_blocks       = [var.prinet1_cidr, var.prinet2_cidr, var.prinet3_cidr]
+  source_security_group_id = aws_security_group.zk-prisg.id
 }
 
 resource "aws_security_group_rule" "zk-sg-zk-out" {
-  for_each          = toset([tostring(var.zk_portnifi), tostring(var.zkA_port2), tostring(var.zkA_port3), tostring(var.zkB_port2), tostring(var.zkB_port3), tostring(var.zkC_port2), tostring(var.zkC_port3), "2181", "2888", "3888"])
+  for_each          = toset(["2181", "2888", "3888"])
   security_group_id = aws_security_group.zk-prisg.id
   type              = "egress"
-  description       = "OUT FROM PRINET ZK ${each.key}"
+  description       = "OUT FROM SELF ZK ${each.key}"
   from_port         = each.key
   to_port           = each.key
   protocol          = "tcp"
-  cidr_blocks       = [var.prinet1_cidr, var.prinet2_cidr, var.prinet3_cidr]
+  source_security_group_id = aws_security_group.zk-prisg.id
 }
 
+# self endpoints
 resource "aws_security_group_rule" "zk-sg-https-in" {
   security_group_id = aws_security_group.zk-prisg.id
   type              = "ingress"
@@ -49,6 +51,7 @@ resource "aws_security_group_rule" "zk-sg-https-out" {
   source_security_group_id = aws_security_group.zk-prisg.id
 }
 
+# world
 resource "aws_security_group_rule" "zk-prisg-tcp-out" {
   security_group_id = aws_security_group.zk-prisg.id
   type              = "egress"
@@ -67,4 +70,15 @@ resource "aws_security_group_rule" "zk-prisg-udp-out" {
   to_port           = 65535
   protocol          = "udp"
   cidr_blocks       = ["0.0.0.0/0"]
+}
+
+# nifi
+resource "aws_security_group_rule" "zk-sg-nifi-in" {
+  security_group_id = aws_security_group.zk-prisg.id
+  type              = "ingress"
+  description       = "IN FROM NIFI"
+  from_port         = 2181
+  to_port           = 2181
+  protocol          = "tcp"
+  source_security_group_id = aws_security_group.tf-nifi-prisg.id
 }
