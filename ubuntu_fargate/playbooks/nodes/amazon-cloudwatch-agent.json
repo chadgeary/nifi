@@ -1,0 +1,101 @@
+{
+    "agent": {
+        "metrics_collection_interval": 60,
+        "region": "{{ aws_region }}",
+        "logfile": "/opt/aws/amazon-cloudwatch-agent/logs/amazon-cloudwatch-agent.log",
+        "debug": false,
+        "run_as_user": "cloudwatch"
+    },
+    "logs": {
+        "logs_collected": {
+            "files": {
+                "collect_list": [
+                {
+                    "file_path": "/var/log/syslog",
+                    "log_group_name": "/aws/ec2/{{ name_prefix }}_{{ name_suffix }}",
+                    "log_stream_name": "{local_hostname}-{instance_id}_syslog"
+                },
+                {
+                    "file_path": "/var/log/auth.log",
+                    "log_group_name": "/aws/ec2/{{ name_prefix }}_{{ name_suffix }}",
+                    "log_stream_name": "{local_hostname}-{instance_id}_auth"
+                },
+                {
+                    "file_path": "/opt/nifi/logs/nifi-app.log",
+                    "log_group_name": "/aws/ec2/{{ name_prefix }}_{{ name_suffix }}",
+                    "log_stream_name": "{local_hostname}-{instance_id}_nifi-app.log"
+                }
+                ]
+            }
+        }
+    },
+    "log_stream_name": "{local_hostname}-{instance_id}",
+    "metrics": {
+	"namespace": "{{ name_prefix }}_{{ name_suffix }}",
+        "metrics_collected": {
+            "cpu": {
+                "resources": [
+                    "*"
+                ],
+                "measurement": [
+                    "usage_idle",
+                    "usage_iowait",
+		    "usage_nice",
+                    "usage_user",
+                    "usage_system"
+                ],
+                "totalcpu": false
+            },
+            "netstat": {
+                "measurement": [
+                    "tcp_established",
+                    "tcp_syn_sent",
+                    "tcp_close",
+                    "udp_socket"
+                ]
+            },
+            "net": {
+                "measurement": [
+                    "bytes_sent",
+                    "bytes_recv"
+                ],
+		"resources": [
+	            "*"
+		]
+            },
+            "disk": {
+                "measurement": [
+                    "free",
+                    "total",
+                    "used",
+                    "used_percent"
+                ],
+                "resources": [
+                    "/"
+                ],
+                "drop_device": true
+            },
+            "processes": {
+                "measurement": [
+                    "running",
+                    "sleeping",
+                    "dead"
+                ]
+            },
+            "mem": {
+                "measurement": [
+                    "available",
+                    "total",
+                    "used",
+                    "used_percent"
+                ]
+            }
+        },
+        "append_dimensions": {
+            "InstanceId": "${aws:InstanceId}",
+            "InstanceType": "${aws:InstanceType}",
+            "AutoScalingGroupName": "${aws:AutoScalingGroupName}"
+        },
+        "aggregation_dimensions" : [["AutoScalingGroupName"], ["InstanceId", "InstanceType"],[]]
+    }
+}
