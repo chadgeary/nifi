@@ -23,8 +23,8 @@ https://${aws_lb.tf-nifi-node-nlb.dns_name}:${var.web_port}/nifi
 # Instance IDs in Cluster
 AWS_PROFILE=${var.aws_profile} aws ec2 describe-instances --region ${var.aws_region} --query 'Reservations[].Instances[*].[InstanceId, LaunchTime, [Tags[?Key==`Name`].Value][0][0]]' --filters Name=tag:Cluster,Values=${var.name_prefix}_${random_string.tf-nifi-random.result} Name=instance-state-name,Values=pending,running --output text
 
-# Connecting via SSM
-AWS_PROFILE=${var.aws_profile} aws ssm start-session --region ${var.aws_region} --target i-SOME_INSTANCE
+# Connecting via SSM, append an instance id from the previous command 
+AWS_PROFILE=${var.aws_profile} aws ssm start-session --region ${var.aws_region} --target 
 
 # Re-run Ansible (SSM Associations)
 AWS_PROFILE=${var.aws_profile} aws ssm start-associations-once --region ${var.aws_region} --association-ids ${aws_ssm_association.tf-nifi-nodes-ssm-assoc.association_id}
