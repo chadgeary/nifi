@@ -1,3 +1,8 @@
+resource "time_sleep" "wait_for_codepipe_deps" {
+  create_duration         = "30s"
+  depends_on              = [aws_iam_role_policy_attachment.zk-codepipe-policy-role-attach, aws_ecs_task_definition.zk-ecs-task]
+}
+
 resource "aws_codepipeline" "zk-codepipe" {
   name     = "${var.name_prefix}-codepipe-${random_string.tf-nifi-random.result}"
   role_arn = aws_iam_role.zk-codepipe-role.arn
@@ -40,5 +45,5 @@ resource "aws_codepipeline" "zk-codepipe" {
       }
     }
   }
-  depends_on = [aws_iam_role_policy_attachment.zk-codepipe-policy-role-attach, aws_ecs_task_definition.zk-ecs-task]
+  depends_on = [time_sleep.wait_for_codepipe_deps]
 }

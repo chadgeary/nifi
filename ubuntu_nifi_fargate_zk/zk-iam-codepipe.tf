@@ -2,87 +2,28 @@ resource "aws_iam_policy" "zk-codepipe-policy" {
   name   = "${var.name_prefix}-codepipe-policy-${random_string.tf-nifi-random.result}"
   policy = <<EOF
 {
-    "Statement": [{
+    "Statement": [
+        {
             "Action": [
                 "iam:PassRole"
             ],
-            "Resource": "*",
+            "Resource": ["arn:aws:iam::*:role/${var.name_prefix}-codepipe-${random_string.tf-nifi-random.result}"],
             "Effect": "Allow",
             "Condition": {
                 "StringEqualsIfExists": {
                     "iam:PassedToService": [
-                        "ecs-tasks.amazonaws.com"
+                        "codepipeline.amazonaws.com"
                     ]
                 }
             }
         },
         {
             "Action": [
-                "codedeploy:CreateDeployment",
-                "codedeploy:GetApplication",
-                "codedeploy:GetApplicationRevision",
-                "codedeploy:GetDeployment",
-                "codedeploy:GetDeploymentConfig",
-                "codedeploy:RegisterApplicationRevision"
-            ],
-            "Resource": "*",
-            "Effect": "Allow"
-        },
-        {
-            "Action": [
-                "elasticloadbalancing:*",
-                "autoscaling:*",
-                "cloudwatch:*",
-                "ecs:*"
-            ],
-            "Resource": "*",
-            "Effect": "Allow"
-        },
-        {
-            "Action": [
                 "codebuild:BatchGetBuilds",
-                "codebuild:StartBuild",
-                "codebuild:BatchGetBuildBatches",
-                "codebuild:StartBuildBatch"
+                "codebuild:StartBuild"
             ],
             "Resource": "${aws_codebuild_project.zk-codebuild.arn}",
             "Effect": "Allow"
-        },
-        {
-            "Effect": "Allow",
-            "Action": [
-                "servicecatalog:ListProvisioningArtifacts",
-                "servicecatalog:CreateProvisioningArtifact",
-                "servicecatalog:DescribeProvisioningArtifact",
-                "servicecatalog:DeleteProvisioningArtifact",
-                "servicecatalog:UpdateProduct"
-            ],
-            "Resource": "*"
-        },
-        {
-            "Effect": "Allow",
-            "Action": [
-                "ecr:DescribeImages"
-            ],
-            "Resource": "*"
-        },
-        {
-            "Effect": "Allow",
-            "Action": [
-                "states:DescribeExecution",
-                "states:DescribeStateMachine",
-                "states:StartExecution"
-            ],
-            "Resource": "*"
-        },
-        {
-            "Effect": "Allow",
-            "Action": [
-                "appconfig:StartDeployment",
-                "appconfig:StopDeployment",
-                "appconfig:GetDeployment"
-            ],
-            "Resource": "*"
         },
         {
             "Sid": "ObjectsinBucketPrefix",
@@ -90,8 +31,8 @@ resource "aws_iam_policy" "zk-codepipe-policy" {
             "Action": [
                 "s3:GetObject",
                 "s3:GetObjectVersion",
-                                "s3:GetBucketVersioning",
-                                "s3:PutObject"
+                "s3:GetBucketVersioning",
+                "s3:PutObject"
             ],
             "Resource": ["${aws_s3_bucket.zk-bucket.arn}","${aws_s3_bucket.zk-bucket.arn}/*"]
         },
@@ -106,19 +47,18 @@ resource "aws_iam_policy" "zk-codepipe-policy" {
             ],
             "Resource": ["${aws_kms_key.zk-kmscmk-code.arn}"]
         },
-                {
-                        "Sid": "S3KMSCMK",
-                        "Effect": "Allow",
-                        "Action": [
-                                "kms:Encrypt",
-                                "kms:ReEncrypt*",
-                                "kms:Decrypt",
-                                "kms:GenerateDataKey*",
-                                "kms:DescribeKey"
-                        ],
-                        "Resource": ["${aws_kms_key.zk-kmscmk-s3.arn}"]
-                }
-
+        {
+            "Sid": "S3KMSCMK",
+            "Effect": "Allow",
+            "Action": [
+                "kms:Encrypt",
+                "kms:ReEncrypt*",
+                "kms:Decrypt",
+                "kms:GenerateDataKey*",
+                "kms:DescribeKey"
+            ],
+            "Resource": ["${aws_kms_key.zk-kmscmk-s3.arn}"]
+        }
     ],
     "Version": "2012-10-17"
 }
