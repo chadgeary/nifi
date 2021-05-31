@@ -44,5 +44,5 @@ resource "aws_codebuild_project" "zk-codebuild" {
     subnets            = [aws_subnet.tf-nifi-prinet1.id, aws_subnet.tf-nifi-prinet2.id, aws_subnet.tf-nifi-prinet3.id]
     security_group_ids = [aws_security_group.zk-prisg.id]
   }
-  depends_on = [aws_iam_role_policy_attachment.zk-codebuild-policy-role-attach, aws_cloudwatch_log_group.tf-nifi-cloudwatch-log-group-codebuild, aws_s3_bucket_object.zk-s3-codebuild-object]
+  depends_on = [aws_iam_role_policy_attachment.zk-codebuild-policy-role-attach, aws_cloudwatch_log_group.tf-nifi-cloudwatch-log-group-codebuild, aws_s3_bucket_object.zk-s3-codebuild-object, aws_autoscaling_group.tf-nifi-autoscalegroup]
 }

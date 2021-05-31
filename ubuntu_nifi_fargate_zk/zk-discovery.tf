@@ -1,7 +1,7 @@
 resource "aws_service_discovery_private_dns_namespace" "zk-svcnamespace" {
-  name               = "${var.name_prefix}_${random_string.tf-nifi-random.result}.internal"
-  description        = "Zookeeper Namespace"
-  vpc                = aws_vpc.tf-nifi-vpc.id
+  name        = "${var.name_prefix}_${random_string.tf-nifi-random.result}.internal"
+  description = "Zookeeper Namespace"
+  vpc         = aws_vpc.tf-nifi-vpc.id
 }
 
 resource "aws_service_discovery_service" "zk-svcdiscoveryA" {

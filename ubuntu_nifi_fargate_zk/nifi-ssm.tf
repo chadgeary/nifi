@@ -1,9 +1,9 @@
 # secret
 resource "aws_ssm_parameter" "tf-nifi-secret" {
-  name                    = "${var.name_prefix}-nifi-secret-${random_string.tf-nifi-random.result}"
-  type                    = "SecureString"
-  key_id                  = aws_kms_key.tf-nifi-kmscmk-ssm.key_id
-  value                   = var.nifi_secret
+  name   = "${var.name_prefix}-nifi-secret-${random_string.tf-nifi-random.result}"
+  type   = "SecureString"
+  key_id = aws_kms_key.tf-nifi-kmscmk-ssm.key_id
+  value  = var.nifi_secret
 }
 
 # document

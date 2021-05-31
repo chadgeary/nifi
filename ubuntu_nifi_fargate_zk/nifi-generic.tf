@@ -182,5 +182,5 @@ variable "health_check_count" {
 }
 
 variable "nifi_secret" {
-  type    = string
+  type = string
 }

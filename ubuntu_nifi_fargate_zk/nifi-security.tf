@@ -39,22 +39,22 @@ resource "aws_security_group_rule" "tf-nifi-prisg-allhttps-out" {
 }
 
 resource "aws_security_group_rule" "tf-nifi-sg-https-out" {
-  security_group_id = aws_security_group.tf-nifi-prisg.id
-  type              = "egress"
-  description       = "OUT FROM NIFI TO SELF HTTPS"
-  from_port         = "443"
-  to_port           = "443"
-  protocol          = "tcp"
+  security_group_id        = aws_security_group.tf-nifi-prisg.id
+  type                     = "egress"
+  description              = "OUT FROM NIFI TO SELF HTTPS"
+  from_port                = "443"
+  to_port                  = "443"
+  protocol                 = "tcp"
   source_security_group_id = aws_security_group.tf-nifi-prisg.id
 }
 
 resource "aws_security_group_rule" "tf-nifi-sg-https-in" {
-  security_group_id = aws_security_group.tf-nifi-prisg.id
-  type              = "ingress"
-  description       = "IN FROM NIFI TO SELF HTTPS"
-  from_port         = "443"
-  to_port           = "443"
-  protocol          = "tcp"
+  security_group_id        = aws_security_group.tf-nifi-prisg.id
+  type                     = "ingress"
+  description              = "IN FROM NIFI TO SELF HTTPS"
+  from_port                = "443"
+  to_port                  = "443"
+  protocol                 = "tcp"
   source_security_group_id = aws_security_group.tf-nifi-prisg.id
 }
 
@@ -155,11 +155,11 @@ resource "aws_security_group_rule" "tf-nifi-prisg-self-out-websg" {
 
 # zookeepers
 resource "aws_security_group_rule" "tf-nifi-sg-zk-out" {
-  security_group_id = aws_security_group.tf-nifi-prisg.id
-  type              = "egress"
-  description       = "OUT FROM PRINET ZK"
-  from_port         = 2181
-  to_port           = 2181
-  protocol          = "tcp"
+  security_group_id        = aws_security_group.tf-nifi-prisg.id
+  type                     = "egress"
+  description              = "OUT FROM PRINET ZK"
+  from_port                = 2181
+  to_port                  = 2181
+  protocol                 = "tcp"
   source_security_group_id = aws_security_group.zk-prisg.id
 }

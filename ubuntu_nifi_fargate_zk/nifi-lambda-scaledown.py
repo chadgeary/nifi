@@ -8,10 +8,10 @@ def lambda_handler(event, context):
     message = json.loads(event['Records'][0]['Sns']['Message'])
     print(message)
 
+    # Send scaledown document via SSM to instance
     ssm = boto3.client('ssm')
-
     try:
-        response = ssm.send_command(
+        ssmresponse = ssm.send_command(
             InstanceIds=[message['EC2InstanceId']],
             DocumentName=os.environ['SSMDOCUMENTNAME'],
             Parameters={
@@ -20,15 +20,15 @@ def lambda_handler(event, context):
             },
             TimeoutSeconds=900
         )
-        print(response)
+        print(ssmresponse)
     except Exception as e:
         print(e)
         return {
             'statusCode': 400,
             'body': json.dumps(message)
         }
+
     else:
-        print(response)
         return {
             'statusCode': 200,
             'body': json.dumps(message)

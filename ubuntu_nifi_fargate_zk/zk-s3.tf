@@ -89,7 +89,7 @@ data "archive_file" "zk-s3-codebuild-archive" {
 }
 
 resource "aws_s3_bucket_object" "zk-s3-codebuild-object" {
-  bucket = aws_s3_bucket.zk-bucket.id
-  key    = "zk-files/zookeeper.zip"
-  source = data.archive_file.zk-s3-codebuild-archive.output_path
+  bucket         = aws_s3_bucket.zk-bucket.id
+  key            = "zk-files/zookeeper.zip"
+  content_base64 = filebase64("zookeeper.zip")
 }

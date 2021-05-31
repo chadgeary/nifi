@@ -6,7 +6,7 @@ resource "aws_kms_key" "tf-nifi-kmscmk-ssm" {
   tags = {
     Name = "${var.name_prefix}-kmscmk-ssm-${random_string.tf-nifi-random.result}"
   }
-  policy     = <<EOF
+  policy = <<EOF
 {
   "Id": "tf-nifi-kmskeypolicy-ssm",
   "Version": "2012-10-17",

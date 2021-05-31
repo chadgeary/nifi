@@ -39,7 +39,7 @@ resource "aws_ecs_service" "zk-ecs-serviceA" {
     assign_public_ip = false
   }
   service_registries {
-    registry_arn     = aws_service_discovery_service.zk-svcdiscoveryA.arn
+    registry_arn = aws_service_discovery_service.zk-svcdiscoveryA.arn
   }
 }
 
@@ -55,7 +55,7 @@ resource "aws_ecs_service" "zk-ecs-serviceB" {
     assign_public_ip = false
   }
   service_registries {
-    registry_arn     = aws_service_discovery_service.zk-svcdiscoveryB.arn
+    registry_arn = aws_service_discovery_service.zk-svcdiscoveryB.arn
   }
 }
 
@@ -71,6 +71,6 @@ resource "aws_ecs_service" "zk-ecs-serviceC" {
     assign_public_ip = false
   }
   service_registries {
-    registry_arn     = aws_service_discovery_service.zk-svcdiscoveryC.arn
+    registry_arn = aws_service_discovery_service.zk-svcdiscoveryC.arn
   }
 }

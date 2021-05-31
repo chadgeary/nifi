@@ -40,5 +40,5 @@ resource "aws_codepipeline" "zk-codepipe" {
       }
     }
   }
-  depends_on = [aws_iam_role_policy_attachment.zk-codepipe-policy-role-attach]
+  depends_on = [aws_iam_role_policy_attachment.zk-codepipe-policy-role-attach, aws_ecs_task_definition.zk-ecs-task]
 }

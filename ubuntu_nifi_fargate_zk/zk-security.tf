@@ -9,45 +9,45 @@ resource "aws_security_group" "zk-prisg" {
 
 # self zookeeper
 resource "aws_security_group_rule" "zk-sg-zk-in" {
-  for_each          = toset(["2181", "2888", "3888"])
-  security_group_id = aws_security_group.zk-prisg.id
-  type              = "ingress"
-  description       = "IN FROM SELF ZK ${each.key}"
-  from_port         = each.key
-  to_port           = each.key
-  protocol          = "tcp"
+  for_each                 = toset(["2181", "2888", "3888"])
+  security_group_id        = aws_security_group.zk-prisg.id
+  type                     = "ingress"
+  description              = "IN FROM SELF ZK ${each.key}"
+  from_port                = each.key
+  to_port                  = each.key
+  protocol                 = "tcp"
   source_security_group_id = aws_security_group.zk-prisg.id
 }
 
 resource "aws_security_group_rule" "zk-sg-zk-out" {
-  for_each          = toset(["2181", "2888", "3888"])
-  security_group_id = aws_security_group.zk-prisg.id
-  type              = "egress"
-  description       = "OUT FROM SELF ZK ${each.key}"
-  from_port         = each.key
-  to_port           = each.key
-  protocol          = "tcp"
+  for_each                 = toset(["2181", "2888", "3888"])
+  security_group_id        = aws_security_group.zk-prisg.id
+  type                     = "egress"
+  description              = "OUT FROM SELF ZK ${each.key}"
+  from_port                = each.key
+  to_port                  = each.key
+  protocol                 = "tcp"
   source_security_group_id = aws_security_group.zk-prisg.id
 }
 
 # self endpoints
 resource "aws_security_group_rule" "zk-sg-https-in" {
-  security_group_id = aws_security_group.zk-prisg.id
-  type              = "ingress"
-  description       = "IN FROM ZK TO SELF HTTPS"
-  from_port         = "443"
-  to_port           = "443"
-  protocol          = "tcp"
+  security_group_id        = aws_security_group.zk-prisg.id
+  type                     = "ingress"
+  description              = "IN FROM ZK TO SELF HTTPS"
+  from_port                = "443"
+  to_port                  = "443"
+  protocol                 = "tcp"
   source_security_group_id = aws_security_group.zk-prisg.id
 }
 
 resource "aws_security_group_rule" "zk-sg-https-out" {
-  security_group_id = aws_security_group.zk-prisg.id
-  type              = "egress"
-  description       = "OUT FROM ZK TO SELF HTTPS"
-  from_port         = "443"
-  to_port           = "443"
-  protocol          = "tcp"
+  security_group_id        = aws_security_group.zk-prisg.id
+  type                     = "egress"
+  description              = "OUT FROM ZK TO SELF HTTPS"
+  from_port                = "443"
+  to_port                  = "443"
+  protocol                 = "tcp"
   source_security_group_id = aws_security_group.zk-prisg.id
 }
 
@@ -74,11 +74,11 @@ resource "aws_security_group_rule" "zk-prisg-udp-out" {
 
 # nifi
 resource "aws_security_group_rule" "zk-sg-nifi-in" {
-  security_group_id = aws_security_group.zk-prisg.id
-  type              = "ingress"
-  description       = "IN FROM NIFI"
-  from_port         = 2181
-  to_port           = 2181
-  protocol          = "tcp"
+  security_group_id        = aws_security_group.zk-prisg.id
+  type                     = "ingress"
+  description              = "IN FROM NIFI"
+  from_port                = 2181
+  to_port                  = 2181
+  protocol                 = "tcp"
   source_security_group_id = aws_security_group.tf-nifi-prisg.id
 }

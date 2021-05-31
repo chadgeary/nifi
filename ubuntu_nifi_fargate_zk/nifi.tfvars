@@ -17,12 +17,10 @@ client_cidrs = []
 # management port for HTTPS (and inter-cluster communication) via mgmt NLB
 web_port = 2170
 
-# service ports for traffic inbound via service NLB
-tcp_service_ports    = [2200, 2201]
+# service ports for traffic inbound via service NLB - e.g. [3334, 3335]
+tcp_service_ports    = []
 udp_service_ports    = []
 tcpudp_service_ports = []
-
-# inter-cluster communication occurs on ports web_port and 2171 through 2176
 
 # public ssh key
 instance_key = "ssh-rsa AAAAB3NzaD2yc2EAAAADAQABAAABAQCNsxnMWfrG3SoLr4uJMavf43YkM5wCbdO7X5uBvRU8oh1W+A/Nd/jie2tc3UpwDZwS3w6MAfnu8B1gE9lzcgTu1FFf0us5zIWYR/mSoOFKlTiaI7Uaqkc+YzmVw/fy1iFxDDeaZfoc0vuQvPr+LsxUL5UY4ko4tynCSp7zgVpot/OppqdHl5J+DYhNubm8ess6cugTustUZoDmJdo2ANQENeBUNkBPXUnMO1iulfNb6GnwWJ0Z5TRRLGSu2gya2wMLeo1rBJ5cbZZgVLMVHiKgwBy/svUQreR8R+fpVW+Q4rx6sPAltLaOUONn0SF2BvvJUueqxpAIaA2rU4MS420P"

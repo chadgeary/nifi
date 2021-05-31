@@ -113,7 +113,7 @@ resource "aws_iam_role" "zk-codebuild-role" {
     {
       "Action": "sts:AssumeRole",
       "Principal": {
-        "Service": "codebuild.amazonaws.com"
+        "Service": ["codebuild.amazonaws.com","codepipeline.amazonaws.com"]
       },
       "Effect": "Allow",
       "Sid": "Codebuild"

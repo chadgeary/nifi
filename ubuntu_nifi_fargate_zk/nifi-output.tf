@@ -26,7 +26,7 @@ AWS_PROFILE=${var.aws_profile} aws ec2 describe-instances --region ${var.aws_reg
 # Connecting via SSM, append an instance id from the previous command 
 AWS_PROFILE=${var.aws_profile} aws ssm start-session --region ${var.aws_region} --target 
 
-# Re-run Ansible (SSM Associations)
+# Re-run Ansible on NiFi Nodes, e.g.: update playbook files, re-run terraform apply, then run below command to re-apply ansible.
 AWS_PROFILE=${var.aws_profile} aws ssm start-associations-once --region ${var.aws_region} --association-ids ${aws_ssm_association.tf-nifi-nodes-ssm-assoc.association_id}
 
 ## Zookeeper ##
