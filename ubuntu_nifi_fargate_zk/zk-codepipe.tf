@@ -1,6 +1,6 @@
 resource "time_sleep" "wait_for_codepipe_deps" {
-  create_duration         = "30s"
-  depends_on              = [aws_iam_role_policy_attachment.zk-codepipe-policy-role-attach, aws_ecs_task_definition.zk-ecs-task]
+  create_duration = "30s"
+  depends_on      = [aws_iam_role_policy_attachment.zk-codepipe-policy-role-attach, aws_ecs_task_definition.zk-ecs-task]
 }
 
 resource "aws_codepipeline" "zk-codepipe" {
