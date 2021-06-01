@@ -424,12 +424,7 @@
         regexp: '        <property name="Connect String">.*</property>'
         line: '        <property name="Connect String">zk1.{{ name_prefix }}{{ name_suffix }}.internal:2173,zk2.{{ name_prefix }}{{ name_suffix }}.internal:2173,zk3.{{ name_prefix }}{{ name_suffix }}.internal:2173</property>'
 
-    - name: check ca exists
-      stat:
-        path: /opt/nifi-certificates/nifi-cert.pem
-      register: ca_cert
-
-    - name: get pre-existing ca from s3
+        - name: get pre-existing ca from s3
       aws_s3:
         region: "{{ aws_region }}"
         mode: get
@@ -441,8 +436,11 @@
       with_items:
         - nifi-cert.pem
         - nifi-key.key
-      when:
-        - ansible_nodename == 'zk1.' + name_prefix + name_suffix + '.internal'
+
+    - name: check ca exists
+      stat:
+        path: /opt/nifi-certificates/nifi-cert.pem
+      register: ca_cert
 
     - name: generate ca when not exists
       shell: |
@@ -471,23 +469,6 @@
         - nifi-key.key
       when:
         - ansible_nodename == 'zk1.' + name_prefix + name_suffix + '.internal'
-
-    - name: get ca from s3
-      aws_s3:
-        region: "{{ aws_region }}"
-        mode: get
-        bucket: "{{ s3_bucket }}"
-        object: "nifi/certificates/{{ item }}"
-        dest: "/opt/nifi-certificates/{{ item }}"
-      with_items:
-        - nifi-cert.pem
-        - nifi-key.key
-      retries: 900
-      delay: 2
-      register: ca_from_s3
-      until: ca_from_s3 is not failed
-      become_user: nifi
-      when: 
         - ca_cert.stat.exists == false
 
     - name: get pre-existing admin from s3
