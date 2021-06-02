@@ -1,3 +1,8 @@
+variable "zk_version" {
+  type    = string
+  default = "latest"
+}
+
 variable "zk_cpu" {
   type = number
 }

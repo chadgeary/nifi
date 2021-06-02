@@ -10,7 +10,7 @@ resource "aws_ecs_cluster" "zk-ecs-cluster" {
 resource "aws_ecs_task_definition" "zk-ecs-task" {
   for_each = toset(["A", "B", "C"])
   family   = "${var.name_prefix}-ecsservice${each.key}-${random_string.tf-nifi-random.result}"
-  container_definitions = templatefile("zk-service${each.key}.tpl",
+  container_definitions = templatefile("zk-service${each.key}.tmpl",
     {
       name_prefix  = var.name_prefix
       aws_suffix   = random_string.tf-nifi-random.result

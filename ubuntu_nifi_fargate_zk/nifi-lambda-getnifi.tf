@@ -16,7 +16,6 @@ resource "aws_lambda_function" "tf-nifi-lambda-getnifi-function" {
   timeout          = 900
   environment {
     variables = {
-      ZKURL      = var.zk_url
       NIFIURL    = var.nifi_url
       TOOLKITURL = var.toolkit_url
       BUCKET     = aws_s3_bucket.tf-nifi-bucket.id

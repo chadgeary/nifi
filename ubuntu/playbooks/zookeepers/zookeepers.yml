@@ -447,7 +447,7 @@
     - name: generate ca when not exists
       shell: |
         export JAVA_HOME=/usr/lib/jvm/default-java
-        /opt/nifi-toolkit/bin/tls-toolkit.sh standalone -c zk1.{{ name_prefix }}{{ name_suffix }}.internal -d 3650 -k 2048 -s SHA256WITHRSA -T jks --subjectAlternativeNames zk1.{{ name_prefix }}{{ name_suffix }}.internal,zk2.{{ name_prefix }}{{ name_suffix }}.internal,zk3.{{ name_prefix }}{{ name_suffix }}.internal,{{ lb_dns }}
+        /opt/nifi-toolkit/bin/tls-toolkit.sh standalone -c {{ lb_dns }} -d 3650 -k 2048 -s SHA256WITHRSA -T jks
       args:
         chdir: /opt/nifi-certificates/
         executable: /bin/bash
@@ -515,7 +515,7 @@
     - name: generate admin when not exists
       shell: |
         export JAVA_HOME=/usr/lib/jvm/default-java
-        /opt/nifi-toolkit/bin/tls-toolkit.sh standalone -a RSA -c zk1.{{ name_prefix }}{{ name_suffix }}.internal -n admin -d 3650 -k 2048 -s SHA256WITHRSA -T pkcs12 --subjectAlternativeNames admin,admin{{ name_prefix }}{{ name_suffix }} -P {{ generated_password.stdout }} -S {{ generated_password.stdout }}
+        /opt/nifi-toolkit/bin/tls-toolkit.sh standalone -a RSA -c {{ lb_dns }} -n admin -d 3650 -k 2048 -s SHA256WITHRSA -T pkcs12 --subjectAlternativeNames admin,admin{{ name_prefix }}{{ name_suffix }} -P {{ generated_password.stdout }} -S {{ generated_password.stdout }}
       args:
         chdir: /opt/nifi-certificates/
         executable: /bin/bash
@@ -596,7 +596,7 @@
     - name: generate node keystore when not exists
       shell: |
         export JAVA_HOME=/usr/lib/jvm/default-java
-        /opt/nifi-toolkit/bin/tls-toolkit.sh standalone -n {{ ansible_nodename }} -d 3650 -k 2048 -s SHA256WITHRSA -T jks --subjectAlternativeNames zk{{ node_id.stdout }},{{ ansible_nodename }},{{ lb_dns }} -P {{ generated_password.stdout }} -S {{ generated_password.stdout }}
+        /opt/nifi-toolkit/bin/tls-toolkit.sh standalone -c {{ lb_dns }} -n {{ ansible_nodename }} -d 3650 -k 2048 -s SHA256WITHRSA -T jks --subjectAlternativeNames zk{{ node_id.stdout }},{{ ansible_nodename }},{{ lb_dns }} -P {{ generated_password.stdout }} -S {{ generated_password.stdout }}
       args:
         chdir: /opt/nifi-certificates/
         executable: /bin/bash

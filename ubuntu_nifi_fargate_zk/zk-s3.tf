@@ -73,23 +73,3 @@ resource "aws_s3_bucket_public_access_block" "zk-bucket-pub-access" {
   ignore_public_acls      = true
   restrict_public_buckets = true
 }
-
-resource "null_resource" "zk-s3-codebuild-checksum" {
-  triggers = {
-    buildspec  = filebase64sha256("zk-files/buildspec.yml")
-    dockerfile = filebase64sha256("zk-files/Dockerfile")
-  }
-}
-
-data "archive_file" "zk-s3-codebuild-archive" {
-  type        = "zip"
-  source_dir  = "zk-files/"
-  output_path = "zookeeper.zip"
-  depends_on  = [null_resource.zk-s3-codebuild-checksum]
-}
-
-resource "aws_s3_bucket_object" "zk-s3-codebuild-object" {
-  bucket         = aws_s3_bucket.zk-bucket.id
-  key            = "zk-files/zookeeper.zip"
-  content_base64 = filebase64("zookeeper.zip")
-}

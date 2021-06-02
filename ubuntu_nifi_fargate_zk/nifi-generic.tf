@@ -69,11 +69,6 @@ variable "nifi_version" {
   description = "The version of Apache NiFi, e.g. 1.11.4"
 }
 
-variable "zk_version" {
-  type        = string
-  description = "The version of Apache Zookeeper, e.g. 3.6.1"
-}
-
 variable "minimum_node_count" {
   type        = number
   description = "The minimum number of non-zookeeper NiFi nodes in the Autoscaling Group"
@@ -127,10 +122,6 @@ resource "random_string" "tf-nifi-random" {
   length  = 5
   upper   = false
   special = false
-}
-
-variable "zk_url" {
-  type = string
 }
 
 variable "nifi_url" {

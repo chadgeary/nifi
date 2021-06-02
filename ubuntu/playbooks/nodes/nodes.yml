@@ -372,7 +372,7 @@
     - name: generate node keystore when not exists
       shell: |
         export JAVA_HOME=/usr/lib/jvm/default-java
-        /opt/nifi-toolkit/bin/tls-toolkit.sh standalone -n {{ ansible_nodename }} -d 3650 -k 2048 -s SHA256WITHRSA -T jks --subjectAlternativeNames {{ ansible_nodename }} -P {{ generated_password.stdout }} -S {{ generated_password.stdout }}
+        /opt/nifi-toolkit/bin/tls-toolkit.sh standalone -c {{ lb_dns }} -n {{ ansible_nodename }} -d 3650 -k 2048 -s SHA256WITHRSA -T jks --subjectAlternativeNames {{ ansible_nodename }} -P {{ generated_password.stdout }} -S {{ generated_password.stdout }}
       args:
         chdir: /opt/nifi-certificates/
         executable: /bin/bash
