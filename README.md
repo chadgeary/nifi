@@ -1,5 +1,11 @@
 # Reference
-NiFi secure+autoscaling cluster built automatically in AWS via Terraform+Ansible. Ubuntu (20.04 or 18.04) base. Run zookeepers via Fargate on ECS if so desired with the other directory.
+NiFi secure+autoscaling cluster built automatically in AWS via Terraform+Ansible.
+
+# Options
+Two designs are provided, either:
+- NiFi on EC2 with Zookeeper running within the same EC2 instances, or
+- NiFi on EC2 with Zookeeper running separately in ECS Fargate.
+- Side note - for considerations about using RHEL as opposed to Ubuntu as the base EC2 OS, see `rhel.md`.
 
 # Requirements
 - An AWS account
@@ -26,20 +32,20 @@ shutdown /r /t 5
 # After reboot, launch a REGULAR Powershell prompt (left click).
 # Do NOT proceed with an ELEVATED Powershell prompt.
 
-# Download the Ubuntu 1804 package from Microsoft
-curl.exe -L -o ubuntu-1804.appx https://aka.ms/wsl-ubuntu-1804
+# Download the Ubuntu 2004 package from Microsoft
+curl.exe -L -o ubuntu-2004.appx https://aka.ms/wsl-ubuntu-2004
  
 # Rename the package
-Rename-Item ubuntu-1804.appx ubuntu-1804.zip
+Rename-Item ubuntu-2004.appx ubuntu-2004.zip
  
 # Expand the zip
-Expand-Archive ubuntu-1804.zip ubuntu-1804
+Expand-Archive ubuntu-2004.zip ubuntu-2004
  
 # Change to the zip directory
-cd ubuntu-1804
+cd ubuntu-2004
  
-# Execute the ubuntu 1804 installer
-.\ubuntu1804.exe
+# Execute the ubuntu 2004 installer
+.\ubuntu2004.exe
  
 # Create a username and password when prompted
 ```
@@ -110,7 +116,7 @@ cd ~/nifi/ubuntu/
 
 # Open File Explorer in a separate window
 # Navigate to ubuntu project directory - change \chad\ to your WSL username
-%HOMEPATH%\ubuntu-1804\rootfs\home\chad\nifi\ubuntu
+%HOMEPATH%\ubuntu-2004\rootfs\home\chad\nifi\ubuntu
 
 # Edit the nifi.tfvars file using notepad and save
 ```
