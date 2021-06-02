@@ -7,7 +7,7 @@
 
     - name: set zookeeper connection string
       set_fact:
-        zookeeper_nodes: "{{ name_prefix }}-zk1-{{ name_suffix }}.{{ name_prefix }}{{ name_suffix }}.internal:2173,{{ name_prefix }}-zk2-{{ name_suffix }}.{{ name_prefix }}{{ name_suffix }}.internal:2173,{{ name_prefix }}-zk3-{{ name_suffix }}.{{ name_prefix }}{{ name_suffix }}.internal:2173"
+        zookeeper_nodes: "zk1.{{ name_prefix }}{{ name_suffix }}.internal:2173,zk2.{{ name_prefix }}{{ name_suffix }}.internal:2173,zk3.{{ name_prefix }}{{ name_suffix }}.internal:2173"
 
     - name: set host in hosts
       lineinfile:
@@ -300,7 +300,7 @@
       lineinfile:
         path: /opt/nifi/conf/state-management.xml
         regexp: '        <property name="Connect String">.*</property>'
-        line: '        <property name="Connect String">{{ name_prefix }}-zk1-{{ name_suffix }}.{{ name_prefix }}{{ name_suffix }}.internal:2173,{{ name_prefix }}-zk2-{{ name_suffix }}.{{ name_prefix }}{{ name_suffix }}.internal:2173,{{ name_prefix }}-zk3-{{ name_suffix }}.{{ name_prefix }}{{ name_suffix }}.internal:2173</property>'
+        line: '        <property name="Connect String">zk1.{{ name_prefix }}{{ name_suffix }}.internal:2173,zk2.{{ name_prefix }}{{ name_suffix }}.internal:2173,zk3.{{ name_prefix }}{{ name_suffix }}.internal:2173</property>'
 
     - name: check ca exists
       stat:

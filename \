@@ -7,7 +7,7 @@
 
     - name: set zookeeper connection string
       set_fact:
-        zookeeper_nodes: "{{ name_prefix }}-zk1-{{ name_suffix }}.{{ name_prefix }}{{ name_suffix }}.internal:2173,{{ name_prefix }}-zk2-{{ name_suffix }}.{{ name_prefix }}{{ name_suffix }}.internal:2173,{{ name_prefix }}-zk3-{{ name_suffix }}.{{ name_prefix }}{{ name_suffix }}.internal:2173"
+        zookeeper_nodes: "zk1.{{ name_prefix }}{{ name_suffix }}.internal:2173,zk2.{{ name_prefix }}{{ name_suffix }}.internal:2173,zk3.{{ name_prefix }}{{ name_suffix }}.internal:2173"
 
     - name: set host in hosts
       lineinfile:
@@ -21,9 +21,9 @@
         state: latest
       vars:
         packages:
-        - java-11-openjdk
+        - default-jre
         - jq
-        - python-pip
+        - python3-pip
         - unzip
       retries: 60
       delay: 3
@@ -32,10 +32,11 @@
 
     - name: ansible required packages
       pip:
-        executable: /usr/bin/pip
+        executable: /usr/bin/pip3
         name: "{{ packages }}"
       vars:
         packages:
+        - awscli
         - boto
         - boto3
         - botocore
@@ -52,30 +53,15 @@
         groups: adm,nifi
         append: yes
 
-    - name: set messages and secure readable in logrotate syslog
-      blockinfile:
-        block: |
-          #     cloudwatch to read logs
-                /bin/setfacl -m g:cloudwatch:rx /var/log/messages
-                /bin/setfacl -m g:cloudwatch:rx /var/log/secure
-        insertbefore: "    endscript"
-        path: /etc/logrotate.d/syslog
-
-    - name: set active messages and secure readable
-      acl:
-        path: "/var/log/{{ item }}"
-        entity: cloudwatch
-        etype: group
-        permissions: rx
-        state: present
-      with_items:
-        - messages
-        - secure
+    - name: cloudwatch agent download
+      get_url:
+        url: https://s3.amazonaws.com/amazoncloudwatch-agent/ubuntu/amd64/latest/amazon-cloudwatch-agent.deb
+        dest: /opt/amazon-cloudwatch-agent.deb
 
     - name: cloudwatch agent install
-      yum:
-        name: 'https://s3.amazonaws.com/amazoncloudwatch-agent/amazon_linux/amd64/latest/amazon-cloudwatch-agent.rpm'
-        state: latest
+      apt:
+        deb: /opt/amazon-cloudwatch-agent.deb
+        state: present
 
     - name: cloudwatch conf
       file:
@@ -113,25 +99,6 @@
       delay: 2
       register: route53_record
       until: route53_record is not failed
-
-    - name: awscli via aws instructions
-      get_url:
-        url: https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip
-        dest: /opt/awscli-exe-linux-x86_64.zip
-        owner: root
-        group: root
-        mode: 0640
-
-    - name: unarchive awscli
-      unarchive:
-        src: /opt/awscli-exe-linux-x86_64.zip
-        dest: /opt/
-
-    - name: execute awscli installer
-      shell: |
-        /opt/aws/install
-      args:
-        creates: /usr/local/bin/aws
 
     - name: nifi management directories
       file:
@@ -333,7 +300,7 @@
       lineinfile:
         path: /opt/nifi/conf/state-management.xml
         regexp: '        <property name="Connect String">.*</property>'
-        line: '        <property name="Connect String">{{ name_prefix }}-zk1-{{ name_suffix }}.{{ name_prefix }}{{ name_suffix }}.internal:2173,{{ name_prefix }}-zk2-{{ name_suffix }}.{{ name_prefix }}{{ name_suffix }}.internal:2173,{{ name_prefix }}-zk3-{{ name_suffix }}.{{ name_prefix }}{{ name_suffix }}.internal:2173</property>'
+        line: '        <property name="Connect String">zk1.{{ name_prefix }}{{ name_suffix }}.internal:2173,zk2.{{ name_prefix }}{{ name_suffix }}.internal:2173,zk3.{{ name_prefix }}{{ name_suffix }}.internal:2173</property>'
 
     - name: check ca exists
       stat:
@@ -404,7 +371,7 @@
 
     - name: generate node keystore when not exists
       shell: |
-        export JAVA_HOME=/etc/alternatives/jre
+        export JAVA_HOME=/usr/lib/jvm/default-java
         /opt/nifi-toolkit/bin/tls-toolkit.sh standalone -n {{ ansible_nodename }} -d 3650 -k 2048 -s SHA256WITHRSA -T jks --subjectAlternativeNames {{ ansible_nodename }} -P {{ generated_password.stdout }} -S {{ generated_password.stdout }}
       args:
         chdir: /opt/nifi-certificates/

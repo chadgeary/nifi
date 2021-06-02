@@ -1,12 +1,12 @@
 # Reference
-NiFi secure+autoscaling cluster built automatically in AWS via Terraform+Ansible. RHEL7 or Ubuntu (20.04 or 18.04) base.
+NiFi secure+autoscaling cluster built automatically in AWS via Terraform+Ansible. Ubuntu (20.04 or 18.04) base. Run zookeepers via Fargate on ECS if so desired with the other directory.
 
 # Requirements
 - An AWS account
 - Follow Step-by-Step (compatible with Windows and Ubuntu)
 
 # Media 
-- [Video Guide](https://youtu.be/7idB-OuDOd0) - follow along with me as I deploy using the step-by-step guide below.
+- [Video Guide](https://youtu.be/7idB-OuDOd0) - a bit outdated, but still useful. Follow along with me as I deploy using the step-by-step guide below.
 - [Discord](https://discord.gg/G6W4UDJEZ3) - for questions, ideas, comments, or troubleshooting assistance.
 
 # Step-by-Step Terraform Deployment 
@@ -105,12 +105,12 @@ EOM
 
 Customize the deployment - See variables section below
 ```
-# Change to the project's aws directory in powershell (use ~/nifi/ubuntu/ for ubuntu)
-cd ~/nifi/rhel7/
+# Change to the project's aws directory in powershell
+cd ~/nifi/ubuntu/
 
 # Open File Explorer in a separate window
-# Navigate to rhel or ubuntu project directory - change \chad\ to your WSL username
-%HOMEPATH%\ubuntu-1804\rootfs\home\chad\nifi\rhel7
+# Navigate to ubuntu project directory - change \chad\ to your WSL username
+%HOMEPATH%\ubuntu-1804\rootfs\home\chad\nifi\ubuntu
 
 # Edit the nifi.tfvars file using notepad and save
 ```
@@ -118,7 +118,7 @@ cd ~/nifi/rhel7/
 Deploy
 ```
 # In powershell's WSL window, change to the project's aws directory
-cd ~/nifi/rhel7/
+cd ~/nifi/ubuntu/
 
 # Initialize terraform and apply the terraform state
 terraform init
@@ -135,7 +135,7 @@ sudo chown $USER nifi.tfvars && chmod 600 nifi.tfvars
 # Variables
 ```
 # instance_key
-# a public SSH key for SSH access to the instance via user `ec2-user` or `ubuntu`, service port 22 must be exposed.
+# a public SSH key for SSH access to the instance via user `ubuntu`, service port 22 must be exposed.
 # cat ~/.ssh/id_rsa.pub
 
 # mgmt_cidrs
