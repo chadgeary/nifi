@@ -5,6 +5,14 @@ aws_region  = "us-east-1"
 # existing aws iam user granted access to the kms key (for browsing KMS encrypted services like S3 or SNS).
 kms_manager = "some_iam_user"
 
+# password for keys and keystores
+nifi_secret = "changeme"
+
+# additional aws tags
+aws_default_tags = {
+  Environment = "Development"
+}
+
 # the subnet(s) permitted to browse nifi (port 2170 or web_port) via the AWS NLB
 mgmt_cidrs = ["127.0.0.0/32"]
 

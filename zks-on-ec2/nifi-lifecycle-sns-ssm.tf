@@ -1,3 +1,4 @@
+# down
 # sns topic called by lifecycle hooks
 resource "aws_sns_topic" "tf-nifi-sns-scaledown" {
   name              = "${var.name_prefix}-sns-scaledown-${random_string.tf-nifi-random.result}"

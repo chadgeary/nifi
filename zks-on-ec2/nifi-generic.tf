@@ -114,9 +114,17 @@ variable "vendor_ami_name_string" {
   description = "The search string for the name of the AMI from the AMI Vendor"
 }
 
+variable "aws_default_tags" {
+  type = map(string)
+  default = {}
+}
+
 provider "aws" {
   region  = var.aws_region
   profile = var.aws_profile
+  default_tags {
+    tags = var.aws_default_tags
+  }
 }
 
 # region azs
@@ -194,4 +202,8 @@ variable "health_check_unit" {
 variable "health_check_count" {
   type    = string
   default = "5"
+}
+
+variable "nifi_secret" {
+  type = string
 }

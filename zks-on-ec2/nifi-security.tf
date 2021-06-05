@@ -48,6 +48,16 @@ resource "aws_security_group_rule" "tf-nifi-prisg-web-out" {
   cidr_blocks       = ["0.0.0.0/0"]
 }
 
+resource "aws_security_group_rule" "tf-nifi-prisg-zk-out" {
+  security_group_id = aws_security_group.tf-nifi-prisg.id
+  type              = "egress"
+  description       = "OUT TO PUB PRI NAT - ZK NIFI"
+  from_port         = "2173"
+  to_port           = "2173"
+  protocol          = "tcp"
+  cidr_blocks       = ["0.0.0.0/0"]
+}
+
 # ingress
 resource "aws_security_group_rule" "tf-nifi-prisg-web-in" {
   security_group_id = aws_security_group.tf-nifi-prisg.id
@@ -57,6 +67,16 @@ resource "aws_security_group_rule" "tf-nifi-prisg-web-in" {
   to_port           = var.web_port
   protocol          = "tcp"
   cidr_blocks       = concat(var.mgmt_cidrs, [var.pubnet1_cidr, var.pubnet2_cidr, var.pubnet3_cidr, var.prinet1_cidr, var.prinet2_cidr, var.prinet3_cidr, "${aws_eip.tf-nifi-ng-eip1.public_ip}/32", "${aws_eip.tf-nifi-ng-eip2.public_ip}/32", "${aws_eip.tf-nifi-ng-eip3.public_ip}/32"])
+}
+
+resource "aws_security_group_rule" "tf-nifi-prisg-zk-in" {
+  security_group_id = aws_security_group.tf-nifi-prisg.id
+  type              = "ingress"
+  description       = "IN FROM PUB PRI NAT - ZK NIFI"
+  from_port         = "2173"
+  to_port           = "2173"
+  protocol          = "tcp"
+  cidr_blocks       = [var.pubnet1_cidr, var.pubnet2_cidr, var.pubnet3_cidr, var.prinet1_cidr, var.prinet2_cidr, var.prinet3_cidr, "${aws_eip.tf-nifi-ng-eip1.public_ip}/32", "${aws_eip.tf-nifi-ng-eip2.public_ip}/32", "${aws_eip.tf-nifi-ng-eip3.public_ip}/32"]
 }
 
 resource "aws_security_group_rule" "tf-nifi-prisg-tcp-service-in" {

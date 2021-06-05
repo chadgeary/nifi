@@ -112,7 +112,7 @@ EOM
 Customize the deployment - See variables section below
 ```
 # Change to the project's aws directory in powershell
-cd ~/nifi/ubuntu/
+cd ~/nifi/zks-on-ec2/
 
 # Open File Explorer in a separate window
 # Navigate to ubuntu project directory - change \chad\ to your WSL username
@@ -124,7 +124,11 @@ cd ~/nifi/ubuntu/
 Deploy
 ```
 # In powershell's WSL window, change to the project's aws directory
-cd ~/nifi/ubuntu/
+cd ~/nifi/zks-on-ec2/
+
+# Copy nifi-lambda-certs.py and add the cryptography module to nifi-lambda-certs/
+mkdir nifi-lambda-certs && cp nifi-lambda-certs.py nifi-lambda-certs/
+pip3 install --upgrade --target ./nifi-lambda-certs/ cryptography
 
 # Initialize terraform and apply the terraform state
 terraform init
@@ -140,21 +144,7 @@ sudo chown $USER nifi.tfvars && chmod 600 nifi.tfvars
 
 # Variables
 ```
-# instance_key
-# a public SSH key for SSH access to the instance via user `ubuntu`, service port 22 must be exposed.
-# cat ~/.ssh/id_rsa.pub
-
-# mgmt_cidrs
-# IP ranges granted web_port access.
-
-# client_cidrs
-# IP ranges granted service port(s) access.
-
-# kms_manager
-# The AWS username (not root) granted access to read configuration files in S3.
-
-# name_prefix
-# a short alphanumeric* string *(must starting with a letter) applied to various AWS resource names.
+# See nifi.tfvars
 ```
 
 # Post-Deployment

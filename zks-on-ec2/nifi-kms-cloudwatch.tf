@@ -76,6 +76,26 @@ resource "aws_kms_key" "tf-nifi-kmscmk-cloudwatch" {
       "Resource": "*",
       "Condition": {
         "ArnEquals": {
+          "kms:EncryptionContext:aws:logs:arn": "arn:${data.aws_partition.tf-nifi-aws-partition.partition}:logs:${var.aws_region}:${data.aws_caller_identity.tf-nifi-aws-account.account_id}:log-group:/aws/lambda/${var.name_prefix}-lambda-certs-${random_string.tf-nifi-random.result}"
+        }
+      }
+    },
+    {
+      "Sid": "Allow access through cloudwatch",
+      "Effect": "Allow",
+      "Principal": {
+        "Service": "logs.${var.aws_region}.amazonaws.com"
+      },
+      "Action": [
+        "kms:Encrypt",
+        "kms:Decrypt",
+        "kms:ReEncrypt*",
+        "kms:GenerateDataKey*",
+        "kms:DescribeKey"
+      ],
+      "Resource": "*",
+      "Condition": {
+        "ArnEquals": {
           "kms:EncryptionContext:aws:logs:arn": "arn:${data.aws_partition.tf-nifi-aws-partition.partition}:logs:${var.aws_region}:${data.aws_caller_identity.tf-nifi-aws-account.account_id}:log-group:/aws/lambda/${var.name_prefix}-lambda-health-${random_string.tf-nifi-random.result}"
         }
       }

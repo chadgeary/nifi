@@ -7,7 +7,7 @@
 
     - name: set zookeeper connection string
       set_fact:
-        zookeeper_nodes: "zk1.{{ name_prefix }}{{ name_suffix }}.internal:2173,zk2.{{ name_prefix }}{{ name_suffix }}.internal:2173,zk3.{{ name_prefix }}{{ name_suffix }}.internal:2173"
+        zookeeper_nodes: "{{ lb_dns }}:2173"
 
     - name: fetch node_id
       shell: |
@@ -45,6 +45,18 @@
         - boto
         - boto3
         - botocore
+        - cryptography
+        - pyOpenSSL
+
+    - name: get secret
+      set_fact:
+        nifi_secret: "{{ lookup('aws_ssm', name_prefix + '-nifi-secret-' + name_suffix, decrypt=True, region=aws_region) }}"
+      no_log: True
+
+    - name: set secret absent
+      file:
+        state: absent
+        path: /opt/nifi-conf/nifi_secret
 
     - name: nifi user
       user:
@@ -116,6 +128,18 @@
         - /opt/nifi-certificates
         - /opt/nifi-conf
         - /opt/nifi-downloads
+        - /opt/nifi-certificates/ca
+        - /opt/nifi-certificates/admin
+        - /opt/nifi-certificates/{{ ansible_nodename }}
+
+    - name: set secret
+      lineinfile:
+        path: /opt/nifi-conf/nifi_secret
+        line: "{{ nifi_secret }}"
+        owner: nifi
+        group: nifi
+        mode: '0400'
+        create: yes
 
     - name: remove any previous bucket or kms key id file (for dynamic changes)
       file:
@@ -326,71 +350,6 @@
         owner: root
         group: root
 
-    - name: get pre-existing generated password from s3
-      aws_s3:
-        region: "{{ aws_region }}"
-        mode: get
-        bucket: "{{ s3_bucket }}"
-        object: "nifi/conf/{{ item }}"
-        dest: "/opt/nifi-conf/{{ item }}"
-      become_user: nifi
-      ignore_errors: True
-      with_items:
-        - generated_password
-      when:
-        - ansible_nodename == 'zk1.' + name_prefix + name_suffix + '.internal'
-
-    - name: check password generated
-      stat:
-        path: /opt/nifi-conf/generated_password
-      register: password_generated
-      when:
-        - ansible_nodename == 'zk1.' + name_prefix + name_suffix + '.internal'
-
-    - name: generate password if not generated
-      shell: |
-        head /dev/urandom | tr -dc A-Za-z0-9 | head -c 20 > /opt/nifi-conf/generated_password
-      become_user: nifi
-      ignore_errors: True
-      when:
-        - ansible_nodename == 'zk1.' + name_prefix + name_suffix + '.internal'
-        - password_generated.stat.exists == false
-
-    - name: upload password to s3
-      aws_s3:
-        region: "{{ aws_region }}"
-        mode: put
-        bucket: "{{ s3_bucket }}"
-        object: "nifi/conf/generated_password"
-        src: /opt/nifi-conf/generated_password
-        encrypt: yes
-        encryption_mode: "aws:kms"
-        encryption_kms_key_id: "{{ kms_key_id }}"
-      become_user: nifi
-      when:
-        - ansible_nodename == 'zk1.' + name_prefix + name_suffix + '.internal'
-
-    - name: get generated password from s3
-      aws_s3:
-        region: "{{ aws_region }}"
-        mode: get
-        bucket: "{{ s3_bucket }}"
-        object: "nifi/conf/{{ item }}"
-        dest: "/opt/nifi-conf/{{ item }}"
-      become_user: nifi
-      with_items:
-        - generated_password
-      retries: 900
-      delay: 2
-      register: genpass_from_s3
-      until: genpass_from_s3 is not failed
-
-    - name: set generated_password var
-      shell: |
-        cat /opt/nifi-conf/generated_password
-      become_user: nifi
-      register: generated_password
-
     - name: bootstrap.conf
       template:
         src: bootstrap.conf
@@ -422,66 +381,23 @@
       lineinfile:
         path: /opt/nifi/conf/state-management.xml
         regexp: '        <property name="Connect String">.*</property>'
-        line: '        <property name="Connect String">zk1.{{ name_prefix }}{{ name_suffix }}.internal:2173,zk2.{{ name_prefix }}{{ name_suffix }}.internal:2173,zk3.{{ name_prefix }}{{ name_suffix }}.internal:2173</property>'
+        line: '        <property name="Connect String">{{ lb_dns }}:2173</property>'
 
     - name: check ca exists
       stat:
-        path: /opt/nifi-certificates/nifi-cert.pem
+        path: /opt/nifi-certificates/ca/ca.pem
       register: ca_cert
-
-    - name: get pre-existing ca from s3
-      aws_s3:
-        region: "{{ aws_region }}"
-        mode: get
-        bucket: "{{ s3_bucket }}"
-        object: "nifi/certificates/{{ item }}"
-        dest: "/opt/nifi-certificates/{{ item }}"
-      become_user: nifi
-      ignore_errors: True
-      with_items:
-        - nifi-cert.pem
-        - nifi-key.key
-      when:
-        - ansible_nodename == 'zk1.' + name_prefix + name_suffix + '.internal'
-
-    - name: generate ca when not exists
-      shell: |
-        export JAVA_HOME=/usr/lib/jvm/default-java
-        /opt/nifi-toolkit/bin/tls-toolkit.sh standalone -c {{ lb_dns }} -d 3650 -k 2048 -s SHA256WITHRSA -T jks
-      args:
-        chdir: /opt/nifi-certificates/
-        executable: /bin/bash
-      become_user: nifi
-      when:
-        - ca_cert.stat.exists == false
-        - ansible_nodename == 'zk1.' + name_prefix + name_suffix + '.internal'
-
-    - name: upload ca to s3
-      aws_s3:
-        region: "{{ aws_region }}"
-        mode: put
-        bucket: "{{ s3_bucket }}"
-        object: "nifi/certificates/{{ item }}"
-        src: "/opt/nifi-certificates/{{ item }}"
-        encrypt: yes
-        encryption_mode: "aws:kms"
-        encryption_kms_key_id: "{{ kms_key_id }}"
-      with_items:
-        - nifi-cert.pem
-        - nifi-key.key
-      when:
-        - ansible_nodename == 'zk1.' + name_prefix + name_suffix + '.internal'
 
     - name: get ca from s3
       aws_s3:
         region: "{{ aws_region }}"
         mode: get
         bucket: "{{ s3_bucket }}"
-        object: "nifi/certificates/{{ item }}"
-        dest: "/opt/nifi-certificates/{{ item }}"
+        object: "nifi/certificates/ca/{{ item }}"
+        dest: "/opt/nifi-certificates/ca/{{ item }}"
       with_items:
-        - nifi-cert.pem
-        - nifi-key.key
+        - ca.pem
+        - ca.key
       retries: 900
       delay: 2
       register: ca_from_s3
@@ -490,77 +406,12 @@
       when: 
         - ca_cert.stat.exists == false
 
-    - name: get pre-existing admin from s3
-      aws_s3:
-        region: "{{ aws_region }}"
-        mode: get
-        bucket: "{{ s3_bucket }}"
-        object: "nifi/certificates/admin/{{ item }}"
-        dest: "/opt/nifi-certificates/admin/{{ item }}"
-      become_user: nifi
-      ignore_errors: True
-      with_items:
-        - keystore.p12
-        - truststore.jks
-        - admin_cert.pem
-        - private_key.pem
-      when:
-        - ansible_nodename == 'zk1.' + name_prefix + name_suffix + '.internal'
-
     - name: check admin exists
       stat:
         path: /opt/nifi-certificates/admin/keystore.p12
       register: admin_cert
 
-    - name: generate admin when not exists
-      shell: |
-        export JAVA_HOME=/usr/lib/jvm/default-java
-        /opt/nifi-toolkit/bin/tls-toolkit.sh standalone -a RSA -c {{ lb_dns }} -n admin -d 3650 -k 2048 -s SHA256WITHRSA -T pkcs12 --subjectAlternativeNames admin,admin{{ name_prefix }}{{ name_suffix }} -P {{ generated_password.stdout }} -S {{ generated_password.stdout }}
-      args:
-        chdir: /opt/nifi-certificates/
-        executable: /bin/bash
-      become_user: nifi
-      when:
-        - admin_cert.stat.exists == false
-        - ansible_nodename == 'zk1.' + name_prefix + name_suffix + '.internal'
-
-
-    - name: rename pkcs12 to p12 and extract
-      shell: |
-        mv /opt/nifi-certificates/admin/keystore.pkcs12 /opt/nifi-certificates/admin/keystore.p12
-        openssl pkcs12 -in /opt/nifi-certificates/admin/keystore.p12 -nodes -nocerts -out /opt/nifi-certificates/admin/private_key.pem -passin file:/opt/nifi-conf/generated_password
-        openssl pkcs12 -in /opt/nifi-certificates/admin/keystore.p12 -nokeys -out /opt/nifi-certificates/admin/admin_cert.pem -passin file:/opt/nifi-conf/generated_password
-      when:
-        - admin_cert.stat.exists == false
-        - ansible_nodename == 'zk1.' + name_prefix + name_suffix + '.internal'
-
-    - name: upload admin to s3
-      aws_s3:
-        region: "{{ aws_region }}"
-        mode: put
-        bucket: "{{ s3_bucket }}"
-        object: "nifi/certificates/admin/{{ item }}"
-        src: "/opt/nifi-certificates/admin/{{ item }}"
-        encrypt: yes
-        encryption_mode: "aws:kms"
-        encryption_kms_key_id: "{{ kms_key_id }}"
-      with_items:
-        - keystore.p12
-        - truststore.jks
-        - admin_cert.pem
-        - private_key.pem
-      when:
-        - ansible_nodename == 'zk1.' + name_prefix + name_suffix + '.internal'
-
-    - name: ensure admin dir for s3 objects
-      file:
-        path: /opt/nifi-certificates/admin
-        state: directory
-        owner: nifi
-        group: nifi
-        mode: 0750
-
-    - name: pull admin from s3
+    - name: get admin from s3
       aws_s3:
         region: "{{ aws_region }}"
         mode: get
@@ -569,8 +420,7 @@
         dest: "/opt/nifi-certificates/admin/{{ item }}"
       with_items:
         - keystore.p12
-        - truststore.jks
-        - private_key.pem
+        - private_key.key
         - admin_cert.pem
       retries: 900
       delay: 2
@@ -590,17 +440,93 @@
 
     - name: check node keystore exists
       stat:
-        path: /opt/nifi-certificates/{{ ansible_nodename }}/keystore.jks
+        path: /opt/nifi-certificates/{{ ansible_nodename }}/node.p12
       register: node_cert
 
-    - name: generate node keystore when not exists
+    - name: generate node private key when no keystore
+      community.crypto.openssl_privatekey:
+        path: /opt/nifi-certificates/{{ ansible_nodename }}/node.key
+        owner: nifi
+        group: nifi
+        type: RSA
+        cipher: auto
+        passphrase: "{{ nifi_secret }}"
+        select_crypto_backend: cryptography
+      when: node_cert.stat.exists == false
+
+    - name: generate node public key when no keystore
+      community.crypto.openssl_publickey:
+        path: /opt/nifi-certificates/{{ ansible_nodename }}/node.pem
+        owner: nifi
+        group: nifi
+        format: PEM
+        privatekey_path: /opt/nifi-certificates/{{ ansible_nodename }}/node.key
+        privatekey_passphrase: "{{ nifi_secret }}"
+        select_crypto_backend: cryptography
+      when: node_cert.stat.exists == false
+
+    - name: generate node csr when no keystore
+      community.crypto.openssl_csr:
+        path: /opt/nifi-certificates/{{ ansible_nodename }}/node.csr
+        owner: nifi
+        group: nifi
+        privatekey_path: /opt/nifi-certificates/{{ ansible_nodename }}/node.key
+        privatekey_passphrase: "{{ nifi_secret }}"
+        common_name: "{{ ansible_nodename }}"
+        organizational_unit_name: "NIFI"
+        subject_alt_name: "DNS:{{ lb_dns }},DNS:{{ ansible_nodename }}"
+        select_crypto_backend: cryptography
+        key_usage:
+          - digitalSignature
+          - nonRepudiation
+          - keyEncipherment
+          - dataEncipherment
+          - keyAgreement
+        extended_key_usage:
+          - serverAuth
+          - clientAuth
+      when: node_cert.stat.exists == false
+
+    - name: generate node certificate when no keystore
+      community.crypto.x509_certificate:
+        path: /opt/nifi-certificates/{{ ansible_nodename }}/node.pem
+        owner: nifi
+        group: nifi
+        csr_path: /opt/nifi-certificates/{{ ansible_nodename }}/node.csr
+        ownca_path: /opt/nifi-certificates/ca/ca.pem
+        ownca_privatekey_path: /opt/nifi-certificates/ca/ca.key
+        ownca_privatekey_passphrase: "{{ nifi_secret }}"
+        provider: ownca
+        select_crypto_backend: cryptography
+      when: node_cert.stat.exists == false
+
+    - name: generate node pkcs12 keystore when no keystore
+      community.crypto.openssl_pkcs12:
+        action: export
+        path: /opt/nifi-certificates/{{ ansible_nodename }}/node.p12
+        owner: nifi
+        group: nifi
+        friendly_name: "{{ ansible_nodename }}"
+        privatekey_path: /opt/nifi-certificates/{{ ansible_nodename }}/node.key
+        privatekey_passphrase: "{{ nifi_secret }}"
+        certificate_path: /opt/nifi-certificates/{{ ansible_nodename }}/node.pem
+        passphrase: "{{ nifi_secret }}"
+      when: node_cert.stat.exists == false
+
+    - name: create empty truststore when no keystore
       shell: |
-        export JAVA_HOME=/usr/lib/jvm/default-java
-        /opt/nifi-toolkit/bin/tls-toolkit.sh standalone -c {{ lb_dns }} -n {{ ansible_nodename }} -d 3650 -k 2048 -s SHA256WITHRSA -T jks --subjectAlternativeNames zk{{ node_id.stdout }},{{ ansible_nodename }},{{ lb_dns }} -P {{ generated_password.stdout }} -S {{ generated_password.stdout }}
-      args:
-        chdir: /opt/nifi-certificates/
-        executable: /bin/bash
+        keytool -genkeypair -alias none -storepass "{{ nifi_secret }}" -keypass "{{ nifi_secret }}" -keystore /opt/nifi-certificates/ca/trust.jks -dname "CN=none"
+        keytool -delete -alias none -storepass "{{ nifi_secret }}" -keystore /opt/nifi-certificates/ca/trust.jks
       become_user: nifi
+      when: node_cert.stat.exists == false
+
+    - name: add ca to jks truststore when no keystore
+      community.general.java_cert:
+        cert_alias: "NIFICA"
+        cert_path: /opt/nifi-certificates/ca/ca.pem
+        keystore_path: /opt/nifi-certificates/ca/trust.jks
+        keystore_pass: "{{ nifi_secret }}"
+        trust_cacert: yes
       when: node_cert.stat.exists == false
 
     - name: zookeeper data directory
@@ -619,80 +545,41 @@
         group: nifi
         mode: 0444
 
-    - name: zookeeper conf
+    - name: zookeeper conf file
       template:
         src: zoo.cfg
         dest: /opt/zookeeper/conf/zoo.cfg
         owner: nifi
         group: nifi
         mode: 0640
+      register: zk_conf_file
+
+    - name: zookeeper log file
+      template:
+        src: zklog4j.properties
+        dest: /opt/zookeeper/conf/log4j.properties
+        owner: nifi
+        group: nifi
+        mode: 0640
+      register: zk_log_file
 
     - name: zookeeper systemd service start/enable
       systemd:
-        state: started
+        state: "{% if zk_conf_file.changed or zk_log_file.changed %}restarted{% else %}started{% endif %}"
         enabled: yes
         name: zookeeper
         daemon_reload: yes
 
-    - name: nifi systemd service start/enable
-      systemd:
-        state: started
-        enabled: yes
-        name: nifi
-        daemon_reload: yes
-      when:
-        - ansible_nodename == 'zk1.' + name_prefix + name_suffix + '.internal'
-
-    - name: wait for users.xml, authorizations.xml
-      wait_for:
-        path: "/opt/nifi/conf/{{ item }}"
-        state: present
-        timeout: 900
-      with_items:
-        - users.xml
-        - authorizations.xml
-      when:
-        - ansible_nodename == 'zk1.' + name_prefix + name_suffix + '.internal'
-
-    - name: put users.xml, authorizations.xml on s3
-      aws_s3:
-        region: "{{ aws_region }}"
-        mode: put
-        bucket: "{{ s3_bucket }}"
-        object: "nifi/conf/{{ item }}"
-        src: "/opt/nifi/conf/{{ item }}"
-        encrypt: yes
-        encryption_mode: "aws:kms"
-        encryption_kms_key_id: "{{ kms_key_id }}"
-      with_items:
-        - users.xml
-        - authorizations.xml
-      when:
-        - ansible_nodename == 'zk1.' + name_prefix + name_suffix + '.internal'
-
-    - name: get nifi conf files from s3
-      aws_s3:
-        region: "{{ aws_region }}"
-        mode: get
-        bucket: "{{ s3_bucket }}"
-        object: "nifi/conf/{{ item }}"
-        dest: "/opt/nifi/conf/{{ item }}"
-      with_items:
-        - users.xml
-        - authorizations.xml
-      become_user: nifi
-      retries: 900
-      delay: 2
-      register: nifi_conf_from_s3
-      until: nifi_conf_from_s3 is not failed
-
-    - name: copy scale-down script executed by autoscaling ssm doc
+    - name: copy admin-operate and scale-down script
       copy:
-        src: scale-down
-        dest: /usr/local/bin/scale-down
+        src: "{{ item }}"
+        dest: "/usr/local/bin/{{ item }}"
         owner: nifi
         group: nifi
         mode: 0550
+      with_items:
+        - admin-operate
+        - scale-down
 
     - name: timers and service units
       copy:
@@ -719,3 +606,7 @@
       with_items:
         - service
         - timer
+
+    - name: perform admin operate
+      shell: |
+        /usr/local/bin/admin-operate

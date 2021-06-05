@@ -5,6 +5,11 @@ aws_region  = "us-east-1"
 # existing aws iam user granted access to the kms key (for browsing KMS encrypted services like S3 or SNS).
 kms_manager = "some_iam_user"
 
+# additional aws tags
+aws_default_tags = {
+  Environment = "Development"
+}
+
 # the secret for nifi private keys
 nifi_secret = "changeme"
 

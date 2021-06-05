@@ -1,0 +1,42 @@
+#!/bin/bash
+export JAVA_HOME=/usr/lib/jvm/default-java
+
+# root process group
+ROOT_PROCESS_GROUP_ID=$(curl --insecure --silent --key /opt/nifi-certificates/admin/private_key.key --cert /opt/nifi-certificates/admin/admin_cert.pem --pass $(cat /opt/nifi-conf/nifi_secret) {{ lb_dns }}:{{ web_port }}/nifi-api/flow/process-groups/root | jq -r '.processGroupFlow.id')
+
+# client id
+CLIENT_ID=$(curl --insecure --silent --key /opt/nifi-certificates/admin/private_key.key --cert /opt/nifi-certificates/admin/admin_cert.pem --pass $(cat /opt/nifi-conf/nifi_secret) {{ lb_dns }}:{{ web_port }}/nifi-api/flow/client-id)
+
+# admin id
+ADMIN_ID=$(curl --insecure --silent --key /opt/nifi-certificates/admin/private_key.key --cert /opt/nifi-certificates/admin/admin_cert.pem --pass $(cat /opt/nifi-conf/nifi_secret) '{{ lb_dns }}:{{ web_port }}/nifi-api/tenants/users' | jq -r '.users[0].id')
+
+# if policy(ies) exist, exit
+curl --insecure --fail --silent --key /opt/nifi-certificates/admin/private_key.key --cert /opt/nifi-certificates/admin/admin_cert.pem --pass $(cat /opt/nifi-conf/nifi_secret) '{{ lb_dns }}:{{ web_port }}/nifi-api/policies/read/process-groups/'$ROOT_PROCESS_GROUP_ID''
+if [ $? -eq 0 ]
+then
+  exit 0
+fi
+
+# create view policy
+CREATED_VIEW_RESPONSE=$(curl --insecure --silent --key /opt/nifi-certificates/admin/private_key.key --cert /opt/nifi-certificates/admin/admin_cert.pem --pass $(cat /opt/nifi-conf/nifi_secret) '{{ lb_dns }}:{{ web_port }}/nifi-api/policies' -H "Accept: application/json, text/javascript" -H "Content-Type: application/json" --data-raw "{\"revision\":{\"clientId\":\"$CLIENT_ID\",\"version\":0},\"disconnectedNodeAcknowledged\":false,\"component\":{\"action\":\"read\",\"resource\":\"/process-groups/$ROOT_PROCESS_GROUP_ID\",\"users\":[],\"userGroups\":[]}}")
+
+VIEW_POLICY_ID=$(echo $CREATED_VIEW_RESPONSE | jq -r '.id')
+
+# add admin to view policy
+curl -X 'PUT' --insecure --silent --key /opt/nifi-certificates/admin/private_key.key --cert /opt/nifi-certificates/admin/admin_cert.pem --pass $(cat /opt/nifi-conf/nifi_secret) "{{ lb_dns }}:{{ web_port }}/nifi-api/policies/$VIEW_POLICY_ID" -H "Accept: application/json, text/javascript" -H "Content-Type: application/json" --data-raw "{\"revision\":{\"clientId\":\"$CLIENT_ID\",\"version\":0},\"disconnectedNodeAcknowledged\":false,\"component\":{\"id\":\"$VIEW_POLICY_ID\",\"users\":[{\"revision\":{\"version\":0},\"id\":\"$ADMIN_ID\",\"permissions\":{\"canRead\":true,\"canWrite\":true},\"component\":{\"id\":\"$ADMIN_ID\",\"identity\":\"CN=admin, OU=NIFI\",\"configurable\":true}}],\"userGroups\":[]}}"
+
+# create modify policy
+CREATED_MODIFY_RESPONSE=$(curl --insecure --silent --key /opt/nifi-certificates/admin/private_key.key --cert /opt/nifi-certificates/admin/admin_cert.pem --pass $(cat /opt/nifi-conf/nifi_secret) '{{ lb_dns }}:{{ web_port }}/nifi-api/policies' -H "Accept: application/json, text/javascript" -H "Content-Type: application/json" --data-raw "{\"revision\":{\"clientId\":\"$CLIENT_ID\",\"version\":0},\"disconnectedNodeAcknowledged\":false,\"component\":{\"action\":\"write\",\"resource\":\"/process-groups/$ROOT_PROCESS_GROUP_ID\",\"users\":[],\"userGroups\":[]}}")
+
+MODIFY_POLICY_ID=$(echo $CREATED_MODIFY_RESPONSE | jq -r '.id')
+
+# add admin to modify policy
+curl -X 'PUT' --insecure --silent --key /opt/nifi-certificates/admin/private_key.key --cert /opt/nifi-certificates/admin/admin_cert.pem --pass $(cat /opt/nifi-conf/nifi_secret) "{{ lb_dns }}:{{ web_port }}/nifi-api/policies/$MODIFY_POLICY_ID" -H "Accept: application/json, text/javascript" -H "Content-Type: application/json" --data-raw "{\"revision\":{\"clientId\":\"$CLIENT_ID\",\"version\":0},\"disconnectedNodeAcknowledged\":false,\"component\":{\"id\":\"$MODIFY_POLICY_ID\",\"users\":[{\"revision\":{\"version\":0},\"id\":\"$ADMIN_ID\",\"permissions\":{\"canRead\":true,\"canWrite\":true},\"component\":{\"id\":\"$ADMIN_ID\",\"identity\":\"CN=admin, OU=NIFI\",\"configurable\":true}}],\"userGroups\":[]}}"
+
+# create operate policy
+CREATED_OPERATE_RESPONSE=$(curl --insecure --silent --key /opt/nifi-certificates/admin/private_key.key --cert /opt/nifi-certificates/admin/admin_cert.pem --pass $(cat /opt/nifi-conf/nifi_secret) '{{ lb_dns }}:{{ web_port }}/nifi-api/policies' -H "Accept: application/json, text/javascript" -H "Content-Type: application/json" --data-raw "{\"revision\":{\"clientId\":\"$CLIENT_ID\",\"version\":0},\"disconnectedNodeAcknowledged\":false,\"component\":{\"action\":\"write\",\"resource\":\"/operation/process-groups/$ROOT_PROCESS_GROUP_ID\",\"users\":[],\"userGroups\":[]}}")
+
+OPERATE_POLICY_ID=$(echo $CREATED_OPERATE_RESPONSE | jq -r '.id')
+
+# add admin to operate policy
+curl -X 'PUT' --insecure --silent --key /opt/nifi-certificates/admin/private_key.key --cert /opt/nifi-certificates/admin/admin_cert.pem --pass $(cat /opt/nifi-conf/nifi_secret) "{{ lb_dns }}:{{ web_port }}/nifi-api/policies/$OPERATE_POLICY_ID" -H "Accept: application/json, text/javascript" -H "Content-Type: application/json" --data-raw "{\"revision\":{\"clientId\":\"$CLIENT_ID\",\"version\":0},\"disconnectedNodeAcknowledged\":false,\"component\":{\"id\":\"$OPERATE_POLICY_ID\",\"users\":[{\"revision\":{\"version\":0},\"id\":\"$ADMIN_ID\",\"permissions\":{\"canRead\":true,\"canWrite\":true},\"component\":{\"id\":\"$ADMIN_ID\",\"identity\":\"CN=admin, OU=NIFI\",\"configurable\":true}}],\"userGroups\":[]}}"

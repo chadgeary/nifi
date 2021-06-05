@@ -2,7 +2,6 @@
 *.terraform
 *.terraform*.tfstate*.lock*.
 *pvars.*
-*-setup-*.sh
-*-init-*.yml
 *.swp
 *.zip
+**/zks-on-ec2/nifi-lambda-certs/
