@@ -5,3 +5,4 @@
 *.swp
 *.zip
 **/zks-on-ec2/nifi-lambda-certs/
+**/zks-on-fargate/nifi-lambda-certs/

@@ -36,6 +36,23 @@ resource "aws_kms_key" "tf-nifi-kmscmk-ssm" {
           "kms:ViaService": "ssm.${var.aws_region}.amazonaws.com"
         }
       }
+    },
+    {
+      "Sid": "Allow access through Lambda certs",
+      "Effect": "Allow",
+      "Principal": {
+        "AWS": "${aws_iam_role.tf-nifi-iam-role-lambda-certs.arn}"
+      },
+      "Action": [
+        "kms:Decrypt"
+      ],
+      "Resource": "*",
+      "Condition": {
+        "StringEquals": {
+          "kms:CallerAccount": "${data.aws_caller_identity.tf-nifi-aws-account.account_id}",
+          "kms:ViaService": "ssm.${var.aws_region}.amazonaws.com"
+        }
+      }
     }
   ]
 }

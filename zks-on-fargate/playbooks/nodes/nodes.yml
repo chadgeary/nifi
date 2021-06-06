@@ -40,10 +40,13 @@
         - boto
         - boto3
         - botocore
+        - cryptography
+        - pyOpenSSL
 
     - name: get secret
       set_fact:
         nifi_secret: "{{ lookup('aws_ssm', name_prefix + '-nifi-secret-' + name_suffix, decrypt=True, region=aws_region) }}"
+      no_log: True
 
     - name: set secret absent
       file:
@@ -120,6 +123,9 @@
         - /opt/nifi-certificates
         - /opt/nifi-conf
         - /opt/nifi-downloads
+        - /opt/nifi-certificates/ca
+        - /opt/nifi-certificates/admin
+        - /opt/nifi-certificates/{{ ansible_nodename }}
 
     - name: set secret
       lineinfile:
@@ -291,23 +297,52 @@
         regexp: '        <property name="Connect String">.*</property>'
         line: '        <property name="Connect String">zka.{{ name_prefix }}_{{ name_suffix }}.internal:{{ zk_port }},zkb.{{ name_prefix }}_{{ name_suffix }}.internal:{{ zk_port }},zkc.{{ name_prefix }}_{{ name_suffix }}.internal:{{ zk_port }}</property>'
 
-    - name: get pre-existing ca from s3
+    - name: check ca exists
+      stat:
+        path: /opt/nifi-certificates/ca/ca.pem
+      register: ca_cert
+
+    - name: get ca from s3
       aws_s3:
         region: "{{ aws_region }}"
         mode: get
         bucket: "{{ s3_bucket }}"
-        object: "nifi/certificates/{{ item }}"
-        dest: "/opt/nifi-certificates/{{ item }}"
-      become_user: nifi
-      ignore_errors: True
+        object: "nifi/certificates/ca/{{ item }}"
+        dest: "/opt/nifi-certificates/ca/{{ item }}"
       with_items:
-        - nifi-cert.pem
-        - nifi-key.key
+        - ca.pem
+        - ca.key
+      retries: 900
+      delay: 2
+      register: ca_from_s3
+      until: ca_from_s3 is not failed
+      become_user: nifi
+      when:
+        - ca_cert.stat.exists == false
 
-    - name: check ca exists
+    - name: check admin exists
       stat:
-        path: /opt/nifi-certificates/nifi-cert.pem
-      register: ca_cert
+        path: /opt/nifi-certificates/admin/keystore.p12
+      register: admin_cert
+
+    - name: get admin from s3
+      aws_s3:
+        region: "{{ aws_region }}"
+        mode: get
+        bucket: "{{ s3_bucket }}"
+        object: "nifi/certificates/admin/{{ item }}"
+        dest: "/opt/nifi-certificates/admin/{{ item }}"
+      with_items:
+        - keystore.p12
+        - private_key.key
+        - admin_cert.pem
+      retries: 900
+      delay: 2
+      register: admin_from_s3
+      until: admin_from_s3 is not failed
+      become_user: nifi
+      when:
+        - admin_cert.stat.exists == false
 
     - name: authorizers.xml
       template:
@@ -316,104 +351,6 @@
         owner: nifi
         group: nifi
         mode: 0640
-
-    - name: generate ca when not exists
-      shell: |
-        export JAVA_HOME=/usr/lib/jvm/default-java
-        /opt/nifi-toolkit/bin/tls-toolkit.sh standalone -c {{ service_nlb }} -d 3650 -k 2048 -s SHA256WITHRSA -T jks
-      args:
-        chdir: /opt/nifi-certificates/
-        executable: /bin/bash
-      when: ca_cert.stat.exists == false
-      become_user: nifi
-
-    - name: push ca to s3
-      aws_s3:
-        region: "{{ aws_region }}"
-        mode: put
-        bucket: "{{ s3_bucket }}"
-        object: "nifi/certificates/{{ item }}"
-        src: "/opt/nifi-certificates/{{ item }}"
-      with_items:
-        - nifi-cert.pem
-        - nifi-key.key
-      become_user: nifi
-
-    - name: get pre-existing admin from s3
-      aws_s3:
-        region: "{{ aws_region }}"
-        mode: get
-        bucket: "{{ s3_bucket }}"
-        object: "nifi/certificates/admin/{{ item }}"
-        dest: "/opt/nifi-certificates/admin/{{ item }}"
-      become_user: nifi
-      ignore_errors: True
-      with_items:
-        - keystore.p12
-        - truststore.jks
-        - admin_cert.pem
-        - private_key.pem
-
-    - name: check admin exists
-      stat:
-        path: /opt/nifi-certificates/admin/keystore.p12
-      register: admin_cert
-
-    - name: generate admin when not exists
-      shell: |
-        export JAVA_HOME=/usr/lib/jvm/default-java
-        /opt/nifi-toolkit/bin/tls-toolkit.sh standalone -a RSA -c {{ service_nlb }} -n admin -d 3650 -k 2048 -s SHA256WITHRSA -T pkcs12 --subjectAlternativeNames admin,admin{{ name_prefix }}{{ name_suffix }} -P {{ nifi_secret }} -S {{ nifi_secret }}
-      args:
-        chdir: /opt/nifi-certificates/
-        executable: /bin/bash
-      become_user: nifi
-      when:
-        - admin_cert.stat.exists == false
-
-    - name: rename pkcs12 to p12 and extract
-      shell: |
-        mv /opt/nifi-certificates/admin/keystore.pkcs12 /opt/nifi-certificates/admin/keystore.p12
-        openssl pkcs12 -in /opt/nifi-certificates/admin/keystore.p12 -nodes -nocerts -out /opt/nifi-certificates/admin/private_key.pem -passin file:/opt/nifi-conf/nifi_secret
-        openssl pkcs12 -in /opt/nifi-certificates/admin/keystore.p12 -nokeys -out /opt/nifi-certificates/admin/admin_cert.pem -passin file:/opt/nifi-conf/nifi_secret
-      when:
-        - admin_cert.stat.exists == false
-
-    - name: upload admin to s3
-      aws_s3:
-        region: "{{ aws_region }}"
-        mode: put
-        bucket: "{{ s3_bucket }}"
-        object: "nifi/certificates/admin/{{ item }}"
-        src: "/opt/nifi-certificates/admin/{{ item }}"
-        encrypt: yes
-        encryption_mode: "aws:kms"
-        encryption_kms_key_id: "{{ kms_key_id }}"
-      with_items:
-        - keystore.p12
-        - truststore.jks
-        - admin_cert.pem
-        - private_key.pem
-      when:
-        - admin_cert.stat.exists == false
-
-    - name: pull admin from s3
-      aws_s3:
-        region: "{{ aws_region }}"
-        mode: get
-        bucket: "{{ s3_bucket }}"
-        object: "nifi/certificates/admin/{{ item }}"
-        dest: "/opt/nifi-certificates/admin/{{ item }}"
-      with_items:
-        - keystore.p12
-        - truststore.jks
-        - private_key.pem
-        - admin_cert.pem
-      when: admin_cert.stat.exists == false
-      become_user: nifi
-      retries: 900
-      delay: 2
-      register: admin_from_s3
-      until: admin_from_s3 is not failed
 
     - name: admin cli.properties template
       template:
@@ -425,30 +362,108 @@
 
     - name: check node keystore exists
       stat:
-        path: /opt/nifi-certificates/{{ ansible_nodename }}/keystore.jks
+        path: /opt/nifi-certificates/{{ ansible_nodename }}/node.p12
       register: node_cert
 
-    - name: generate node keystore when not exists
-      shell: |
-        export JAVA_HOME=/usr/lib/jvm/default-java
-        /opt/nifi-toolkit/bin/tls-toolkit.sh standalone -a RSA -c {{ service_nlb }} -n {{ ansible_nodename }} -d 3650 -k 2048 -s SHA256WITHRSA -T jks --subjectAlternativeNames {{ ansible_nodename }},{{ service_nlb }} -P {{ nifi_secret }} -S {{ nifi_secret }}
-      args:
-        chdir: /opt/nifi-certificates/
-        executable: /bin/bash
-      become_user: nifi
+    - name: generate node private key when no keystore
+      community.crypto.openssl_privatekey:
+        path: /opt/nifi-certificates/{{ ansible_nodename }}/node.key
+        owner: nifi
+        group: nifi
+        type: RSA
+        cipher: auto
+        passphrase: "{{ nifi_secret }}"
+        select_crypto_backend: cryptography
       when: node_cert.stat.exists == false
 
-    - name: copy scale-down scale-user and scale-up scripts
+    - name: generate node public key when no keystore
+      community.crypto.openssl_publickey:
+        path: /opt/nifi-certificates/{{ ansible_nodename }}/node.pem
+        owner: nifi
+        group: nifi
+        format: PEM
+        privatekey_path: /opt/nifi-certificates/{{ ansible_nodename }}/node.key
+        privatekey_passphrase: "{{ nifi_secret }}"
+        select_crypto_backend: cryptography
+      when: node_cert.stat.exists == false
+
+    - name: generate node csr when no keystore
+      community.crypto.openssl_csr:
+        path: /opt/nifi-certificates/{{ ansible_nodename }}/node.csr
+        owner: nifi
+        group: nifi
+        privatekey_path: /opt/nifi-certificates/{{ ansible_nodename }}/node.key
+        privatekey_passphrase: "{{ nifi_secret }}"
+        common_name: "{{ ansible_nodename }}"
+        organizational_unit_name: "NIFI"
+        subject_alt_name: "DNS:{{ lb_dns }},DNS:{{ ansible_nodename }}"
+        select_crypto_backend: cryptography
+        key_usage:
+          - digitalSignature
+          - nonRepudiation
+          - keyEncipherment
+          - dataEncipherment
+          - keyAgreement
+        extended_key_usage:
+          - serverAuth
+          - clientAuth
+      when: node_cert.stat.exists == false
+
+    - name: generate node certificate when no keystore
+      community.crypto.x509_certificate:
+        path: /opt/nifi-certificates/{{ ansible_nodename }}/node.pem
+        owner: nifi
+        group: nifi
+        csr_path: /opt/nifi-certificates/{{ ansible_nodename }}/node.csr
+        ownca_path: /opt/nifi-certificates/ca/ca.pem
+        ownca_privatekey_path: /opt/nifi-certificates/ca/ca.key
+        ownca_privatekey_passphrase: "{{ nifi_secret }}"
+        provider: ownca
+        select_crypto_backend: cryptography
+      when: node_cert.stat.exists == false
+
+    - name: generate node pkcs12 keystore when no keystore
+      community.crypto.openssl_pkcs12:
+        action: export
+        path: /opt/nifi-certificates/{{ ansible_nodename }}/node.p12
+        owner: nifi
+        group: nifi
+        friendly_name: "{{ ansible_nodename }}"
+        privatekey_path: /opt/nifi-certificates/{{ ansible_nodename }}/node.key
+        privatekey_passphrase: "{{ nifi_secret }}"
+        certificate_path: /opt/nifi-certificates/{{ ansible_nodename }}/node.pem
+        passphrase: "{{ nifi_secret }}"
+      when: node_cert.stat.exists == false
+
+    - name: create empty truststore when no keystore
+      shell: |
+        keytool -genkeypair -alias none -storepass "{{ nifi_secret }}" -keypass "{{ nifi_secret }}" -keystore /opt/nifi-certificates/ca/trust.jks -dname "CN=none"
+        keytool -delete -alias none -storepass "{{ nifi_secret }}" -keystore /opt/nifi-certificates/ca/trust.jks
+      become_user: nifi
+      no_log: True
+      when: node_cert.stat.exists == false
+
+    - name: add ca to jks truststore when no keystore
+      community.general.java_cert:
+        cert_alias: "NIFICA"
+        cert_path: /opt/nifi-certificates/ca/ca.pem
+        keystore_path: /opt/nifi-certificates/ca/trust.jks
+        keystore_pass: "{{ nifi_secret }}"
+        trust_cacert: yes
+      when: node_cert.stat.exists == false
+
+    - name: copy admin-operate and scaling scripts
       template:
-        src: "scale-{{ item }}"
-        dest: "/usr/local/bin/scale-{{ item }}"
+        src: "{{ item }}"
+        dest: "/usr/local/bin/{{ item }}"
         owner: nifi
         group: nifi
         mode: 0550
       with_items:
-        - down
-        - up-adduser
-        - up-permitproxy
+        - admin-operate
+        - scale-down
+        - scale-up-adduser
+        - scale-up-permitproxy
 
     - name: timers and service units
       copy:
@@ -461,11 +476,19 @@
         - nifi.service
         - nifi.timer
 
+    - name: check existing service on nlb
+      wait_for:
+        host: "{{ lb_dns }}"
+        port: "{{ web_port }}"
+        timeout: 60
+      ignore_errors: yes
+      register: existing_service_nlb
+        
     - name: run scale-up script to add node as user
       shell: |
         /usr/local/bin/scale-up-adduser
       become_user: nifi
-      when: ca_cert.stat.exists == true
+      when: not existing_service_nlb.failed
 
     - name: nifi systemd
       systemd:
@@ -491,4 +514,12 @@
       delay: 3
       register: scale_up
       until: scale_up is not failed
-      when: ca_cert.stat.exists == true
+      when: not existing_service_nlb.failed
+
+    - name: run admin-operate script
+      shell: |
+        /usr/local/bin/admin-operate
+      retries: 60
+      delay: 3
+      register: admin_operate
+      until: admin_operate is not failed

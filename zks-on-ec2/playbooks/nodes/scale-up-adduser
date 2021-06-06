@@ -1,5 +1,5 @@
 #!/bin/bash
-# Adds proxy request permission to node from cluster
+# Adds node user to cluster
 export JAVA_HOME=/usr/lib/jvm/default-java
 
 # Responses

@@ -8,7 +8,7 @@ data "archive_file" "zk-s3-codebuild-archive" {
     filename = "Dockerfile"
   }
   source {
-    content  = "zk-files/buildspec.yml"
+    content = file("zk-files/buildspec.yml")
     filename = "buildspec.yml"
   }
   output_path = "zk-files/zookeeper.zip"

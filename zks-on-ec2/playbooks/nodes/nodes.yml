@@ -440,6 +440,7 @@
         keytool -genkeypair -alias none -storepass "{{ nifi_secret }}" -keypass "{{ nifi_secret }}" -keystore /opt/nifi-certificates/ca/trust.jks -dname "CN=none"
         keytool -delete -alias none -storepass "{{ nifi_secret }}" -keystore /opt/nifi-certificates/ca/trust.jks
       become_user: nifi
+      no_log: True
       when: node_cert.stat.exists == false
 
     - name: add ca to jks truststore when no keystore

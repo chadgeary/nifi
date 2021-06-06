@@ -73,6 +73,7 @@ resource "aws_ssm_document" "tf-nifi-ssm-playbook-doc" {
         "sudo apt-get update",
         "sudo DEBIAN_FRONTEND=noninteractive apt-get -y install python3-pip unzip",
         "sudo pip3 install ansible",
+        "sudo ansible-galaxy collection install community.crypto",
         "echo \"Running Ansible in `pwd`\"",
         "for zip in $(find -iname '*.zip'); do",
         "  unzip -o $zip",
@@ -104,7 +105,7 @@ resource "aws_ssm_association" "tf-nifi-nodes-ssm-assoc" {
     s3_key_prefix  = "ssm"
   }
   parameters = {
-    ExtraVariables = "SSM=True nifi_version=${var.nifi_version} service_nlb=${aws_lb.tf-nifi-node-nlb.dns_name} zk_port=2181 s3_bucket=${aws_s3_bucket.tf-nifi-bucket.id} kms_key_id=${aws_kms_key.tf-nifi-kmscmk-s3.key_id} name_prefix=${var.name_prefix} name_suffix=${random_string.tf-nifi-random.result} web_port=${var.web_port} aws_region=${var.aws_region}"
+    ExtraVariables = "SSM=True nifi_version=${var.nifi_version} lb_dns=${aws_lb.tf-nifi-node-nlb.dns_name} zk_port=2181 s3_bucket=${aws_s3_bucket.tf-nifi-bucket.id} kms_key_id=${aws_kms_key.tf-nifi-kmscmk-s3.key_id} name_prefix=${var.name_prefix} name_suffix=${random_string.tf-nifi-random.result} web_port=${var.web_port} aws_region=${var.aws_region}"
     PlaybookFile   = "nodes.yml"
     SourceInfo     = "{\"path\":\"https://s3.${var.aws_region}.amazonaws.com/${aws_s3_bucket.tf-nifi-bucket.id}/nifi/nodes/\"}"
     SourceType     = "S3"

@@ -61,6 +61,26 @@ resource "aws_kms_key" "tf-nifi-kmscmk-s3" {
       }
     },
     {
+      "Sid": "Allow Lambda certs",
+      "Effect": "Allow",
+      "Principal": {
+        "AWS": "arn:${data.aws_partition.tf-nifi-aws-partition.partition}:sts::${data.aws_caller_identity.tf-nifi-aws-account.account_id}:assumed-role/${var.name_prefix}-iam-role-lambda-certs-${random_string.tf-nifi-random.result}/${var.name_prefix}-lambda-certs-${random_string.tf-nifi-random.result}"
+      },
+      "Action": [
+        "kms:Encrypt",
+        "kms:Decrypt",
+        "kms:ReEncrypt*",
+        "kms:GenerateDataKey*",
+        "kms:DescribeKey"
+      ],
+      "Resource": "*",
+      "Condition": {
+        "StringEquals": {
+          "kms:CallerAccount": "${data.aws_caller_identity.tf-nifi-aws-account.account_id}"
+        }
+      }
+    },
+    {
       "Sid": "Allow Lambda health",
       "Effect": "Allow",
       "Principal": {

@@ -61,7 +61,7 @@ resource "aws_iam_policy" "tf-nifi-iam-policy-lambda-health-2" {
         "s3:GetObject",
         "s3:GetObjectAcl"
       ],
-      "Resource": ["${aws_s3_bucket.tf-nifi-bucket.arn}/nifi/certificates/admin/admin_cert.pem","${aws_s3_bucket.tf-nifi-bucket.arn}/nifi/certificates/admin/private_key.pem"]
+      "Resource": ["${aws_s3_bucket.tf-nifi-bucket.arn}/nifi/certificates/admin/admin_cert.pem","${aws_s3_bucket.tf-nifi-bucket.arn}/nifi/certificates/admin/private_key.key"]
     },
     {
       "Sid": "SetInstanceHealth",

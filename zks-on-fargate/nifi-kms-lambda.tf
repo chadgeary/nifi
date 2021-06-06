@@ -24,7 +24,7 @@ resource "aws_kms_key" "tf-nifi-kmscmk-lambda" {
       "Sid": "Allow access through Lambda",
       "Effect": "Allow",
       "Principal": {
-        "AWS": ["${aws_iam_role.tf-nifi-iam-role-lambda-getnifi.arn}","${aws_iam_role.tf-nifi-iam-role-lambda-scaledown.arn}","${aws_iam_role.tf-nifi-iam-role-lambda-health.arn}"]
+        "AWS": ["${aws_iam_role.tf-nifi-iam-role-lambda-certs.arn}","${aws_iam_role.tf-nifi-iam-role-lambda-getnifi.arn}","${aws_iam_role.tf-nifi-iam-role-lambda-scaledown.arn}","${aws_iam_role.tf-nifi-iam-role-lambda-health.arn}"]
       },
       "Action": [
         "kms:Encrypt",

@@ -11,12 +11,12 @@ def lambda_handler(event, context):
     s3 = boto3.client('s3')
     with open('/tmp/admin_cert.pem', 'wb') as data:
         s3.download_fileobj(os.environ['PREFIX'] + '-bucket-' + os.environ['SUFFIX'],'nifi/certificates/admin/admin_cert.pem', data)
-    with open('/tmp/private_key.pem', 'wb') as data:
-        s3.download_fileobj(os.environ['PREFIX'] + '-bucket-' + os.environ['SUFFIX'],'nifi/certificates/admin/private_key.pem', data)
+    with open('/tmp/private_key.key', 'wb') as data:
+        s3.download_fileobj(os.environ['PREFIX'] + '-bucket-' + os.environ['SUFFIX'],'nifi/certificates/admin/private_key.key', data)
 
     # EC2 instances
     ec2 = boto3.client('ec2')
-    http = urllib3.PoolManager(cert_reqs='CERT_NONE', cert_file='/tmp/admin_cert.pem', key_file='/tmp/private_key.pem')
+    http = urllib3.PoolManager(cert_reqs='CERT_NONE', cert_file='/tmp/admin_cert.pem', key_file='/tmp/private_key.key')
     cluster_filter = [
         {
             'Name': 'tag:Cluster',
