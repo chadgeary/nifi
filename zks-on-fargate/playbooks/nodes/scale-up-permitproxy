@@ -50,11 +50,11 @@ POLICYUP_ATTEMPTS=1
 POLICYUP_STATE="INCOMPLETE"
 while [[ $POLICYUP_ATTEMPTS -le $MAX_ATTEMPTS && $POLICYUP_STATE != $TARGET_STATE ]]
 do
-  POLICYID=$(curl --silent 'https://{{ lb_dns }}:{{ web_port }}/nifi-api/policies/write/proxy' --insecure --key /opt/nifi-certificates/admin/private_key.key --cert /opt/nifi-certificates/admin/admin_cert.pem | jq -r '.component.id')
+  POLICYID=$(curl --silent 'https://{{ lb_dns }}:{{ web_port }}/nifi-api/policies/write/proxy' --insecure --key /opt/nifi-certificates/admin/private_key.key --cert /opt/nifi-certificates/admin/admin_cert.pem --pass $(cat /opt/nifi-conf/nifi_secret) | jq -r '.component.id')
   # Use current policy to build new policy with NODEID
-  curl --fail --silent 'https://{{ lb_dns }}:{{ web_port }}/nifi-api/policies/write/proxy' --insecure --key /opt/nifi-certificates/admin/private_key.key --cert /opt/nifi-certificates/admin/admin_cert.pem | \
+  curl --fail --silent 'https://{{ lb_dns }}:{{ web_port }}/nifi-api/policies/write/proxy' --insecure --key /opt/nifi-certificates/admin/private_key.key --cert /opt/nifi-certificates/admin/admin_cert.pem --pass $(cat /opt/nifi-conf/nifi_secret) | \
 jq '.component.users += [{"revision": { "version": 0 }, "id": "'$NODEID'","permissions": {"canRead": true,"canWrite": true},"component": {"id": "'$NODEID'", "identity": "CN='$(hostname -f)', OU=NIFI","configurable": true} }]' | \
-curl --fail -X PUT 'https://{{ lb_dns }}:{{ web_port }}/nifi-api/policies/'$POLICYID'' --insecure --key /opt/nifi-certificates/admin/private_key.key --cert /opt/nifi-certificates/admin/admin_cert.pem -H 'Content-Type: application/json' --data @-
+curl --fail -X PUT 'https://{{ lb_dns }}:{{ web_port }}/nifi-api/policies/'$POLICYID'' --insecure --key /opt/nifi-certificates/admin/private_key.key --cert /opt/nifi-certificates/admin/admin_cert.pem --pass $(cat /opt/nifi-conf/nifi_secret) -H 'Content-Type: application/json' --data @-
   if [ $? -eq 0 ]
   then
     POLICYUP_STATE="COMPLETE"

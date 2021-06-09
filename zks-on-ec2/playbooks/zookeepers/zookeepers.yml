@@ -572,7 +572,7 @@
         daemon_reload: yes
 
     - name: copy admin-operate and scale-down script
-      copy:
+      template:
         src: "{{ item }}"
         dest: "/usr/local/bin/{{ item }}"
         owner: nifi
@@ -612,6 +612,6 @@
       shell: |
         /usr/local/bin/admin-operate
       retries: 60
-      delay: 3
+      delay: 5
       register: admin_operate
       until: admin_operate is not failed
