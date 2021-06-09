@@ -12,7 +12,7 @@ data "aws_ami" "tf-nifi-vendor-ami-latest" {
   }
   filter {
     name   = "architecture"
-    values = ["x86_64"]
+    values = ["arm64", "x86_64"]
   }
   filter {
     name   = "root-device-type"

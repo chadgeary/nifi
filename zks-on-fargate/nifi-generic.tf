@@ -95,7 +95,7 @@ variable "vendor_ami_name_string" {
 }
 
 variable "aws_default_tags" {
-  type = map(string)
+  type    = map(string)
   default = {}
 }
 

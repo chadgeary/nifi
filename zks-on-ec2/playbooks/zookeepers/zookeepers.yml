@@ -35,6 +35,44 @@
       register: install_packages
       until: install_packages is not failed
 
+    - name: arm required packages
+      package:
+        name: "{{ packages }}"
+        state: latest
+      vars:
+        packages:
+        - cmake
+        - default-jdk
+        - git
+      retries: 60
+      delay: 3
+      register: install_packages
+      until: install_packages is not failed
+      when: ansible_architecture == "aarch64"
+
+    - name: arm get snappy for build
+      git:
+        repo: 'https://github.com/xerial/snappy-java'
+        dest: /opt/snappy-java
+        clone: yes
+        update: no
+      when: ansible_architecture == "aarch64"
+
+    - name: arm make snappy
+      make:
+        chdir: /opt/snappy-java
+      environment:
+        JAVA_HOME: /usr/lib/jvm/default-java
+      when: ansible_architecture == "aarch64"
+
+    - name: arm find snappy jar
+      find:
+        paths: /opt/snappy-java
+        recurse: yes
+        patterns: "snappy-java-*.jar"
+      register: snappy_jar
+      when: ansible_architecture == "aarch64"
+
     - name: ansible required packages
       pip:
         executable: /usr/bin/pip3
@@ -72,7 +110,7 @@
 
     - name: cloudwatch agent download
       get_url:
-        url: https://s3.amazonaws.com/amazoncloudwatch-agent/ubuntu/amd64/latest/amazon-cloudwatch-agent.deb
+        url: https://s3.amazonaws.com/amazoncloudwatch-agent/ubuntu/{% if ansible_architecture == "x86_64" %}amd64{% elif ansible_architecture == "aarch64" %}arm64{% endif %}/latest/amazon-cloudwatch-agent.deb
         dest: /opt/amazon-cloudwatch-agent.deb
 
     - name: cloudwatch agent install
@@ -294,6 +332,16 @@
         mode: 0755
         owner: nifi
         group: nifi
+
+    - name: arm copy snappy jar to nifi
+      copy:
+        src: "{{ item.path }}"
+        dest: /opt/nifi/lib/
+        owner: nifi
+        group: nifi
+        remote_src: yes
+      with_items: "{{ snappy_jar.files }}"
+      when: ansible_architecture == "aarch64"
 
     - name: check toolkit unarchived
       stat:

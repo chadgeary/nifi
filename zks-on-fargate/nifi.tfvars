@@ -53,7 +53,8 @@ enable_zk3 = 1
 # the name prefix for various resources (e.g. "nifi" for "nifi-encrypted-ami", "nifi-zk1-", ...)
 name_prefix = "nifi"
 
-# the vendor supplying the AMI and the AMI name - default is official Ubuntu 20.04
+# the vendor supplying the AMI and the AMI name - default is official Ubuntu 20.04 x86_64
+# official Ubuntu ARM instances/amis are supported
 vendor_ami_account_number = "099720109477"
 vendor_ami_name_string    = "ubuntu/images/hvm-ssd/ubuntu-focal-20.04-amd64-server-20210415"
 
