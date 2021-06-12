@@ -304,14 +304,6 @@
         owner: nifi
         group: nifi
 
-    - name: nifi systemd service file
-      copy:
-        src: nifi.service
-        dest: /etc/systemd/system/nifi.service
-        mode: 0444
-        owner: nifi
-        group: nifi
-
     - name: bootstrap.conf
       template:
         src: bootstrap.conf
