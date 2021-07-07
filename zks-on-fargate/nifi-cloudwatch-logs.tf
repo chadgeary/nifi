@@ -12,7 +12,7 @@ resource "aws_cloudwatch_log_group" "tf-nifi-cloudwatch-log-group-ecs" {
   retention_in_days = var.log_retention_days
   kms_key_id        = aws_kms_key.tf-nifi-kmscmk-cloudwatch.arn
   tags = {
-    Name = "/aws/ec2/${var.name_prefix}_${random_string.tf-nifi-random.result}"
+    Name = "/aws/ecs/${var.name_prefix}_${random_string.tf-nifi-random.result}"
   }
 }
 
