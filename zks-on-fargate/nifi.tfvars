@@ -67,11 +67,11 @@ health_check_unit   = "minutes"
 health_check_count  = 10
 
 # nifi/nifi-toolkit and zookeeper versions downloaded from urls below
-nifi_version = "1.13.2"
+nifi_version = "1.14.0"
 
 # urls for a lambda function to fetch nifi and nifi toolkit and put to s3
-nifi_url    = "https://apache.osuosl.org/nifi/1.13.2/nifi-1.13.2-bin.tar.gz"
-toolkit_url = "https://apache.osuosl.org/nifi/1.13.2/nifi-toolkit-1.13.2-bin.tar.gz"
+nifi_url    = "https://apache.osuosl.org/nifi/1.14.0/nifi-1.14.0-bin.tar.gz"
+toolkit_url = "https://apache.osuosl.org/nifi/1.14.0/nifi-toolkit-1.14.0-bin.tar.gz"
 
 # zk version of docker container - https://hub.docker.com/_/zookeeper/?tab=tags&page=1&ordering=last_updated
 zk_version = "latest"

@@ -65,13 +65,13 @@ health_check_unit   = "minutes"
 health_check_count  = 10
 
 # nifi/nifi-toolkit and zookeeper versions downloaded from urls below
-nifi_version = "1.13.2"
+nifi_version = "1.14.0"
 zk_version   = "3.7.0"
 
 # urls for a lambda function to fetch zookeeper, nifi, and nifi toolkit and put to s3
 zk_url      = "https://apache.osuosl.org/zookeeper/zookeeper-3.7.0/apache-zookeeper-3.7.0-bin.tar.gz"
-nifi_url    = "https://apache.osuosl.org/nifi/1.13.2/nifi-1.13.2-bin.tar.gz"
-toolkit_url = "https://apache.osuosl.org/nifi/1.13.2/nifi-toolkit-1.13.2-bin.tar.gz"
+nifi_url    = "https://apache.osuosl.org/nifi/1.14.0/nifi-1.14.0-bin.tar.gz"
+toolkit_url = "https://apache.osuosl.org/nifi/1.14.0/nifi-toolkit-1.14.0-bin.tar.gz"
 
 # vpc specific vars, modify these values if there would be overlap with existing resources.
 vpc_cidr     = "10.10.10.0/24"
