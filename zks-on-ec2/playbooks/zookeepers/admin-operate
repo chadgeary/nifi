@@ -3,14 +3,26 @@ export JAVA_HOME=/usr/lib/jvm/default-java
 
 # root process group
 ROOT_PROCESS_GROUP_ID=$(curl --insecure --silent --key /opt/nifi-certificates/admin/private_key.key --cert /opt/nifi-certificates/admin/admin_cert.pem --pass $(cat /opt/nifi-conf/nifi_secret) https://{{ lb_dns }}:{{ web_port }}/nifi-api/flow/process-groups/root | jq -r '.processGroupFlow.id')
+if [ $? -ne 0 ]
+then
+  exit 1
+fi
 
 # client id
 CLIENT_ID=$(curl --insecure --silent --key /opt/nifi-certificates/admin/private_key.key --cert /opt/nifi-certificates/admin/admin_cert.pem --pass $(cat /opt/nifi-conf/nifi_secret) https://{{ lb_dns }}:{{ web_port }}/nifi-api/flow/client-id)
+if [ $? -ne 0 ]
+then
+  exit 1
+fi
 
 # admin id
 ADMIN_ID=$(curl --insecure --silent --key /opt/nifi-certificates/admin/private_key.key --cert /opt/nifi-certificates/admin/admin_cert.pem --pass $(cat /opt/nifi-conf/nifi_secret) 'https://{{ lb_dns }}:{{ web_port }}/nifi-api/tenants/users' | jq -r '.users[] | select(.component.identity=="CN=admin, OU=NIFI") | .id')
+if [ $? -ne 0 ]
+then
+  exit 1
+fi
 
-# if policy(ies) exist, exit
+# if policy(ies) exist, exit ok
 curl --insecure --fail --silent --key /opt/nifi-certificates/admin/private_key.key --cert /opt/nifi-certificates/admin/admin_cert.pem --pass $(cat /opt/nifi-conf/nifi_secret) 'https://{{ lb_dns }}:{{ web_port }}/nifi-api/policies/read/process-groups/'$ROOT_PROCESS_GROUP_ID''
 if [ $? -eq 0 ]
 then
