@@ -46,23 +46,42 @@
         - ansible_architecture == "aarch64"
 
     - name: arm get snappy for build
-      git:
-        repo: 'https://github.com/xerial/snappy-java'
-        dest: /opt/snappy-java
-        clone: yes
-        update: no
+      get_url:
+        url: https://github.com/xerial/snappy-java/archive/refs/tags/1.1.8.4.tar.gz
+        dest: /opt/snappy-java.tar.gz
       when: ansible_architecture == "aarch64"
+
+    - name: check snappy unarchived
+      stat:
+        path: /opt/snappy-java-1.1.8.4/README.md
+      register: snappy_unarchived
+
+    - name: nifi user
+      user:
+        name: nifi
+        comment: Apache NiFi Service Account
+
+    - name: unarchive snappy if not unarchived
+      unarchive:
+        src: /opt/snappy-java.tar.gz
+        dest: /opt
+        remote_src: yes
+        owner: nifi
+        group: nifi
+      when:
+        - ansible_architecture == "aarch64"
+        - snappy_unarchived.stat.exists == false
 
     - name: arm make snappy
       make:
-        chdir: /opt/snappy-java
+        chdir: /opt/snappy-java-1.1.8.4
       environment:
         JAVA_HOME: /usr/lib/jvm/default-java
       when: ansible_architecture == "aarch64"
 
     - name: arm find snappy jar
       find:
-        paths: /opt/snappy-java
+        paths: /opt/snappy-java-1.1.8.4
         recurse: yes
         patterns: "snappy-java-*.jar"
       register: snappy_jar
@@ -491,6 +510,15 @@
         keystore_pass: "{{ nifi_secret }}"
         trust_cacert: yes
       when: node_cert.stat.exists == false
+
+    - name: link node cert dir to /opt/nifi-certificates/node
+      file:
+        src: /opt/nifi-certificates/{{ ansible_nodename }}
+        path: /opt/nifi-certificates/node
+        state: link
+        mode: 0755
+        owner: nifi
+        group: nifi
 
     - name: copy scale-down scale-user and scale-up scripts
       template:

@@ -492,6 +492,15 @@
         trust_cacert: yes
       when: node_cert.stat.exists == false
 
+    - name: link node cert dir to /opt/nifi-certificates/node
+      file:
+        src: /opt/nifi-certificates/{{ ansible_nodename }}
+        path: /opt/nifi-certificates/node
+        state: link
+        mode: 0755
+        owner: nifi
+        group: nifi
+
     - name: copy admin-operate and scaling scripts
       template:
         src: "{{ item }}"
