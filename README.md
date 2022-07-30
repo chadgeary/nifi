@@ -126,10 +126,6 @@ Deploy
 # In powershell's WSL window, change to the project's aws directory
 cd ~/nifi/zks-on-ec2/
 
-# Copy nifi-lambda-certs.py and add the cryptography module to nifi-lambda-certs/
-mkdir nifi-lambda-certs && cp nifi-lambda-certs.py nifi-lambda-certs/
-pip3 install --upgrade --target ./nifi-lambda-certs/ cryptography
-
 # Initialize terraform and apply the terraform state
 terraform init
 terraform apply -var-file="nifi.tfvars"
