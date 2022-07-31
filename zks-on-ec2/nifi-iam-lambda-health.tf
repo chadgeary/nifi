@@ -1,4 +1,4 @@
-data "aws_iam_policy" "tf-nifi-iam-policy-lambda-certs-1" {
+data "aws_iam_policy" "tf-nifi-iam-policy-lambda-health-1" {
   arn = "arn:${data.aws_partition.tf-nifi-aws-partition.partition}:iam::aws:policy/AmazonSSMFullAccess"
 }
 
