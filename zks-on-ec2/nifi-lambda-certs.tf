@@ -1,12 +1,6 @@
-data "archive_file" "tf-nifi-lambda-certs-archive" {
-  type        = "zip"
-  source_dir  = "nifi-lambda-certs"
-  output_path = "nifi-lambda-certs.zip"
-}
-
 resource "aws_lambda_function" "tf-nifi-lambda-certs-function" {
   filename         = "nifi-lambda-certs.zip"
-  source_code_hash = data.archive_file.tf-nifi-lambda-certs-archive.output_base64sha256
+  source_code_hash = filebase64sha256("nifi-lambda-certs.zip")
   function_name    = "${var.name_prefix}-lambda-certs-${random_string.tf-nifi-random.result}"
   role             = aws_iam_role.tf-nifi-iam-role-lambda-certs.arn
   kms_key_arn      = aws_kms_key.tf-nifi-kmscmk-lambda.arn

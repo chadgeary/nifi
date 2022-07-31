@@ -14,9 +14,17 @@ def lambda_handler(event, context):
     with open('/tmp/private_key.key', 'wb') as data:
         s3.download_fileobj(os.environ['PREFIX'] + '-bucket-' + os.environ['SUFFIX'],'nifi/certificates/admin/private_key.key', data)
 
+    # Get key's secret via ssm
+    ssm = boto3.client("ssm", region_name=os.environ["REGION"])
+    ssm_secret = ssm.get_parameter(
+        Name=os.environ["PREFIX"] + "-nifi-secret-" + os.environ["SUFFIX"],
+        WithDecryption=True,
+    )
+    secret = ssm_secret["Parameter"]["Value"]
+
     # EC2 instances
     ec2 = boto3.client('ec2')
-    http = urllib3.PoolManager(cert_reqs='CERT_NONE', cert_file='/tmp/admin_cert.pem', key_file='/tmp/private_key.key')
+    http = urllib3.PoolManager(cert_reqs='CERT_NONE', cert_file='/tmp/admin_cert.pem', key_file='/tmp/private_key.key', key_password=secret)
     cluster_filter = [
         {
             'Name': 'tag:Cluster',

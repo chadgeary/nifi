@@ -1,8 +1,12 @@
 data "aws_iam_policy" "tf-nifi-iam-policy-lambda-health-1" {
+  arn = "arn:${data.aws_partition.tf-nifi-aws-partition.partition}:iam::aws:policy/AmazonSSMFullAccess"
+}
+
+data "aws_iam_policy" "tf-nifi-iam-policy-lambda-health-2" {
   arn = "arn:${data.aws_partition.tf-nifi-aws-partition.partition}:iam::aws:policy/service-role/AWSLambdaVPCAccessExecutionRole"
 }
 
-resource "aws_iam_policy" "tf-nifi-iam-policy-lambda-health-2" {
+resource "aws_iam_policy" "tf-nifi-iam-policy-lambda-health-3" {
   name        = "${var.name_prefix}-iam-policy-lambda-health-${random_string.tf-nifi-random.result}"
   path        = "/"
   description = "Provides lambda EC2 and InstanceHealth permission"
@@ -21,6 +25,14 @@ resource "aws_iam_policy" "tf-nifi-iam-policy-lambda-health-2" {
         "kms:DescribeKey"
       ],
       "Resource": ["${aws_kms_key.tf-nifi-kmscmk-lambda.arn}"]
+    },
+    {
+      "Sid": "SSMCMK",
+      "Effect": "Allow",
+      "Action": [
+        "kms:Decrypt"
+      ],
+      "Resource": ["${aws_kms_key.tf-nifi-kmscmk-ssm.arn}"]
     },
     {
       "Sid": "LambdaEC2",
@@ -103,5 +115,10 @@ resource "aws_iam_role_policy_attachment" "tf-nifi-iam-attach-health-lambda-1" {
 
 resource "aws_iam_role_policy_attachment" "tf-nifi-iam-attach-health-lambda-2" {
   role       = aws_iam_role.tf-nifi-iam-role-lambda-health.name
-  policy_arn = aws_iam_policy.tf-nifi-iam-policy-lambda-health-2.arn
+  policy_arn = data.aws_iam_policy.tf-nifi-iam-policy-lambda-health-2.arn
+}
+
+resource "aws_iam_role_policy_attachment" "tf-nifi-iam-attach-health-lambda-3" {
+  role       = aws_iam_role.tf-nifi-iam-role-lambda-health.name
+  policy_arn = aws_iam_policy.tf-nifi-iam-policy-lambda-health-3.arn
 }
