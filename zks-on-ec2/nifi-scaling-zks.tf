@@ -41,7 +41,7 @@ locals {
 # zk1 launchconf and asg
 resource "aws_launch_configuration" "tf-nifi-zk1-launchconf" {
   name_prefix          = "${var.name_prefix}-zk1lconf-${random_string.tf-nifi-random.result}-"
-  image_id             = aws_ami_copy.tf-nifi-encrypted-ami.id
+  image_id             = data.aws_ami.tf-nifi-vendor-ami-latest.id
   instance_type        = var.instance_type
   key_name             = aws_key_pair.tf-nifi-instance-key.key_name
   iam_instance_profile = aws_iam_instance_profile.tf-nifi-instance-profile.name
@@ -91,7 +91,7 @@ resource "aws_autoscaling_group" "tf-nifi-zk1-autoscalegroup" {
 # zk2 launchconf and asg
 resource "aws_launch_configuration" "tf-nifi-zk2-launchconf" {
   name_prefix          = "${var.name_prefix}-zk2lconf-${random_string.tf-nifi-random.result}-"
-  image_id             = aws_ami_copy.tf-nifi-encrypted-ami.id
+  image_id             = data.aws_ami.tf-nifi-vendor-ami-latest.id
   instance_type        = var.instance_type
   key_name             = aws_key_pair.tf-nifi-instance-key.key_name
   iam_instance_profile = aws_iam_instance_profile.tf-nifi-instance-profile.name
@@ -141,7 +141,7 @@ resource "aws_autoscaling_group" "tf-nifi-zk2-autoscalegroup" {
 # zk3 launchconf and asg
 resource "aws_launch_configuration" "tf-nifi-zk3-launchconf" {
   name_prefix          = "${var.name_prefix}-zk3lconf-${random_string.tf-nifi-random.result}-"
-  image_id             = aws_ami_copy.tf-nifi-encrypted-ami.id
+  image_id             = data.aws_ami.tf-nifi-vendor-ami-latest.id
   instance_type        = var.instance_type
   key_name             = aws_key_pair.tf-nifi-instance-key.key_name
   iam_instance_profile = aws_iam_instance_profile.tf-nifi-instance-profile.name
