@@ -204,7 +204,7 @@ def lambda_handler(event, context):
     # Check for certificates in S3, because this only runs if they don't exist
     s3 = boto3.resource("s3")
     s3_object = list(
-        s3.Bucket(os.environ["BUCKET"]).objects.filter(Prefix="nifi/certificates/")
+        s3.Bucket(os.environ["BUCKET"]).objects.filter(Prefix="nifi/certificates/ca/")
     )
     if len(s3_object) >= 2:
         print("Certificates found, skipping.")
@@ -325,24 +325,14 @@ def lambda_handler(event, context):
 
             # UPLOAD
             files = {
-                "nifi/certificates/ca/ca.pem": io.BytesIO(
-                    identities["ca"].get("public_bytes")
-                ),
-                "nifi/certificates/ca/ca.key": io.BytesIO(
-                    identities["ca"].get("private_bytes")
-                ),
-                "nifi/certificates/admin/admin_cert.pem": io.BytesIO(
-                    identities["admin"].get("public_bytes")
-                ),
-                "nifi/certificates/admin/private_key.key": io.BytesIO(
-                    identities["admin"].get("private_bytes")
-                ),
-                "nifi/certificates/admin/keystore.p12": io.BytesIO(
-                    identities["admin"].get("identity_certstore")
-                ),
+                "nifi/certificates/ca/ca.pem": "/tmp/nifi/certificates/nifica/nifica.pem",
+                "nifi/certificates/ca/ca.key": "/tmp/nifi/certificates/nifica/nifica.key",
+                "nifi/certificates/admin/admin_cert.pem": "/tmp/nifi/certificates/admin/admin.pem",
+                "nifi/certificates/admin/private_key.key": "/tmp/nifi/certificates/admin/admin.key",
+                "nifi/certificates/admin/keystore.p12": "/tmp/nifi/certificates/admin/admin.p12",
             }
         for key in files:
-            s3.meta.client.upload_fileobj(
+            s3.meta.client.upload_file(
                 files[key],
                 os.environ["BUCKET"],
                 key,
