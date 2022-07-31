@@ -18,9 +18,4 @@ data "aws_ami" "tf-nifi-vendor-ami-latest" {
     name   = "root-device-type"
     values = ["ebs"]
   }
-  lifecycle {
-    ignore_changes = [
-      id
-    ]
-  }
 }

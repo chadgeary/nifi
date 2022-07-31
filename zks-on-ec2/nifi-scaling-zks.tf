@@ -53,6 +53,9 @@ resource "aws_launch_configuration" "tf-nifi-zk1-launchconf" {
   }
   lifecycle {
     create_before_destroy = true
+    ignore_changes = [
+      image_id
+    ]
   }
   user_data = <<EOF
 #!/bin/bash
@@ -103,6 +106,9 @@ resource "aws_launch_configuration" "tf-nifi-zk2-launchconf" {
   }
   lifecycle {
     create_before_destroy = true
+    ignore_changes = [
+      image_id
+    ]
   }
   user_data = <<EOF
 #!/bin/bash
@@ -153,6 +159,9 @@ resource "aws_launch_configuration" "tf-nifi-zk3-launchconf" {
   }
   lifecycle {
     create_before_destroy = true
+    ignore_changes = [
+      image_id
+    ]
   }
   user_data = <<EOF
 #!/bin/bash
