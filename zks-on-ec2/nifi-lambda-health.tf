@@ -19,6 +19,7 @@ resource "aws_lambda_function" "tf-nifi-lambda-health-function" {
       WEB_PORT = var.web_port
       PREFIX   = var.name_prefix
       SUFFIX   = random_string.tf-nifi-random.result
+      REGION   = var.aws_region
     }
   }
   vpc_config {
